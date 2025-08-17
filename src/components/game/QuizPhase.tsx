@@ -1,5 +1,3 @@
-// src/components/game/QuizPhase.tsx
-
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -195,19 +193,16 @@ export default function QuizPhase({
     }
   }
 
-  const saveAnswerAndUpdateHealth = async (answer: string, isCorrectAnswer: boolean, isHealthPenalty = false) => {
+  const saveAnswerAndUpdateHealth = async (answer: string, isCorrectAnswer: boolean) => {
     try {
       setIsProcessingAnswer(true)
 
       let newSpeed = playerSpeed
-      let newHealth = playerHealth
 
       if (isCorrectAnswer) {
         newSpeed = Math.min(playerSpeed + 5, 100)
-      } else if (!isCorrectAnswer && !isHealthPenalty) {
+      } else {
         newSpeed = Math.max(20, playerSpeed - 5)
-      } else if (!isCorrectAnswer && isHealthPenalty) {
-        newHealth = playerHealth - 1
       }
 
       const { error: answerError } = await supabase.from("player_answers").insert({
@@ -226,14 +221,13 @@ export default function QuizPhase({
 
       await supabase
         .from("player_health_states")
-        .update({ speed: newSpeed, health: newHealth, last_answer_time: new Date().toISOString() })
+        .update({ speed: newSpeed, health: playerHealth, last_answer_time: new Date().toISOString() })
         .eq("player_id", currentPlayer.id)
         .eq("room_id", room.id)
 
       setPlayerSpeed(newSpeed)
-      setPlayerHealth(newHealth)
 
-      console.log("player speed dan health after salah jawab:", newSpeed, " and ", newHealth)
+      console.log("player speed after jawab:", newSpeed)
 
       return true
     } catch (error) {
@@ -340,7 +334,7 @@ export default function QuizPhase({
         setInactivityCountdown(null)
       } else {
         if (inactivityCountdown !== null) {
-          console.log("🔄 Menghapus countdown penalti karena pemain aktif atau kecepatan <= 10")
+          console.log("🔄 Menghapus countdown penalti karena pemain aktif atau kecepatan <= 20")
           setInactivityCountdown(null)
         }
       }
@@ -368,7 +362,14 @@ export default function QuizPhase({
       timerRef.current = null
     }
 
-    await saveGameCompletion(health, correct, total, actuallyEliminated)
+    try {
+      await saveGameCompletion(health, correct, total, actuallyEliminated)
+
+      // Wait a bit to ensure database write is complete
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    } catch (error) {
+      console.error("Error saving game completion:", error)
+    }
 
     const lastResult = {
       playerId: currentPlayer.id,
@@ -377,9 +378,14 @@ export default function QuizPhase({
       health: Math.max(0, health),
       correct: correct,
       total: total,
-      eliminated: actuallyEliminated,
+      eliminated: 
+      lyEliminated,
+      timestamp: Date.now(),
     }
+
     localStorage.setItem("lastGameResult", JSON.stringify(lastResult))
+    localStorage.setItem(`gameResult_${roomCode}_${currentPlayer.id}`, JSON.stringify(lastResult))
+
     if (onGameComplete) onGameComplete(lastResult)
 
     router.push(`/game/${roomCode}/results`)
@@ -493,51 +499,7 @@ export default function QuizPhase({
     setIsCorrect(false)
     setShowFeedback(true)
 
-    if (playerSpeed <= 30) {
-      const newSpeed = Math.max(20, playerSpeed - 5)
-      const newHealth = playerHealth - 1
-
-      console.log(
-        `[QuizPhase] Player attacked by zombie - Health: ${playerHealth} -> ${newHealth}, Speed: ${playerSpeed} -> ${newSpeed}`,
-      )
-
-      if (newHealth <= 0) {
-        console.log("[v0] Player will die from this attack, preparing to stop timers")
-        if (timerRef.current) {
-          clearInterval(timerRef.current)
-          timerRef.current = null
-        }
-      }
-
-      setPlayerHealth(newHealth)
-      setPlayerSpeed(newSpeed)
-
-      await supabase
-        .from("player_health_states")
-        .update({
-          health: newHealth,
-          speed: newSpeed,
-          is_being_attacked: true,
-          last_answer_time: new Date().toISOString(),
-        })
-        .eq("player_id", currentPlayer.id)
-        .eq("room_id", room.id)
-
-      await saveAnswerAndUpdateHealth(selectedAnswer || "TIME_UP", false, true)
-    } else {
-      const newSpeed = Math.max(20, playerSpeed - 5)
-      setPlayerSpeed(newSpeed)
-
-      console.log(`[QuizPhase] Speed penalty - Speed: ${playerSpeed} -> ${newSpeed}`)
-
-      await supabase
-        .from("player_health_states")
-        .update({ speed: newSpeed, last_answer_time: new Date().toISOString() })
-        .eq("player_id", currentPlayer.id)
-        .eq("room_id", room.id)
-
-      await saveAnswerAndUpdateHealth(selectedAnswer || "TIME_UP", false, false)
-    }
+    await saveAnswerAndUpdateHealth(selectedAnswer || "TIME_UP", false)
   }
 
   const formatTime = (seconds: number) => {
@@ -576,12 +538,13 @@ export default function QuizPhase({
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
       <div
-        className={`absolute inset-0 transition-all duration-1000 ${dangerLevel === 3
+        className={`absolute inset-0 transition-all duration-1000 ${
+          dangerLevel === 3
             ? "bg-gradient-to-br from-red-900/40 via-black to-red-950/40"
             : dangerLevel === 2
               ? "bg-gradient-to-br from-red-950/25 via-black to-purple-950/25"
               : "bg-gradient-to-br from-red-950/15 via-black to-purple-950/15"
-          }`}
+        }`}
         style={{
           opacity: 0.3 + pulseIntensity * 0.4,
           filter: `hue-rotate(${pulseIntensity * 30}deg)`,
@@ -658,12 +621,13 @@ export default function QuizPhase({
               {[...Array(3)].map((_, i) => (
                 <div
                   key={i}
-                  className={`w-6 h-6 rounded-full border-2 transition-all duration-300 ${i < playerHealth
+                  className={`w-6 h-6 rounded-full border-2 transition-all duration-300 ${
+                    i < playerHealth
                       ? playerHealth <= 1
                         ? "bg-red-500 border-red-400 animate-pulse"
                         : "bg-green-500 border-green-400"
                       : "bg-gray-600 border-gray-500"
-                    }`}
+                  }`}
                 />
               ))}
             </div>
@@ -700,8 +664,9 @@ export default function QuizPhase({
                     key={index}
                     onClick={() => handleAnswerSelect(option)}
                     disabled={isAnswered || isProcessingAnswer}
-                    className={`${getAnswerButtonClass(option)} p-6 text-left justify-start font-mono text-lg border-2 transition-all duration-300 relative overflow-hidden group ${isProcessingAnswer ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
+                    className={`${getAnswerButtonClass(option)} p-6 text-left justify-start font-mono text-lg border-2 transition-all duration-300 relative overflow-hidden group ${
+                      isProcessingAnswer ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                     <div className="flex items-center space-x-3 relative z-10">
