@@ -2,7 +2,7 @@
 
 import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
@@ -69,6 +69,8 @@ export default function RunningCharacters({
 }: RunningCharactersProps) {
   const [eliminatedPlayers, setEliminatedPlayers] = useState<Set<string>>(new Set());
   const router = useRouter();
+  const params = useParams()
+    const roomCode = params.roomCode as string
 
   useEffect(() => {
     const newEliminated = new Set<string>();
@@ -87,7 +89,7 @@ export default function RunningCharacters({
 
     if (allPlayersEliminated && players.length > 0) {
       const redirectTimeout = setTimeout(() => {
-        router.push("/");
+        router.push(`/game/${roomCode}/resultshost`);
       }, 1000);
       return () => clearTimeout(redirectTimeout);
     }
