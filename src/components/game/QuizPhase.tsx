@@ -378,8 +378,7 @@ export default function QuizPhase({
       health: Math.max(0, health),
       correct: correct,
       total: total,
-      eliminated: 
-      lyEliminated,
+      eliminated: actuallyEliminated,
       timestamp: Date.now(),
     }
 
