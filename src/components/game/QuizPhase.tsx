@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Clock, Skull, Zap, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+import { AlertTriangle, CheckCircle, Clock, Skull, XCircle, Zap } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { motion, AnimatePresence } from "framer-motion"
+import { AnimatePresence, motion } from 'framer-motion';
+import { Progress } from "../ui/progress"
+import { Card } from "../ui/card"
+import { Button } from "../ui/button"
 import ZombieFeedback from "./ZombieFeedback"
 
 interface QuizPhaseProps {
@@ -46,6 +46,8 @@ export default function QuizPhase({
   const roomCode = params.roomCode as string
 
   const [roomInfo, setRoomInfo] = useState<{ game_start_time: string; duration: number } | null>(null)
+  const [gameStartTime, setGameStartTime] = useState<number | null>(null)
+  const [playerStartTime, setPlayerStartTime] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchRoomInfo = async () => {
@@ -59,6 +61,11 @@ export default function QuizPhase({
         console.error("❌ Gagal fetch room info:", error.message)
       } else {
         setRoomInfo(data)
+        if (data.game_start_time) {
+          const startTime = new Date(data.game_start_time).getTime()
+          setGameStartTime(startTime)
+          setPlayerStartTime(Date.now())
+        }
       }
     }
 
@@ -143,6 +150,11 @@ export default function QuizPhase({
 
   const dangerLevel = getDangerLevel()
 
+  const calculateSurvivalDuration = () => {
+    if (!playerStartTime) return 0
+    return Math.floor((Date.now() - playerStartTime) / 1000)
+  }
+
   const saveGameCompletion = async (
     finalHealth: number,
     finalCorrect: number,
@@ -150,21 +162,31 @@ export default function QuizPhase({
     isEliminated = false,
   ) => {
     try {
+      const actuallyEliminated = isEliminated || finalHealth <= 0
+      const survivalDuration = calculateSurvivalDuration()
+
+      console.log(
+        `[v0] Saving game completion - Health: ${finalHealth}, Eliminated: ${actuallyEliminated}, Duration: ${survivalDuration}s`,
+      )
+
       const { error } = await supabase.from("game_completions").insert({
         player_id: currentPlayer.id,
         room_id: room.id,
-        final_health: finalHealth !== undefined ? finalHealth : currentPlayer.health,
-        correct_answers: finalCorrect !== undefined ? finalCorrect : currentPlayer.correct_answers,
-        total_questions_answered:
-          totalAnswered !== undefined ? totalAnswered : currentPlayer.current_question_index + 1,
-        completion_type: isEliminated ? "eliminated" : finalCorrect === totalQuestions ? "completed" : "partial",
+        final_health: Math.max(0, finalHealth),
+        correct_answers: finalCorrect,
+        total_questions_answered: totalAnswered,
+        is_eliminated: actuallyEliminated,
+        completion_type: actuallyEliminated ? "eliminated" : finalCorrect === totalQuestions ? "completed" : "partial",
         completed_at: new Date().toISOString(),
+        survival_duration: survivalDuration,
       })
 
       if (error) {
         console.error("Gagal menyimpan penyelesaian permainan:", error)
       } else {
-        console.log("Penyelesaian permainan berhasil disimpan")
+        console.log(
+          `Penyelesaian permainan berhasil disimpan - Health: ${finalHealth}, Eliminated: ${actuallyEliminated}, Duration: ${survivalDuration}s`,
+        )
       }
     } catch (error) {
       console.error("Error di saveGameCompletion:", error)
@@ -329,8 +351,10 @@ export default function QuizPhase({
     isEliminated = false,
     isPerfect = false,
   ) => {
+    const actuallyEliminated = isEliminated || health <= 0
+
     console.log(
-      `Mengalihkan ke hasil: health=${health}, correct=${correct}, total=${total}, eliminated=${isEliminated}, perfect=${isPerfect}`,
+      `Mengalihkan ke hasil: health=${health}, correct=${correct}, total=${total}, eliminated=${actuallyEliminated}, perfect=${isPerfect}`,
     )
 
     if (timerRef.current) {
@@ -339,7 +363,7 @@ export default function QuizPhase({
     }
 
     try {
-      await saveGameCompletion(health, correct, total, isEliminated)
+      await saveGameCompletion(health, correct, total, actuallyEliminated)
 
       // Wait a bit to ensure database write is complete
       await new Promise((resolve) => setTimeout(resolve, 500))
@@ -351,10 +375,11 @@ export default function QuizPhase({
       playerId: currentPlayer.id,
       roomCode: roomCode,
       nickname: currentPlayer.nickname,
-      health: isEliminated ? 0 : health,
+      health: Math.max(0, health),
       correct: correct,
       total: total,
-      eliminated: isEliminated,
+      eliminated: 
+      lyEliminated,
       timestamp: Date.now(),
     }
 
@@ -383,7 +408,11 @@ export default function QuizPhase({
 
   useEffect(() => {
     if (playerHealth <= 0) {
-      console.log("Pemain tereliminasi, mengalihkan ke hasil")
+      console.log("[v0] Player eliminated (health <= 0), stopping all timers and redirecting")
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
       setShowFeedback(false)
       redirectToResults(0, correctAnswers, currentQuestionIndex + 1, true)
     }

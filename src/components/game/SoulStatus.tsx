@@ -237,7 +237,7 @@ export default function SoulStatus({
               {/* {getStatusIcon()} */}
               <div>
                 <p className={cn(
-                  "font-mono text-center text-3xl font-bold tracking-wider",
+                  "font-mono text-center text-3xl lg:text-2xl font-bold tracking-wider",
                   isDead ? "text-gray-400 line-through" : "text-red-200",
                   isCurrentPlayer ? "text-white" : ""
                 )}>

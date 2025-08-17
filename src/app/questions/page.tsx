@@ -17,7 +17,6 @@ type Quiz = {
   id: string
   theme: string
   description?: string
-  duration?: number
 }
 
 type Question = {
@@ -41,7 +40,6 @@ export default function QuestionsCRUD() {
   const [quizFormData, setQuizFormData] = useState({
     theme: "",
     description: "",
-    duration: "",
   })
   const [questionFormData, setQuestionFormData] = useState({
     question_type: "multiple_choice",
@@ -61,7 +59,7 @@ export default function QuestionsCRUD() {
     setLoading(true)
     const { data: quizzesData, error: quizzesError } = await supabase
       .from("quizzes")
-      .select("id, theme, description, duration")
+      .select("id, theme, description")
       .order("created_at", { ascending: false })
 
     if (quizzesError) {
@@ -95,7 +93,7 @@ export default function QuestionsCRUD() {
 
   const handleQuizInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setQuizFormData({ ...quizFormData, [name]: name === "duration" ? value : value })
+    setQuizFormData({ ...quizFormData})
   }
 
   const handleQuestionInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -110,9 +108,9 @@ export default function QuestionsCRUD() {
 
   const handleSubmitQuiz = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { theme, description, duration } = quizFormData
+    const { theme, description } = quizFormData
 
-    if (!theme || !duration) {
+    if (!theme) {
       alert("Tema dan durasi harus diisi!")
       return
     }
@@ -120,7 +118,7 @@ export default function QuestionsCRUD() {
     if (selectedQuiz) {
       const { error } = await supabase
         .from("quizzes")
-        .update({ theme, description, duration: parseInt(duration) })
+        .update({ theme, description})
         .eq("id", selectedQuiz.id)
 
       if (error) {
@@ -132,7 +130,7 @@ export default function QuestionsCRUD() {
     } else {
       const { data, error } = await supabase
         .from("quizzes")
-        .insert({ theme, description, duration: parseInt(duration) })
+        .insert({ theme, description })
         .select()
         .single()
 
@@ -203,7 +201,6 @@ export default function QuestionsCRUD() {
     setQuizFormData({
       theme: quiz.theme,
       description: quiz.description || "",
-      duration: quiz.duration?.toString() || "",
     })
   }
 
@@ -265,7 +262,6 @@ export default function QuestionsCRUD() {
     setQuizFormData({
       theme: "",
       description: "",
-      duration: "",
     })
   }
 
@@ -319,19 +315,6 @@ export default function QuestionsCRUD() {
                     className="bg-black/50 border-red-900/50 text-red-200 font-mono focus:border-red-400/50 focus:ring-red-400/20"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="duration" className="font-mono">Durasi (menit)</Label>
-                  <Input
-                    id="duration"
-                    name="duration"
-                    type="number"
-                    min="1"
-                    value={quizFormData.duration}
-                    onChange={handleQuizInputChange}
-                    className="bg-black/50 border-red-900/50 text-red-200 font-mono focus:border-red-400/50 focus:ring-red-400/20"
-                    placeholder="Masukkan durasi (menit)"
-                  />
-                </div>
                 <Button type="submit" className="w-full font-mono">{selectedQuiz ? "Update" : "Simpan"}</Button>
               </form>
             </DialogContent>
@@ -345,7 +328,7 @@ export default function QuestionsCRUD() {
               {quizzes.map((quiz) => (
                 <HorrorAccordionItem value={quiz.id} key={quiz.id}>
                   <HorrorAccordionTrigger className="flex justify-between">
-                    <span>{quiz.theme} {quiz.duration ? `(${quiz.duration} menit)` : ""}</span>
+                    <span>{quiz.theme}</span>
                     <div className="flex gap-2">
                       <span
                         className="inline-flex items-center justify-center size-9 rounded-md bg-black/80 border border-red-900/50 text-red-200 hover:bg-red-900/20 hover:shadow-[0_0_10px_rgba(255,0,0,0.3)] transition-all duration-200 cursor-pointer"
@@ -579,19 +562,6 @@ export default function QuestionsCRUD() {
                 value={quizFormData.description}
                 onChange={handleQuizInputChange}
                 className="bg-black/50 border-red-900/50 text-red-200 font-mono focus:border-red-400/50 focus:ring-red-400/20"
-              />
-            </div>
-            <div>
-              <Label htmlFor="duration" className="font-mono">Durasi (menit)</Label>
-              <Input
-                id="duration"
-                name="duration"
-                type="number"
-                min="1"
-                value={quizFormData.duration}
-                onChange={handleQuizInputChange}
-                className="bg-black/50 border-red-900/50 text-red-200 font-mono focus:border-red-400/50 focus:ring-red-400/20"
-                placeholder="Masukkan durasi (menit)"
               />
             </div>
             <Button type="submit" className="w-full font-mono">Update</Button>

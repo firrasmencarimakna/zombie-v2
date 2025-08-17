@@ -351,11 +351,11 @@ export default function CharacterSelectPage() {
             className="space-y-6 lg:col-span-1"
           >
             <div className="bg-black/40 border border-red-900/50 p-6 rounded-lg backdrop-blur-sm">
-              <div className="flex items-center mb-4">
+              {/* <div className="flex items-center mb-4">
                 <Clock className="w-5 h-5 text-red-500 mr-2" />
                 <h2 className="text-xl font-mono text-red-400">{t("gameSettingsTitle")}</h2>
               </div>
-
+              
               <div className="mb-6">
                 <Label htmlFor="duration" className="text-red-300 mb-2 block font-medium text-sm font-mono">
                   {t("gameDurationLabel")}

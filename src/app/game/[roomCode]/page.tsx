@@ -3,8 +3,8 @@
 
 import type React from "react"
 import { useEffect, useState, useCallback, useRef } from "react"
-import { useParams, useSearchParams, useRouter } from "next/navigation"
-import { useGameData, TransformedRoom, TransformedGameState, TransformedPlayer } from "@/hooks/useGameData"
+import { useParams, useRouter } from "next/navigation"
+import { useGameData, type TransformedRoom, type TransformedGameState } from "@/hooks/useGameData"
 import { useGameLogic } from "@/hooks/useGameLogic"
 import { supabase } from "@/lib/supabase"
 import LoadingScreen from "@/components/game/LoadingScreen"
@@ -45,7 +45,11 @@ function ErrorState({ onRetry, error }: { onRetry: () => void; error?: string })
 }
 
 // Unknown phase component
-function UnknownPhase({ phase, room, gameState }: { phase: string; room: TransformedRoom; gameState: TransformedGameState }) {
+function UnknownPhase({
+  phase,
+  room,
+  gameState,
+}: { phase: string; room: TransformedRoom; gameState: TransformedGameState }) {
   return (
     // <div className="min-h-screen bg-gray-900 flex items-center justify-center relative overflow-hidden">
     //   <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-900 to-black opacity-90" />
@@ -131,29 +135,31 @@ export default function GamePage() {
   const saveGameCompletion = useCallback(async () => {
     if (!currentPlayer || !room || !isMountedRef.current) return
 
-    const latestHealth = playerHealthStates[currentPlayer.id]?.health ?? quizState.health;
-
+    const latestHealth = playerHealthStates[currentPlayer.id]?.health ?? quizState.health
+    const isActuallyEliminated = latestHealth <= 0 // Fixed: proper elimination check
 
     try {
       const { error } = await supabase.from("game_completions").insert({
         player_id: currentPlayer.id,
         room_id: room.id,
-        final_health: latestHealth <= 0 ? 0 : latestHealth,
+        final_health: Math.max(0, latestHealth), // Ensure never negative
         correct_answers: quizState.correctAnswers,
         total_questions_answered: room.questions?.length ?? quizState.currentIndex + 1,
-        is_eliminated: latestHealth <= 0,
-        completion_type: latestHealth <= 0 ? "eliminated" : "completed",
+        is_eliminated: isActuallyEliminated, // Fixed: use proper elimination status
+        completion_type: isActuallyEliminated ? "eliminated" : "completed",
       })
 
       if (error) {
         console.error("Failed to save game completion:", error)
       } else {
-        console.log("Game completion saved for player:", currentPlayer.nickname)
+        console.log(
+          `Game completion saved - Player: ${currentPlayer.nickname}, Health: ${latestHealth}, Eliminated: ${isActuallyEliminated}`,
+        )
       }
     } catch (err) {
       console.error("Error saving game completion:", err)
     }
-  }, [currentPlayer, room, quizState])
+  }, [currentPlayer, room, quizState, playerHealthStates])
 
   // Handle resume from minigame
   // useEffect(() => {
@@ -313,7 +319,6 @@ export default function GamePage() {
     })
 
     if (healthState.health <= 0 && !isGameOver) {
-
       safeSetState(() => {
         handleGameEnd()
         setIsGameOver?.(true)
@@ -324,50 +329,48 @@ export default function GamePage() {
 
   const handleGameEnd = useCallback(async () => {
     // Pastikan tidak berjalan dua kali dan semua data ada
-    if (!isMountedRef.current || !currentPlayer || !room) return;
+    if (!isMountedRef.current || !currentPlayer || !room) return
 
-    console.log("🚀 [page.tsx] Menangani akhir permainan untuk:", currentPlayer.nickname);
+    console.log("🚀 [page.tsx] Menangani akhir permainan untuk:", currentPlayer.nickname)
 
     // Ambil health paling update dari playerHealthStates
-    const latestHealth = playerHealthStates[currentPlayer.id]?.health ?? quizState.health;
-
+    const latestHealth = playerHealthStates[currentPlayer.id]?.health ?? quizState.health
+    const isActuallyEliminated = latestHealth <= 0 // Fixed: proper elimination check
 
     // Tandai agar tidak berjalan lagi
-    isMountedRef.current = false;
+    isMountedRef.current = false
 
     // 1. Simpan ke Supabase (tidak perlu ditunggu)
-    await saveGameCompletion();
+    await saveGameCompletion()
 
     // 2. Buat objek hasil untuk disimpan ke localStorage
     const lastResult = {
       playerId: currentPlayer.id,
       nickname: currentPlayer.nickname,
-      health: latestHealth <= 0 ? 0 : latestHealth, // pastikan 0 jika mati
+      health: Math.max(0, latestHealth), // Ensure never negative
       correct: quizState.correctAnswers,
       total: room.questions?.length ?? quizState.currentIndex + 1,
-      eliminated: latestHealth <= 0, // pastikan true jika mati
+      eliminated: isActuallyEliminated, // Fixed: use proper elimination status
       roomCode: roomCode,
-    };
+    }
 
     // 3. Simpan ke localStorage dengan kunci yang benar
     try {
-      localStorage.setItem('lastGameResult', JSON.stringify(lastResult));
-      console.log("💾 [page.tsx] Hasil disimpan ke localStorageeeeeeeeee:", lastResult);
+      localStorage.setItem("lastGameResult", JSON.stringify(lastResult))
+      console.log("💾 [page.tsx] Hasil disimpan ke localStorage:", lastResult)
     } catch (error) {
-      console.error("Gagal menyimpan hasil ke localStorage:", error);
+      console.error("Gagal menyimpan hasil ke localStorage:", error)
     }
 
     // 4. Arahkan ke halaman hasil DENGAN URL YANG BERSIH
-    router.push(`/game/${roomCode}/results`);
-
-  }, [currentPlayer, room, quizState, saveGameCompletion, router, roomCode]);
-
+    router.push(`/game/${roomCode}/results`)
+  }, [currentPlayer, room, quizState, saveGameCompletion, router, roomCode, playerHealthStates])
 
   // Handle game completion and redirect
   useEffect(() => {
-    if (gameState?.phase === 'finished' || gameState?.phase === 'completed') {
-      console.log(`🏆 [page.tsx] Permainan berakhir dengan fase: ${gameState.phase}. Mengarahkan...`);
-      handleGameEnd();
+    if (gameState?.phase === "finished" || gameState?.phase === "completed") {
+      console.log(`🏆 [page.tsx] Permainan berakhir dengan fase: ${gameState.phase}. Mengarahkan...`)
+      handleGameEnd()
     }
   }, [gameState?.phase, roomCode, saveGameCompletion, router, room?.current_phase])
 
@@ -450,13 +453,13 @@ export default function GamePage() {
                   correctAnswers: result.correct,
                   currentIndex: result.total - 1,
                   isResuming: false,
-                }));
+                }))
               }}
               onProgressUpdate={(progress) => {
                 setQuizState((prev) => ({
                   ...prev,
                   ...progress,
-                }));
+                }))
               }}
             />
             <AttackOverlay isVisible={isUnderAttack} />
