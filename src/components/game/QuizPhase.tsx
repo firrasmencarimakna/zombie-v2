@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { AlertTriangle, CheckCircle, Clock, Skull, XCircle, Zap } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from "framer-motion"
 import { Progress } from "../ui/progress"
 import { Card } from "../ui/card"
 import { Button } from "../ui/button"
@@ -49,7 +49,7 @@ export default function QuizPhase({
 
   const [roomInfo, setRoomInfo] = useState<{ game_start_time: string; duration: number } | null>(null)
   const [gameStartTime, setGameStartTime] = useState<number | null>(null)
-  const [playerStartTime, setPlayerStartTime] = useState<number | null>(null)
+  const [playerJoinTime, setPlayerJoinTime] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchRoomInfo = async () => {
@@ -66,7 +66,15 @@ export default function QuizPhase({
         if (data.game_start_time) {
           const startTime = new Date(data.game_start_time).getTime()
           setGameStartTime(startTime)
-          setPlayerStartTime(Date.now())
+          const { data: playerData } = await supabase
+            .from("players")
+            .select("joined_at")
+            .eq("id", currentPlayer.id)
+            .single()
+
+          if (playerData?.joined_at) {
+            setPlayerJoinTime(new Date(playerData.joined_at).getTime())
+          }
         }
       }
     }
@@ -74,7 +82,7 @@ export default function QuizPhase({
     if (room?.id) {
       fetchRoomInfo()
     }
-  }, [room?.id])
+  }, [room?.id, currentPlayer?.id])
 
   const [timeLeft, setTimeLeft] = useState(0)
   useEffect(() => {
@@ -98,6 +106,7 @@ export default function QuizPhase({
   }, [roomInfo])
 
   const [inactivityCountdown, setInactivityCountdown] = useState<number | null>(null)
+  const [penaltyCountdown, setPenaltyCountdown] = useState<number | null>(null)
   const [isClient, setIsClient] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [isAnswered, setIsAnswered] = useState(false)
@@ -117,6 +126,31 @@ export default function QuizPhase({
 
   const pulseIntensity = timeLeft <= 30 ? (31 - timeLeft) / 30 : 0
   const FEEDBACK_DURATION = 1000
+
+  useEffect(() => {
+    const initializeLastAnswerTime = async () => {
+      if (!room?.id || !currentPlayer?.id) return
+
+      const { data, error } = await supabase
+        .from("player_health_states")
+        .select("last_answer_time")
+        .eq("player_id", currentPlayer.id)
+        .eq("room_id", room.id)
+        .single()
+
+      if (error || !data?.last_answer_time) {
+        await supabase.from("player_health_states").upsert({
+          player_id: currentPlayer.id,
+          room_id: room.id,
+          health: playerHealth,
+          speed: playerSpeed,
+          last_answer_time: new Date().toISOString(),
+        })
+      }
+    }
+
+    initializeLastAnswerTime()
+  }, [room?.id, currentPlayer?.id, playerHealth, playerSpeed])
 
   useEffect(() => {
     const fetchAnsweredProgress = async () => {
@@ -153,8 +187,9 @@ export default function QuizPhase({
   const dangerLevel = getDangerLevel()
 
   const calculateSurvivalDuration = () => {
-    if (!playerStartTime) return 0
-    return Math.floor((Date.now() - playerStartTime) / 1000)
+    if (!gameStartTime || !playerJoinTime) return 0
+    const effectiveStartTime = Math.max(gameStartTime, playerJoinTime)
+    return Math.floor((Date.now() - effectiveStartTime) / 1000)
   }
 
   const saveGameCompletion = async (
@@ -166,6 +201,7 @@ export default function QuizPhase({
     try {
       const actuallyEliminated = isEliminated || finalHealth <= 0
       const survivalDuration = calculateSurvivalDuration()
+      const completionTime = new Date().toISOString()
 
       console.log(
         `[v0] Saving game completion - Health: ${finalHealth}, Eliminated: ${actuallyEliminated}, Duration: ${survivalDuration}s`,
@@ -179,8 +215,10 @@ export default function QuizPhase({
         total_questions_answered: totalAnswered,
         is_eliminated: actuallyEliminated,
         completion_type: actuallyEliminated ? "eliminated" : finalCorrect === totalQuestions ? "completed" : "partial",
-        completed_at: new Date().toISOString(),
+        completed_at: completionTime,
         survival_duration: survivalDuration,
+        game_start_time: gameStartTime ? new Date(gameStartTime).toISOString() : null,
+        player_join_time: playerJoinTime ? new Date(playerJoinTime).toISOString() : null,
       })
 
       if (error) {
@@ -293,9 +331,12 @@ export default function QuizPhase({
   }, [playerHealth, correctAnswers, currentQuestionIndex])
 
   const checkInactivityPenalty = async () => {
-    if (!room?.id || !currentPlayer?.id || playerHealth <= 0 || isProcessingAnswer) {
-      console.log("⚠️ Skipping inactivity penalty check: invalid room, player, eliminated, or processing answer")
+    if (!room?.id || !currentPlayer?.id || playerHealth <= 0 || isProcessingAnswer || isAnswered) {
+      console.log(
+        "⚠️ Skipping inactivity penalty check: invalid room, player, eliminated, processing answer, or already answered",
+      )
       setInactivityCountdown(null)
+      setPenaltyCountdown(null)
       return
     }
     try {
@@ -309,6 +350,19 @@ export default function QuizPhase({
       if (error) {
         console.error("Gagal memeriksa ketidakaktifan:", error)
         setInactivityCountdown(null)
+        setPenaltyCountdown(null)
+        return
+      }
+
+      if (!data.last_answer_time) {
+        console.log("No last_answer_time, initializing...")
+        await supabase
+          .from("player_health_states")
+          .update({ last_answer_time: new Date().toISOString() })
+          .eq("player_id", currentPlayer.id)
+          .eq("room_id", room.id)
+        setInactivityCountdown(null)
+        setPenaltyCountdown(null)
         return
       }
 
@@ -318,11 +372,12 @@ export default function QuizPhase({
 
       console.log(`🕒 Pemeriksaan ketidakaktifan: timeSinceLastAnswer=${timeSinceLastAnswer}s, speed=${data.speed}`)
 
-      if (timeSinceLastAnswer >= 0 && timeSinceLastAnswer < 20 && data.speed > 20) {
-        const countdown = Math.ceil(20 - timeSinceLastAnswer)
+      if (timeSinceLastAnswer >= 15 && timeSinceLastAnswer < 25 && data.speed > 20) {
+        const countdown = Math.ceil(25 - timeSinceLastAnswer)
         console.log(`⏲️ Memulai countdown penalti: ${countdown}s`)
-        setInactivityCountdown(countdown)
-      } else if (timeSinceLastAnswer >= 20 && data.speed > 20) {
+        setInactivityCountdown(null)
+        setPenaltyCountdown(countdown)
+      } else if (timeSinceLastAnswer >= 25 && data.speed > 20) {
         const newSpeed = Math.max(20, data.speed - 10)
         console.log(
           `⚠️ Pemain tidak aktif selama ${timeSinceLastAnswer}s, kecepatan dikurangi dari ${data.speed} ke ${newSpeed}`,
@@ -334,15 +389,18 @@ export default function QuizPhase({
           .eq("room_id", room.id)
         setPlayerSpeed(newSpeed)
         setInactivityCountdown(null)
+        setPenaltyCountdown(null)
       } else {
-        if (inactivityCountdown !== null) {
-          console.log("🔄 Menghapus countdown penalti karena pemain aktif atau kecepatan <= 20")
+        if (inactivityCountdown !== null || penaltyCountdown !== null) {
+          console.log("🔄 Menghapus semua countdown karena pemain aktif atau kecepatan <= 20")
           setInactivityCountdown(null)
+          setPenaltyCountdown(null)
         }
       }
     } catch (error) {
       console.error("Error di checkInactivityPenalty:", error)
       setInactivityCountdown(null)
+      setPenaltyCountdown(null)
     }
   }
 
@@ -367,7 +425,6 @@ export default function QuizPhase({
     try {
       await saveGameCompletion(health, correct, total, actuallyEliminated)
 
-      // Wait a bit to ensure database write is complete
       await new Promise((resolve) => setTimeout(resolve, 500))
     } catch (error) {
       console.error("Error saving game completion:", error)
@@ -401,7 +458,7 @@ export default function QuizPhase({
   useEffect(() => {
     const penaltyInterval = setInterval(checkInactivityPenalty, 1000)
     return () => clearInterval(penaltyInterval)
-  }, [currentPlayer.id, room.id, playerHealth, isProcessingAnswer])
+  }, [currentPlayer.id, room.id, playerHealth, isProcessingAnswer, isAnswered])
 
   useEffect(() => {
     setIsClient(true)
@@ -475,6 +532,8 @@ export default function QuizPhase({
 
     setSelectedAnswer(answer)
     setIsAnswered(true)
+    setInactivityCountdown(null)
+    setPenaltyCountdown(null)
 
     if (answer === currentQuestion.correct_answer) {
       await handleCorrectAnswer()
@@ -569,7 +628,7 @@ export default function QuizPhase({
       )}
 
       <AnimatePresence>
-        {inactivityCountdown !== null && (
+        {penaltyCountdown !== null && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -578,8 +637,8 @@ export default function QuizPhase({
             className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-900/90 text-white font-mono text-lg px-6 py-3 rounded-lg shadow-lg border border-red-500/50 animate-pulse"
           >
             <div className="flex items-center space-x-3">
-              <AlertTriangle className="w-6 h-6 text-yellow-300 animate-bounce" />
-              <span>{t("speedDecreases", { seconds: inactivityCountdown })}</span>
+              <AlertTriangle className="w-6 h-6 text-red-300 animate-bounce" />
+              <span>Penalty countdown: {penaltyCountdown}s</span>
             </div>
           </motion.div>
         )}
