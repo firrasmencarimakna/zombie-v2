@@ -719,11 +719,10 @@ export default function ResultsPage() {
                     width={120}
                     height={120}
                     alt="Karakter"
-                    className="rounded-full border-2 border-red-900"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-3 gap-3 mb-6">
                   <div className="bg-gray-900/70 rounded-lg p-4 border border-red-900/50">
                     <Target className="w-6 h-6 text-green-400 mx-auto mb-2" />
                     <div className="text-2xl font-bold text-white font-mono">{playerData.correct}</div>
@@ -736,11 +735,11 @@ export default function ResultsPage() {
                     <div className="text-xs text-gray-400 tracking-widest">Nyawa</div>
                   </div>
 
-                  <div className="bg-gray-900/70 rounded-lg p-4 border border-red-900/50">
+                  {/* <div className="bg-gray-900/70 rounded-lg p-4 border border-red-900/50">
                     <Trophy className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
                     <div className="text-2xl font-bold text-white font-mono">#{getPlayerRank()}</div>
                     <div className="text-xs text-gray-400 tracking-widest">Posisi</div>
-                  </div>
+                  </div> */}
 
                   <div className="bg-gray-900/70 rounded-lg p-4 border border-red-900/50">
                     <Zap className="w-6 h-6 text-purple-400 mx-auto mb-2" />
@@ -805,66 +804,6 @@ export default function ResultsPage() {
                         <div className="text-right">
                           <div className="text-lg font-bold text-white font-mono">{player.score}</div>
                           <div className="text-xs text-gray-400 tracking-widest">POIN KEHEBATAN</div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </div>
-            </HorrorCard>
-          </motion.div>
-        )}
-
-        {recentActivities.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          >
-            <HorrorCard variant="dark" className="max-w-4xl mx-auto mb-8">
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-white mb-4 font-horror tracking-wider flex items-center">
-                  <Clock className="w-5 h-5 mr-2 text-purple-400" />
-                  KISAH PARA PENJELAJAH
-                </h3>
-
-                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                  <AnimatePresence>
-                    {recentActivities.map((activity, index) => (
-                      <motion.div
-                        key={`${activity.activity_type}-${activity.activity_time}-${index}`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="flex items-center justify-between p-3 bg-gray-900/30 rounded-lg border border-gray-800"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className={`w-2 h-2 rounded-full ${
-                              activity.activity_type === "completion"
-                                ? activity.activity_data.is_eliminated
-                                  ? "bg-red-500"
-                                  : "bg-green-500"
-                                : "bg-yellow-500"
-                            } animate-pulse`}
-                          />
-                          <div>
-                            <div className="text-white font-mono text-sm tracking-wider">
-                              {getActivityMessage(activity)}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {new Date(activity.activity_time).toLocaleTimeString()}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="text-right text-xs text-gray-400">
-                          {activity.activity_type === "completion" ? (
-                            <span>❤️ {activity.activity_data.final_health} HP</span>
-                          ) : (
-                            <span>⚔️ {activity.activity_data.damage} DMG</span>
-                          )}
                         </div>
                       </motion.div>
                     ))}
