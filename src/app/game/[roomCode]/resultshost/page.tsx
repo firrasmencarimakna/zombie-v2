@@ -442,11 +442,11 @@ export default function ResultsHostPage() {
           </h1>
         </motion.header>
 
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 1.5, type: "spring", stiffness: 100 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto mt-8 mb-12"
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto mt-8 mb-12 )"
         >
           {[
             {
@@ -479,14 +479,14 @@ export default function ResultsHostPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 1.7 + index * 0.2, type: "spring", stiffness: 120 }}
-              className="bg-gray-900/80 p-4 text-center border border-red-600/40 rounded-lg backdrop-blur-sm"
+              className="from-gray-800 to-black text-red-300 px-3 py-2 rounded-lg border border-red-600/50 flex items-center gap-2 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)"
               style={{ boxShadow: "0 0 12px rgba(239, 68, 68, 0.4)" }}
             >
               <div className="text-lg font-bold text-white">{stat.icon}{stat.value}</div>
               <div className="text-xs text-red-300 mt-2 uppercase tracking-wide">{stat.label}</div>
             </motion.div>
           ))}
-        </motion.div>
+        </motion.div> */}
 
         <motion.section
           initial={{ opacity: 0, y: 50 }}
@@ -574,7 +574,7 @@ export default function ResultsHostPage() {
                       </div>
 
                       <div className="flex-grow space-y-3">
-                        <div className="relative bg-gradient-to-r from-red-700/80 to-red-800/80 text-white px-5 py-2 rounded-lg border border-red-600/60 shadow-[0_0_12px_rgba(220,38,38,0.3)]">
+                        <div className="relative from-gray-800 to-black text-red-300 px-3 py-2 rounded-lg border border-red-600/50 flex items-center gap-2 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)]">
                           <h3 className="font-bold text-lg truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
                             {player.nickname}
                           </h3>
@@ -582,7 +582,7 @@ export default function ResultsHostPage() {
                         </div>
 
                         <div className="flex gap-3">
-                          <div className="flex-1 bg-gradient-to-r from-gray-800 to-black text-red-300 px-3 py-2 rounded-lg border border-red-600/50 flex items-center gap-2 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)]">
+                          <div className="flex-1 from-gray-800 to-black text-red-300 px-3 py-2 rounded-lg border border-red-600/50 flex items-center gap-2 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)]">
                             <Clock className="w-4 h-4 text-red-400" />
                             <span className="font-mono text-base font-bold">{player.duration}</span>
                           </div>
@@ -590,8 +590,8 @@ export default function ResultsHostPage() {
                           <div
                             className={`flex-1 px-3 py-2 rounded-lg border text-center font-bold text-base shadow-[0_0_12px_rgba(0,0,0,0.7)] ${
                               player.isLolos
-                                ? "bg-gradient-to-r from-green-600 to-green-700 text-white border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
-                                : "bg-gradient-to-r from-red-600 to-red-700 text-white border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.7)]"
+                                ? "bg-gradient-to-r from-green-600 to-green-700 text-red-300 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
+                                : " from-gray-800 to-black text-red-300 px-3 py-2 rounded-lg border border-red-600/50 flex items-center gap-2 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)]"
                             }`}
                           >
                             {player.isLolos ? t("pass") : t("fail")}

@@ -140,6 +140,7 @@ export default function QuizPhase({
         await supabase.from("player_health_states").upsert({
           player_id: currentPlayer.id,
           room_id: room.id,
+          
           health: playerHealth,
           speed: playerSpeed,
           last_answer_time: new Date().toISOString(),
