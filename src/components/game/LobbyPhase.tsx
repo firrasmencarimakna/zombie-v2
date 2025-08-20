@@ -360,9 +360,7 @@ export default function LobbyPhase({
         <div className="absolute w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/70 to-transparent" />
       </div>
 
-
-      <AnimatePresence>
-        {countdown !== null && (
+      {countdown !== null && countdown > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -378,8 +376,6 @@ export default function LobbyPhase({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
-      
 
       <div className="relative z-10 container mx-auto px-4 py-8">
         {/* Header */}
