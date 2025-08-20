@@ -1,3 +1,5 @@
+// QuizPhase.tsx (Full Code with Fixes)
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -203,8 +205,10 @@ export default function QuizPhase({
       const completionTime = new Date().toISOString()
 
       console.log(
-        `[v0] Saving game completion - Health: ${finalHealth}, Eliminated: ${actuallyEliminated}, Duration: ${survivalDuration}s`,
-      )
+        `💾 Menyimpan penyelesaian untuk ${currentPlayer.nickname}: health=${finalHealth}, correct=${finalCorrect}, eliminated=${actuallyEliminated}, completion_type=${
+          actuallyEliminated ? "eliminated" : "completed"
+        }`
+      );
 
       const { data, error } = await supabase.from("game_completions").upsert({
         player_id: currentPlayer.id,
@@ -219,11 +223,9 @@ export default function QuizPhase({
       })
 
       if (error) {
-        console.error("Gagal menyimpan penyelesaian permainan:", error)
+        console.error("❌ Gagal menyimpan penyelesaian permainan:", error)
       } else {
-        console.log(
-          `Penyelesaian permainan berhasil disimpan - Health: ${finalHealth}, Eliminated: ${actuallyEliminated}, Duration: ${survivalDuration}s`,
-        )
+        console.log("✅ Penyelesaian permainan berhasil disimpan:", data);
       }
     } catch (error) {
       console.error("Error di saveGameCompletion:", error)
@@ -481,8 +483,8 @@ export default function QuizPhase({
           console.log("Pemain tereliminasi selama feedback, mengalihkan ke hasil")
           redirectToResults(0, correctAnswers, currentQuestionIndex + 1, true)
         } else if (currentQuestionIndex + 1 >= totalQuestions) {
-          console.log("Semua pertanyaan dijawab, mengalihkan ke hasil")
-          const finalCorrect = correctAnswers
+          console.log("Semua pertanyaan dijawab, menyimpan penyelesaian dan mengalihkan ke hasil")
+          const finalCorrect = correctAnswers + (isCorrect ? 1 : 0);
           redirectToResults(playerHealth, finalCorrect, totalQuestions, false, finalCorrect === totalQuestions)
         } else {
           nextQuestion()
@@ -612,23 +614,6 @@ export default function QuizPhase({
           ))}
         </div>
       )}
-{/* 
-      <AnimatePresence>
-        {penaltyCountdown !== null && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-900/90 text-white font-mono text-lg px-6 py-3 rounded-lg shadow-lg border border-red-500/50 animate-pulse"
-          >
-            <div className="flex items-center space-x-3">
-              <AlertTriangle className="w-6 h-6 text-red-300 animate-bounce" />
-              <span>Penalty countdown: {penaltyCountdown}s</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence> */}
 
       <div className="relative z-10 container mx-auto px-4 py-8 pb-24">
         <div className="text-center mb-8">

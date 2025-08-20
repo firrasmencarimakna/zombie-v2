@@ -1,3 +1,5 @@
+// RunningCharacters.tsx (Full Code with Fixes)
+
 "use client";
 
 import { Heart } from "lucide-react";
@@ -81,6 +83,9 @@ export default function RunningCharacters({
       const health = playerState?.health ?? healthState?.health ?? 3;
       const isCompleted = completedPlayers.some((cp) => cp.id === player.id);
       const isEliminated = !player.is_alive || health <= 0;
+      console.log(
+        `Pemain ${player.nickname}: isCompleted=${isCompleted}, isEliminated=${isEliminated}, health=${health}, is_alive=${player.is_alive}`
+      );
       return !isCompleted && !isEliminated;
     });
   }, [players, playerStates, playerHealthStates, completedPlayers]);

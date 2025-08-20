@@ -1,3 +1,4 @@
+// HostGamePage.tsx (Full Code with Fixes)
 
 "use client";
 
@@ -121,8 +122,6 @@ export default function HostGamePage() {
   const attackIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isStarting, setIsStarting] = useState<boolean>(false);
-  // Opsional: Counter untuk jawaban salah berturut-turut
-  // const [consecutiveWrongs, setConsecutiveWrongs] = useState<{ [playerId: string]: number }>({});
 
   // Initialize player states
   const initializePlayerStates = useCallback((playersData: Player[], healthData: PlayerHealthState[]) => {
@@ -378,9 +377,6 @@ export default function HostGamePage() {
         }
       );
 
-      // Opsional: Reset counter salah berturut
-      // setConsecutiveWrongs((prev) => ({ ...prev, [playerId]: 0 }));
-
       if (zombieState.targetPlayerId === playerId && zombieState.isAttacking) {
         console.log(`🛑 Menghentikan serangan pada ${playerId} karena jawaban benar`);
         clearInterval(attackIntervalRef.current!);
@@ -422,157 +418,146 @@ export default function HostGamePage() {
         },
         {
           speed: newSpeed,
-          countdown: shouldStartCountdown && !playerState.countdown ? 10 : playerState.countdown, // Tidak reset ke 3
+          countdown: shouldStartCountdown && !playerState.countdown ? 10 : playerState.countdown,
         }
       );
 
-      // Opsional: Counter salah berturut
-      /*
-      setConsecutiveWrongs((prev) => {
-        const current = (prev[playerId] || 0) + 1;
-        if (current >= 3) {
-          console.log(`⚠️ ${playerId} salah berturut 3x, kurangi kesehatan`);
-          updatePlayerState(
-            playerId,
-            { health: playerState.health - 1 },
-            { health: playerState.health - 1 }
-          );
-          return { ...prev, [playerId]: 0 };
-        }
-        return { ...prev, [playerId]: current };
-      });
-      */
     },
     [playerStates, updatePlayerState],
   );
 
   // Manage player status and inactivity penalties
-const managePlayerStatus = useCallback(() => {
-  if (!gameRoom) {
-    console.log("⚠️ Tidak ada gameRoom, lewati manajemen status pemain");
-    return;
-  }
-
-  setPlayerStates((prev) => {
-    const updatedStates = { ...prev };
-    const newAttackQueue: string[] = [];
-    let activePlayers = 0;
-    let eligiblePlayer: string | null = null;
-
-    Object.entries(updatedStates).forEach(([playerId, state]) => {
-      const player = players.find((p) => p.id === playerId);
-      const isCompleted = completedPlayers.some((cp) => cp.id === playerId); // Cek apakah pemain sudah lolos
-      if (player && state.health > 0 && player.is_alive && !isCompleted) {
-        activePlayers++;
-        if (state.speed <= 30 && !state.isBeingAttacked) {
-          eligiblePlayer = playerId;
-          if (!newAttackQueue.includes(playerId)) {
-            newAttackQueue.push(playerId);
-          }
-        }
-      }
-    });
-
-    console.log(`🧟 Pemain aktif: ${activePlayers}, attackQueue:`, newAttackQueue);
-
-    // Jika tidak ada pemain aktif lagi, set phase ke completed dan redirect
-    if (activePlayers === 0 && players.length > 0) {
-      console.log("Semua pemain selesai atau tereliminasi, mengatur phase ke completed dan redirect");
-      supabase
-        .from("game_rooms")
-        .update({ current_phase: "completed" })
-        .eq("id", gameRoom.id)
-        .then(() => {
-          router.push(`/game/${roomCode}/resultshost`);
-        });
-      return updatedStates;
+  const managePlayerStatus = useCallback(() => {
+    if (!gameRoom) {
+      console.log("⚠️ Tidak ada gameRoom, lewati manajemen status pemain");
+      return;
     }
 
-    Object.entries(updatedStates).forEach(async ([playerId, state]) => {
-      const player = players.find((p) => p.id === playerId);
-      const isCompleted = completedPlayers.some((cp) => cp.id === playerId);
-      if (!player || state.health <= 0 || !player.is_alive || isCompleted) {
-        updatedStates[playerId] = { ...state, countdown: undefined };
-        return;
-      }
+    setPlayerStates((prev) => {
+      const updatedStates = { ...prev };
+      const newAttackQueue: string[] = [];
+      let activePlayers = 0;
+      let eligiblePlayer: string | null = null;
 
-      const healthState = playerHealthStates[playerId];
-      if (healthState) {
-        const timeSinceLastAnswer = (Date.now() - new Date(healthState.last_answer_time).getTime()) / 1000;
-        if (timeSinceLastAnswer >= 20 && state.speed > 20) {
-          const newSpeed = Math.max(20, state.speed - 10);
-          console.log(`⚠️ Pemain ${playerId} tidak aktif, kecepatan dikurangi ke ${newSpeed}`);
-          await updatePlayerState(
-            playerId,
-            {
-              speed: newSpeed,
-              last_answer_time: new Date().toISOString(),
-            },
-            { speed: newSpeed },
-          );
-        }
-      }
-
-      if (state.speed <= 30 && !state.isBeingAttacked && state.health > 0) {
-        if (state.countdown === undefined) {
-          console.log(`⏲️ Menambahkan countdown untuk ${playerId}`);
-          updatedStates[playerId] = { ...state, countdown: 10 };
-        } else if (state.countdown > 0) {
-          const newCountdown = state.countdown - 1;
-          console.log(`⏲️ Countdown untuk ${playerId}: ${newCountdown}s`);
-          updatedStates[playerId] = { ...state, countdown: newCountdown };
-          if (newCountdown <= 0) {
-            if (!zombieState.isAttacking || activePlayers === 1) {
-              console.log(`🧟 Memulai serangan pada ${playerId}, health=${state.health}`);
-              await updatePlayerState(
-                playerId,
-                {
-                  health: state.health - 1,
-                  is_being_attacked: true,
-                },
-                { countdown: undefined },
-              );
-              handleZombieAttack(playerId, state.health - 1, state.speed);
-            } else {
-              updatedStates[playerId] = { ...state, countdown: state.countdown };
+      Object.entries(updatedStates).forEach(([playerId, state]) => {
+        const player = players.find((p) => p.id === playerId);
+        const isCompleted = completedPlayers.some((cp) => cp.id === playerId); // Cek apakah pemain sudah lolos
+        console.log(
+          `Pemain ${player?.nickname || playerId}: health=${state.health}, is_alive=${
+            player?.is_alive
+          }, isCompleted=${isCompleted}`
+        );
+        if (player && state.health > 0 && player.is_alive && !isCompleted) {
+          activePlayers++;
+          if (state.speed <= 30 && !state.isBeingAttacked) {
+            eligiblePlayer = playerId;
+            if (!newAttackQueue.includes(playerId)) {
+              newAttackQueue.push(playerId);
             }
+          }
+        }
+      });
+
+      console.log(`🧟 Pemain aktif: ${activePlayers}, attackQueue:`, newAttackQueue);
+
+      // Jika tidak ada pemain aktif lagi, set phase ke completed dan redirect
+      if (activePlayers === 0 && players.length > 0) {
+        console.log("Semua pemain selesai atau tereliminasi, mengatur phase ke completed dan redirect");
+        supabase
+          .from("game_rooms")
+          .update({ current_phase: "completed" })
+          .eq("id", gameRoom.id)
+          .then(() => {
+            router.push(`/game/${roomCode}/resultshost`);
+          });
+        return updatedStates;
+      }
+
+      Object.entries(updatedStates).forEach(async ([playerId, state]) => {
+        const player = players.find((p) => p.id === playerId);
+        const isCompleted = completedPlayers.some((cp) => cp.id === playerId);
+        if (!player || state.health <= 0 || !player.is_alive || isCompleted) {
+          updatedStates[playerId] = { ...state, countdown: undefined };
+          return;
+        }
+
+        const healthState = playerHealthStates[playerId];
+        if (healthState) {
+          const timeSinceLastAnswer = (Date.now() - new Date(healthState.last_answer_time).getTime()) / 1000;
+          if (timeSinceLastAnswer >= 20 && state.speed > 20) {
+            const newSpeed = Math.max(20, state.speed - 10);
+            console.log(`⚠️ Pemain ${playerId} tidak aktif, kecepatan dikurangi ke ${newSpeed}`);
+            await updatePlayerState(
+              playerId,
+              {
+                speed: newSpeed,
+                last_answer_time: new Date().toISOString(),
+              },
+              { speed: newSpeed },
+            );
+          }
+        }
+
+        if (state.speed <= 30 && !state.isBeingAttacked && state.health > 0) {
+          if (state.countdown === undefined) {
+            console.log(`⏲️ Menambahkan countdown untuk ${playerId}`);
+            updatedStates[playerId] = { ...state, countdown: 10 };
+          } else if (state.countdown > 0) {
+            const newCountdown = state.countdown - 1;
+            console.log(`⏲️ Countdown untuk ${playerId}: ${newCountdown}s`);
+            updatedStates[playerId] = { ...state, countdown: newCountdown };
+            if (newCountdown <= 0) {
+              if (!zombieState.isAttacking || activePlayers === 1) {
+                console.log(`🧟 Memulai serangan pada ${playerId}, health=${state.health}`);
+                await updatePlayerState(
+                  playerId,
+                  {
+                    health: state.health - 1,
+                    is_being_attacked: true,
+                  },
+                  { countdown: undefined },
+                );
+                handleZombieAttack(playerId, state.health - 1, state.speed);
+              } else {
+                updatedStates[playerId] = { ...state, countdown: state.countdown };
+              }
+            }
+          } else {
+            updatedStates[playerId] = { ...state, countdown: undefined };
           }
         } else {
           updatedStates[playerId] = { ...state, countdown: undefined };
         }
-      } else {
-        updatedStates[playerId] = { ...state, countdown: undefined };
+      });
+
+      setAttackQueue(
+        newAttackQueue.filter((id) => {
+          const state = updatedStates[id];
+          const player = players.find((p) => p.id === id);
+          const isCompleted = completedPlayers.some((cp) => cp.id === id);
+          return state && state.speed <= 30 && state.health > 0 && player?.is_alive && !state.isBeingAttacked && !isCompleted;
+        }),
+      );
+
+      if (activePlayers === 1 && !zombieState.isAttacking && eligiblePlayer) {
+        console.log(`🧟 Hanya satu pemain tersisa (${eligiblePlayer}), memulai serangan`);
+        const state = updatedStates[eligiblePlayer];
+        if (state && state.countdown !== undefined && state.countdown <= 0) {
+          updatePlayerState(
+            eligiblePlayer,
+            {
+              health: state.health - 1,
+              is_being_attacked: true,
+            },
+            { countdown: undefined },
+          );
+          handleZombieAttack(eligiblePlayer, state.health - 1, state.speed);
+        }
       }
+
+      return updatedStates;
     });
-
-    setAttackQueue(
-      newAttackQueue.filter((id) => {
-        const state = updatedStates[id];
-        const player = players.find((p) => p.id === id);
-        const isCompleted = completedPlayers.some((cp) => cp.id === id);
-        return state && state.speed <= 30 && state.health > 0 && player?.is_alive && !state.isBeingAttacked && !isCompleted;
-      }),
-    );
-
-    if (activePlayers === 1 && !zombieState.isAttacking && eligiblePlayer) {
-      console.log(`🧟 Hanya satu pemain tersisa (${eligiblePlayer}), memulai serangan`);
-      const state = updatedStates[eligiblePlayer];
-      if (state && state.countdown !== undefined && state.countdown <= 0) {
-        updatePlayerState(
-          eligiblePlayer,
-          {
-            health: state.health - 1,
-            is_being_attacked: true,
-          },
-          { countdown: undefined },
-        );
-        handleZombieAttack(eligiblePlayer, state.health - 1, state.speed);
-      }
-    }
-
-    return updatedStates;
-  });
-}, [gameRoom, playerStates, playerHealthStates, zombieState, handleZombieAttack, updatePlayerState, players, completedPlayers, router, roomCode]);
+  }, [gameRoom, playerStates, playerHealthStates, zombieState, handleZombieAttack, updatePlayerState, players, completedPlayers, router, roomCode]);
 
   // Fetch game data
   const fetchGameData = useCallback(async () => {
@@ -675,6 +660,39 @@ const managePlayerStatus = useCallback(() => {
     }
   }, [roomCode, initializePlayerStates, router]);
 
+  // Sync completed players periodically
+  const syncCompletedPlayers = useCallback(async () => {
+    if (!gameRoom) return;
+    try {
+      console.log("🔄 Menyinkronkan completedPlayers");
+      const { data, error } = await supabase
+        .from("game_completions")
+        .select("*, players(nickname, character_type)")
+        .eq("room_id", gameRoom.id)
+        .eq("completion_type", "completed");
+      if (error) {
+        console.error("Gagal menyinkronkan completedPlayers:", error);
+        return;
+      }
+      const completed = data?.map((completion: any) => completion.players) || [];
+      setCompletedPlayers((prev) => {
+        const newCompleted = completed.filter(
+          (player: Player) => !prev.some((p) => p.id === player.id)
+        );
+        console.log(`Pemain yang baru selesai: ${newCompleted.map((p: Player) => p.nickname).join(", ")}`);
+        return [...prev, ...newCompleted];
+      });
+    } catch (error) {
+      console.error("Error saat menyinkronkan completedPlayers:", error);
+    }
+  }, [gameRoom]);
+
+  useEffect(() => {
+    syncCompletedPlayers();
+    const interval = setInterval(syncCompletedPlayers, 5000); // Sinkronkan setiap 5 detik
+    return () => clearInterval(interval);
+  }, [syncCompletedPlayers]);
+
   // Supabase real-time subscriptions
   useEffect(() => {
     if (!gameRoom) return;
@@ -761,11 +779,13 @@ const managePlayerStatus = useCallback(() => {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "game_completions", filter: `room_id=eq.${gameRoom.id}` },
         async (payload) => {
-          console.log("Penyelesaian permainan terdeteksi:", payload);
+          console.log("🔄 Penyelesaian permainan terdeteksi:", payload);
           const completion = payload.new as GameCompletion;
+          console.log(`Pemain ${completion.player_id} selesai dengan tipe: ${completion.completion_type}`);
           if (completion.completion_type === "completed") {
             const player = players.find((p) => p.id === completion.player_id);
             if (player) {
+              console.log(`Menambahkan ${player.nickname} ke completedPlayers`);
               setCompletedPlayers((prev) => {
                 if (!prev.some((p) => p.id === player.id)) {
                   return [...prev, player];
@@ -773,19 +793,31 @@ const managePlayerStatus = useCallback(() => {
                 return prev;
               });
               setShowCompletionPopup(true);
+            } else {
+              console.warn(`Pemain dengan ID ${completion.player_id} tidak ditemukan di daftar players`);
             }
           }
           const { data, error } = await supabase.from("game_completions").select("*").eq("room_id", gameRoom.id);
-          if (!error && data.length === players.length) {
-            console.log("Semua pemain selesai, mengalihkan ke resultshost");
-            await supabase.from("game_rooms").update({ current_phase: "completed" }).eq("id", gameRoom.id);
-            setIsLoading(false);
-            router.push(`/game/${roomCode}/resultshost`);
+          if (error) {
+            console.error("Gagal memeriksa penyelesaian:", error);
+          } else {
+            console.log(`Total penyelesaian: ${data.length}, total pemain: ${players.length}`);
+            if (data.length === players.length) {
+              console.log("Semua pemain selesai, mengalihkan ke resultshost");
+              await supabase.from("game_rooms").update({ current_phase: "completed" }).eq("id", gameRoom.id);
+              setIsLoading(false);
+              router.push(`/game/${roomCode}/resultshost`);
+            }
           }
         },
       )
       .subscribe((status) => {
         console.log(`Status langganan completions: ${status}`);
+        if (status === "SUBSCRIBED") {
+          console.log("Berhasil berlangganan ke channel completions");
+        } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+          console.warn("Gagal berlangganan ke channel completions, status:", status);
+        }
       });
 
     playerChannel
@@ -981,18 +1013,18 @@ const managePlayerStatus = useCallback(() => {
         getWorkingImagePath={getWorkingImagePath}
         isConnected={isConnected}
       />
-<RunningCharacters
-  players={activePlayers}
-  playerStates={playerStates}
-  playerHealthStates={playerHealthStates}
-  zombieState={zombieState}
-  animationTime={animationTime}
-  gameMode={gameMode}
-  centerX={centerX}
-  getCharacterByType={getCharacterByType}
-  getWorkingImagePath={getWorkingImagePath}
-  completedPlayers={completedPlayers} // Tambahkan prop ini
-/>
+      <RunningCharacters
+        players={activePlayers}
+        playerStates={playerStates}
+        playerHealthStates={playerHealthStates}
+        zombieState={zombieState}
+        animationTime={animationTime}
+        gameMode={gameMode}
+        centerX={centerX}
+        getCharacterByType={getCharacterByType}
+        getWorkingImagePath={getWorkingImagePath}
+        completedPlayers={completedPlayers} // Tambahkan prop ini
+      />
       <ZombieCharacter
         zombieState={zombieState}
         animationTime={animationTime}
@@ -1002,62 +1034,6 @@ const managePlayerStatus = useCallback(() => {
         players={activePlayers}
       />
       <GameUI roomCode={roomCode} />
-
-      {/* <AnimatePresence>
-        {showCompletionPopup && completedPlayers.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
-            onClick={() => setShowCompletionPopup(false)}
-            aria-describedby="completion-dialog-description"
-          >
-            <motion.div
-              initial={{ scale: 0.8, y: 50 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, y: 50 }}
-              className="bg-gray-900/90 border border-red-900/50 rounded-lg p-8 max-w-md w-full text-center max-h-[80vh] overflow-y-auto custom-scrollbar"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div id="completion-dialog-description" className="sr-only">
-                Popup untuk menampilkan pemain yang lolos dari permainan
-              </div>
-              <h2 className="text-2xl font-bold text-white font-mono mb-4">Selamat Anda Lolos dari Kejaran!</h2>
-              <div className="flex justify-center gap-4 mb-6">
-                {completedPlayers.map((player) => {
-                  const character = getCharacterByType(player.character_type);
-                  return (
-                    <img
-                      key={player.id}
-                      src={getWorkingImagePath(character) || "/placeholder.svg"}
-                      alt={character.alt}
-                      className="w-16 h-16 object-contain"
-                    />
-                  );
-                })}
-              </div>
-              <div className="text-white font-mono mb-6">
-                <p className="text-lg mb-2">Pemain yang Lolos:</p>
-                <ul className="list-disc list-inside">
-                  {completedPlayers.map((player) => (
-                    <li key={player.id}>{player.nickname}</li>
-                  ))}
-                </ul>
-              </div>
-              <button
-                onClick={() => {
-                  setShowCompletionPopup(false);
-                  router.push(`/game/${roomCode}/resultshost`);
-                }}
-                className="bg-red-600 hover:bg-red-500 text-white font-mono py-2 px-4 rounded"
-              >
-                Lihat Hasil
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence> */}
 
       <style jsx>{`
         .custom-scrollbar {
