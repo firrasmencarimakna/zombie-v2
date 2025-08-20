@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -7,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Confetti from "react-confetti";
-import { Trophy, Clock, Ghost, Zap } from "lucide-react";
+import { Trophy, Clock, Ghost, Zap, HeartPulse } from "lucide-react";
 import { t } from "i18next";
 
 interface Player {
@@ -84,6 +83,7 @@ export default function ResultsHostPage() {
   const [showContent, setShowContent] = useState(false);
   const [bloodDrips, setBloodDrips] = useState<Array<{ id: number; left: number; speed: number; delay: number }>>([]);
   const [isCreatingNewSession, setIsCreatingNewSession] = useState(false);
+  const [flickerText, setFlickerText] = useState(true)
 
   const getCharacterByType = useCallback((type: string) => {
     return characterGifs.find((char) => char.type === type) || characterGifs[0];
@@ -94,6 +94,24 @@ export default function ResultsHostPage() {
     const secs = seconds % 60;
     return `${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   }, []);
+
+  useEffect(() => {
+    const flickerInterval = setInterval(
+      () => {
+        setFlickerText((prev) => !prev)
+      },
+      100 + Math.random() * 150,
+    )
+
+    // const textInterval = setInterval(() => {
+    //   setAtmosphereText(atmosphereTexts[Math.floor(Math.random() * atmosphereTexts.length)]);
+    // }, 2500);
+
+    return () => {
+      clearInterval(flickerInterval)
+      // clearInterval(textInterval);
+    }
+  }, [])
 
   const calculateAccurateDuration = useCallback(
     (gameStartTime: string | null, completedAt: string, joinedAt: string, survivalDuration?: number) => {
@@ -426,67 +444,65 @@ export default function ResultsHostPage() {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: showContent ? 1 : 0, scale: showContent ? 1 : 0.9 }}
         transition={{ duration: 1.2, ease: [0.6, -0.05, 0.01, 0.99] }}
-        className="relative z-10 container mx-auto px-4 py-8"
+        className="relative z-10 container px-4 py-8 min-w-screen"
       >
         <motion.header
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
-          className="text-center mb-10"
+          className="flex justify-between items-start mb-10"
         >
+          {/* Pojok kiri atas: Title tanpa blink dan heart */}
           <h1
-            className="text-5xl md:text-7xl font-bold font-mono tracking-widest text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.8)]"
-            style={{ textShadow: "0 0 15px rgba(239, 68, 68, 0.9), 0 0 5px rgba(0, 0, 0, 0.8)" }}
+            className="text-3xl md:text-4xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] px-5"
+            style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
           >
             {t("title")}
           </h1>
-        </motion.header>
 
-        {/* <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 1.5, type: "spring", stiffness: 100 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto mt-8 mb-12 )"
-        >
-          {[
-            {
-              value: playerResults.filter((p) => p.isLolos).length,
-              label: t("labels.success"),
-              color: "#22C55E",
-              icon: <Trophy className="w-6 h-6 mx-auto mb-2 text-green-400" />,
-            },
-            {
-              value: playerResults.filter((p) => !p.isLolos).length,
-              label: t("labels.fail"),
-              color: "#EF4444",
-              icon: <Trophy className="w-6 h-6 mx-auto mb-2 text-red-400" />,
-            },
-            {
-              value: gameRoom?.questions?.length || 0,
-              label: t("labels.totalQuestions"),
-              color: "#FFFFFF",
-              icon: <Trophy className="w-6 h-6 mx-auto mb-2 text-gray-300" />,
-            },
-            {
-              value: playerResults.length,
-              label: t("labels.totalPlayers"),
-              color: "#FFFFFF",
-              icon: <Trophy className="w-6 h-6 mx-auto mb-2 text-gray-300" />,
-            },
-          ].map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 1.7 + index * 0.2, type: "spring", stiffness: 120 }}
-              className="from-gray-800 to-black text-red-300 px-3 py-2 rounded-lg border border-red-600/50 flex items-center gap-2 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)"
-              style={{ boxShadow: "0 0 12px rgba(239, 68, 68, 0.4)" }}
+          {/* Tengah atas: Leaderboard dengan blink dan heart */}
+          <div className="flex items-center justify-center py-4 pt-10">
+            <HeartPulse className="w-12 h-12 text-red-500 mr-4 animate-pulse" />
+            <h1
+              className={`text-5xl md:text-8xl font-bold font-mono tracking-wider transition-all duration-150 ${flickerText ? "text-red-500 opacity-100" : "text-red-900 opacity-30"}
+                drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]`}
+              style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
             >
-              <div className="text-lg font-bold text-white">{stat.icon}{stat.value}</div>
-              <div className="text-xs text-red-300 mt-2 uppercase tracking-wide">{stat.label}</div>
-            </motion.div>
-          ))}
-        </motion.div> */}
+              {t("result.titleLeaderboard")}
+            </h1>
+            <HeartPulse className="w-12 h-12 text-red-500 ml-4 animate-pulse" />
+          </div>
+
+          {/* Pojok kanan atas: Buttons home dan main lagi */}
+          <div className="flex justify-center gap-4">
+            <motion.button
+              onClick={() => router.push("/")}
+              whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(239, 68, 68, 0.8)" }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-red-800 text-white font-mono py-3 px-8 text-base uppercase border-2 border-red-600 rounded-lg"
+            >
+              {t("homeButton")}
+            </motion.button>
+            <motion.button
+              onClick={handlePlayAgain}
+              disabled={isCreatingNewSession}
+              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(239, 68, 68, 0.9)" }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-mono py-3 px-8 text-base uppercase border-2 border-red-600 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isCreatingNewSession ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-4 h-4 mr-2 inline-block"
+                >
+                  <Zap className="w-4 h-4" />
+                </motion.div>
+              ) : null}
+              {isCreatingNewSession ? t("creatingSession") : t("playAgain")}
+            </motion.button>
+          </div>
+        </motion.header>
 
         <motion.section
           initial={{ opacity: 0, y: 50 }}
@@ -588,11 +604,10 @@ export default function ResultsHostPage() {
                           </div>
 
                           <div
-                            className={`flex-1 px-3 py-2 rounded-lg border text-center font-bold text-base shadow-[0_0_12px_rgba(0,0,0,0.7)] ${
-                              player.isLolos
+                            className={`flex-1 px-3 py-2 rounded-lg border text-center font-bold text-base shadow-[0_0_12px_rgba(0,0,0,0.7)] ${player.isLolos
                                 ? "bg-gradient-to-r from-green-600 to-green-700 text-red-300 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
                                 : " from-gray-800 to-black text-red-300 px-3 py-2 rounded-lg border border-red-600/50 flex items-center gap-2 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)]"
-                            }`}
+                              }`}
                           >
                             {player.isLolos ? t("pass") : t("fail")}
                           </div>
@@ -629,40 +644,6 @@ export default function ResultsHostPage() {
             </div>
           ))}
         </motion.section>
-
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 2, type: "spring", stiffness: 100 }}
-          className="text-center mt-10 flex justify-center gap-4"
-        >
-          <motion.button
-            onClick={() => router.push("/")}
-            whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(239, 68, 68, 0.8)" }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-red-800 text-white font-mono py-3 px-8 text-base uppercase border-2 border-red-600 rounded-lg"
-          >
-            {t("homeButton")}
-          </motion.button>
-          <motion.button
-            onClick={handlePlayAgain}
-            disabled={isCreatingNewSession}
-            whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(239, 68, 68, 0.9)" }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-mono py-3 px-8 text-base uppercase border-2 border-red-600 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isCreatingNewSession ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 mr-2 inline-block"
-              >
-                <Zap className="w-4 h-4" />
-              </motion.div>
-            ) : null}
-            {isCreatingNewSession ? t("creatingSession") : t("playAgain")}
-          </motion.button>
-        </motion.div>
       </motion.div>
 
       <style jsx global>{`

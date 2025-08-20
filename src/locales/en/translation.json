@@ -165,6 +165,7 @@
     "errorTitle": "THE MIST VEILS YOUR PATH",
     "errorMessage": "We couldn’t find the specific results of your adventure. This might happen if you accessed this page directly. But don’t worry, you can still view the room statistics.",
     "title": "Results",
+    "titleLeaderboard": "Leaderboard",
     "playerRanking": "Player Ranking",
     "correct": "{{count}} correct",
     "alive": "🩸 FIGHTING",
@@ -177,6 +178,6 @@
     "home": "Home",
     "retry": "Try Again"
   },
-  "playAgain": "Play Again",
+  "playAgain": "Restart",
   "creatingSession": "Creating Session..."
 }
