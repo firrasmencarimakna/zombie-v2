@@ -1,8 +1,7 @@
-// app/game/[roomCode]/page.tsx
 "use client"
 
 import type React from "react"
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useGameData, type TransformedRoom, type TransformedGameState } from "@/hooks/useGameData"
 import { useGameLogic } from "@/hooks/useGameLogic"
@@ -12,7 +11,6 @@ import LobbyPhase from "@/components/game/LobbyPhase"
 import QuizPhase from "@/components/game/QuizPhase"
 import AttackOverlay from "@/components/game/AttackOverlay"
 
-// Define interfaces
 interface PlayerHealthState {
   playerId: string
   health: number
@@ -20,12 +18,10 @@ interface PlayerHealthState {
   lastAttackTime: number
 }
 
-// Common wrapper component for game phases
 function GameWrapper({ children }: { children: React.ReactNode }) {
   return <div className="min-h-screen bg-gray-900">{children}</div>
 }
 
-// Error state component
 function ErrorState({ onRetry, error }: { onRetry: () => void; error?: string }) {
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center relative overflow-hidden">
@@ -44,33 +40,12 @@ function ErrorState({ onRetry, error }: { onRetry: () => void; error?: string })
   )
 }
 
-// Unknown phase component
 function UnknownPhase({
   phase,
   room,
   gameState,
 }: { phase: string; room: TransformedRoom; gameState: TransformedGameState }) {
-  return (
-    // <div className="min-h-screen bg-gray-900 flex items-center justify-center relative overflow-hidden">
-    //   <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-900 to-black opacity-90" />
-    //   <div className="text-center z-10 p-6 bg-gray-800 bg-opacity-80 rounded-lg shadow-xl">
-    //     <p className="text-gray-300 text-lg mb-4">Unrecognized game phase: {phase}</p>
-    //     <div className="text-sm text-gray-400 mt-4">
-    //       <p>Debug Info:</p>
-    //       <p>Room Status: {room?.status ?? "N/A"}</p>
-    //       <p>Current Phase: {room?.current_phase ?? "N/A"}</p>
-    //       <p>Game State Phase: {gameState?.phase ?? "N/A"}</p>
-    //     </div>
-    //     <button
-    //       onClick={() => window.location.reload()}
-    //       className="mt-4 px-4 py-2 bg-white text-black rounded-md hover:bg-gray-200 transition-colors duration-200"
-    //     >
-    //       Reload Page
-    //     </button>
-    //   </div>
-    // </div>
-    <LoadingScreen />
-  )
+  return <LoadingScreen />
 }
 
 export default function GamePage() {
@@ -81,11 +56,6 @@ export default function GamePage() {
   const params = useParams()
   const roomCode = params.roomCode as string
   const nickname = (typeof window !== "undefined" && localStorage.getItem("nickname")) || "Unknown"
-
-  // const resumeFromMinigame = searchParams.get("resumeFromMinigame") === "true"
-  // const resumeHealth = parseInt(searchParams.get("health") || "3", 10)
-  // const resumeCorrect = parseInt(searchParams.get("correct") || "0", 10)
-  // const resumeCurrentIndex = parseInt(searchParams.get("currentIndex") || "0", 10)
 
   const { room, gameState, players, currentPlayer, isLoading, error, isSoloMode, refetch } = useGameData(
     roomCode,
@@ -107,7 +77,6 @@ export default function GamePage() {
     currentIndex: 0,
     isResuming: false,
   })
-
   const [playerHealthStates, setPlayerHealthStates] = useState<{ [playerId: string]: PlayerHealthState }>({})
   const [isUnderAttack, setIsUnderAttack] = useState(false)
   const [attackAnimation, setAttackAnimation] = useState(false)
@@ -131,21 +100,20 @@ export default function GamePage() {
     }
   }, [])
 
-  // Save game completion to Supabase
   const saveGameCompletion = useCallback(async () => {
     if (!currentPlayer || !room || !isMountedRef.current) return
 
     const latestHealth = playerHealthStates[currentPlayer.id]?.health ?? quizState.health
-    const isActuallyEliminated = latestHealth <= 0 // Fixed: proper elimination check
+    const isActuallyEliminated = latestHealth <= 0
 
     try {
-      const { error } = await supabase.from("game_completions").insert({
+      const { error } = await supabase.from("game_completions").upsert({
         player_id: currentPlayer.id,
         room_id: room.id,
-        final_health: Math.max(0, latestHealth), // Ensure never negative
+        final_health: Math.max(0, latestHealth),
         correct_answers: quizState.correctAnswers,
         total_questions_answered: room.questions?.length ?? quizState.currentIndex + 1,
-        is_eliminated: isActuallyEliminated, // Fixed: use proper elimination status
+        is_eliminated: isActuallyEliminated,
         completion_type: isActuallyEliminated ? "eliminated" : "completed",
       })
 
@@ -161,26 +129,6 @@ export default function GamePage() {
     }
   }, [currentPlayer, room, quizState, playerHealthStates])
 
-  // Handle resume from minigame
-  // useEffect(() => {
-  //   if (resumeFromMinigame && isMountedRef.current) {
-  //     setQuizState({
-  //       health: resumeHealth,
-  //       correctAnswers: resumeCorrect,
-  //       currentIndex: resumeCurrentIndex,
-  //       isResuming: true,
-  //     })
-
-  //     const url = new URL(window.location.href)
-  //     url.searchParams.delete("resumeFromMinigame")
-  //     url.searchParams.delete("health")
-  //     url.searchParams.delete("correct")
-  //     url.searchParams.delete("currentIndex")
-  //     window.history.replaceState({}, "", url.toString())
-  //   }
-  // }, [resumeFromMinigame, resumeHealth, resumeCorrect, resumeCurrentIndex])
-
-  // Handle health state updates from host
   const handleHealthStateUpdate = useCallback(
     (payload: any) => {
       if (!isMountedRef.current || !payload.new) return
@@ -203,18 +151,11 @@ export default function GamePage() {
       if (currentPlayer && healthData.player_id === currentPlayer.id && healthData.is_being_attacked) {
         console.log("💀 I am being attacked by zombie!")
         triggerAttackAnimation()
-        safeSetState(() => {
-          setQuizState((prev) => ({
-            ...prev,
-            health: healthData.health,
-          }))
-        })
       }
     },
-    [currentPlayer, safeSetState],
+    [currentPlayer, safeSetState]
   )
 
-  // Handle attack events
   const handleAttackEvent = useCallback(
     (payload: any) => {
       if (!isMountedRef.current || !payload.new || !currentPlayer) return
@@ -231,10 +172,9 @@ export default function GamePage() {
         }
       }
     },
-    [currentPlayer],
+    [currentPlayer]
   )
 
-  // Trigger minimal zombie attack animation
   const triggerAttackAnimation = useCallback(() => {
     if (!isMountedRef.current) return
 
@@ -253,7 +193,6 @@ export default function GamePage() {
     }, 2000)
   }, [safeSetState, safeSetTimeout])
 
-  // Setup realtime subscription for player health states and attacks
   useEffect(() => {
     if (!room || !currentPlayer || !isMountedRef.current) return
 
@@ -269,7 +208,7 @@ export default function GamePage() {
           table: "player_health_states",
           filter: `room_id=eq.${room.id}`,
         },
-        handleHealthStateUpdate,
+        handleHealthStateUpdate
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
@@ -289,7 +228,7 @@ export default function GamePage() {
           table: "player_attacks",
           filter: `room_id=eq.${room.id}`,
         },
-        handleAttackEvent,
+        handleAttackEvent
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
@@ -306,55 +245,28 @@ export default function GamePage() {
     }
   }, [room, currentPlayer, handleHealthStateUpdate, handleAttackEvent])
 
-  // Sync player health with quiz state and handle game over
-  useEffect(() => {
-    if (!isMountedRef.current || !currentPlayer || !playerHealthStates[currentPlayer.id]) return
-
-    const healthState = playerHealthStates[currentPlayer.id]
-    safeSetState(() => {
-      setQuizState((prev) => ({
-        ...prev,
-        health: healthState.health,
-      }))
-    })
-
-    if (healthState.health <= 0 && !isGameOver) {
-      safeSetState(() => {
-        handleGameEnd()
-        setIsGameOver?.(true)
-        setShowCaptureAnimation?.(true)
-      })
-    }
-  }, [playerHealthStates, currentPlayer, saveGameCompletion, roomCode, nickname, router, safeSetState])
-
   const handleGameEnd = useCallback(async () => {
-    // Pastikan tidak berjalan dua kali dan semua data ada
     if (!isMountedRef.current || !currentPlayer || !room) return
 
     console.log("🚀 [page.tsx] Menangani akhir permainan untuk:", currentPlayer.nickname)
 
-    // Ambil health paling update dari playerHealthStates
     const latestHealth = playerHealthStates[currentPlayer.id]?.health ?? quizState.health
-    const isActuallyEliminated = latestHealth <= 0 // Fixed: proper elimination check
+    const isActuallyEliminated = latestHealth <= 0
 
-    // Tandai agar tidak berjalan lagi
     isMountedRef.current = false
 
-    // 1. Simpan ke Supabase (tidak perlu ditunggu)
     await saveGameCompletion()
 
-    // 2. Buat objek hasil untuk disimpan ke localStorage
     const lastResult = {
       playerId: currentPlayer.id,
       nickname: currentPlayer.nickname,
-      health: Math.max(0, latestHealth), // Ensure never negative
+      health: Math.max(0, latestHealth),
       correct: quizState.correctAnswers,
       total: room.questions?.length ?? quizState.currentIndex + 1,
-      eliminated: isActuallyEliminated, // Fixed: use proper elimination status
+      eliminated: isActuallyEliminated,
       roomCode: roomCode,
     }
 
-    // 3. Simpan ke localStorage dengan kunci yang benar
     try {
       localStorage.setItem("lastGameResult", JSON.stringify(lastResult))
       console.log("💾 [page.tsx] Hasil disimpan ke localStorage:", lastResult)
@@ -362,19 +274,16 @@ export default function GamePage() {
       console.error("Gagal menyimpan hasil ke localStorage:", error)
     }
 
-    // 4. Arahkan ke halaman hasil DENGAN URL YANG BERSIH
     router.push(`/game/${roomCode}/results`)
   }, [currentPlayer, room, quizState, saveGameCompletion, router, roomCode, playerHealthStates])
 
-  // Handle game completion and redirect
   useEffect(() => {
     if (gameState?.phase === "finished" || gameState?.phase === "completed") {
       console.log(`🏆 [page.tsx] Permainan berakhir dengan fase: ${gameState.phase}. Mengarahkan...`)
       handleGameEnd()
     }
-  }, [gameState?.phase, roomCode, saveGameCompletion, router, room?.current_phase])
+  }, [gameState?.phase, handleGameEnd])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false
@@ -382,6 +291,22 @@ export default function GamePage() {
       timeoutsRef.current.clear()
     }
   }, [])
+
+  const memoizedOnProgressUpdate = useMemo(
+    () => (progress: { health: number; correctAnswers: number; currentIndex: number }) => {
+      setQuizState((prev) => {
+        if (
+          prev.health === progress.health &&
+          prev.correctAnswers === progress.correctAnswers &&
+          prev.currentIndex === progress.currentIndex
+        ) {
+          return prev // Prevent unnecessary state updates
+        }
+        return { ...prev, ...progress }
+      })
+    },
+    []
+  )
 
   if (isLoading) {
     return <LoadingScreen />
@@ -404,6 +329,16 @@ export default function GamePage() {
             isSoloMode={isSoloMode}
             wrongAnswers={wrongAnswers}
             resumeState={quizState}
+            onGameComplete={(result) => {
+              setQuizState((prev) => ({
+                ...prev,
+                health: result.health,
+                correctAnswers: result.correct,
+                currentIndex: result.total - 1,
+                isResuming: false,
+              }))
+            }}
+            onProgressUpdate={memoizedOnProgressUpdate}
           />
           <AttackOverlay isVisible={isUnderAttack} />
         </>
@@ -455,12 +390,7 @@ export default function GamePage() {
                   isResuming: false,
                 }))
               }}
-              onProgressUpdate={(progress) => {
-                setQuizState((prev) => ({
-                  ...prev,
-                  ...progress,
-                }))
-              }}
+              onProgressUpdate={memoizedOnProgressUpdate}
             />
             <AttackOverlay isVisible={isUnderAttack} />
           </>
