@@ -179,5 +179,6 @@
     "retry": "Coba Lagi"
   },
   "playAgain": "Mulai ulang",
-  "creatingSession": "Membuat Sesi..."
+  "creatingSession": "Membuat Sesi...",
+  "youWereKicked": "Anda telah dikeluarkan dari ruangan."
 }

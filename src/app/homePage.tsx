@@ -17,6 +17,7 @@ import { motion } from "framer-motion";
 import { debounce } from "lodash";
 import { useTranslation } from "react-i18next"; // Impor hook untuk terjemahan
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import toast, { Toaster } from "react-hot-toast";
 
 // Types for TypeScript
 interface BloodDrip {
@@ -136,6 +137,11 @@ export default function HomePage() {
     const langFromUrl = searchParams.get("lng");
     if (langFromUrl && i18n.language !== langFromUrl) {
       handleLanguageChange(langFromUrl);
+    }
+
+    if (searchParams.get("kicked") === "1") {
+      toast.error(t("youWereKicked"));
+      window.history.replaceState(null, "", "/");
     }
   }, [searchParams, i18n.language]);
 
@@ -451,6 +457,8 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      <Toaster position="top-center" toastOptions={{ style: { background: "#1a0000", color: "#ff4444", border: "1px solid #ff0000" } }} />
 
       <style jsx global>{`
         @keyframes fall {

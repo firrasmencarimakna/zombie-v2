@@ -8,6 +8,7 @@ import Image from "next/image";
 import Confetti from "react-confetti";
 import { Trophy, Clock, Ghost, Zap, HeartPulse } from "lucide-react";
 import { t } from "i18next";
+import { useHostGuard } from "@/lib/host-guard";
 
 interface Player {
   id: string;
@@ -84,6 +85,8 @@ export default function ResultsHostPage() {
   const [bloodDrips, setBloodDrips] = useState<Array<{ id: number; left: number; speed: number; delay: number }>>([]);
   const [isCreatingNewSession, setIsCreatingNewSession] = useState(false);
   const [flickerText, setFlickerText] = useState(true)
+
+  useHostGuard(roomCode)
 
   const getCharacterByType = useCallback((type: string) => {
     return characterGifs.find((char) => char.type === type) || characterGifs[0];

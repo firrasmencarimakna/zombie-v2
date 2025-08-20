@@ -5,14 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Play, Copy, Check, Clock, Trophy, Zap, Wifi, Skull, Bone, HeartPulse } from "lucide-react";
+import { Users, Play, Copy, Check, Clock, Trophy, Zap, Wifi, Skull, Bone, HeartPulse, Trash2 } from "lucide-react";
 import { supabase, type Player } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import QRCode from "react-qr-code";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { syncServerTime, calculateCountdown } from "@/lib/server-time"
 import { useTranslation } from "react-i18next";
+import { Toaster, toast } from "react-hot-toast";
+import { useHostGuard } from "@/lib/host-guard";
 
 const validChaserTypes = ["zombie", "monster1", "monster2", "monster3", "darknight"] as const
 type ChaserType = (typeof validChaserTypes)[number]
@@ -50,6 +52,53 @@ export default function HostPage() {
   const [flickerText, setFlickerText] = useState(true)
   const [bloodDrips, setBloodDrips] = useState<Array<{ id: number; left: number; speed: number; delay: number }>>([])
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false)
+  const [kickDialogOpen, setKickDialogOpen] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<{ id: string; nickname: string } | null>(null);
+
+  useHostGuard(roomCode)
+
+  const kickPlayer = async (playerId: string, nickname: string) => {
+    console.log("Kick player called for:", playerId, nickname);
+    setSelectedPlayer({ id: playerId, nickname });
+    setKickDialogOpen(true);
+    console.log("kickDialogOpen set to:", true);
+  };
+
+  const confirmKickPlayer = async () => {
+    if (!selectedPlayer || !selectedPlayer.id) {
+      toast.error(t("kickPlayerError"));
+      setKickDialogOpen(false);
+      setSelectedPlayer(null);
+      return;
+    }
+    try {
+      console.log("Attempting to kick player:", selectedPlayer);
+      const { error } = await supabase
+        .from("players")
+        .delete()
+        .eq("id", selectedPlayer.id);
+      if (error) {
+        console.error("Supabase error:", error);
+        toast.error(t("kickPlayerError"));
+      } else {
+        toast.success(t("kickPlayerSuccess", { nickname: selectedPlayer.nickname }));
+        // Panggil fetchPlayers secara manual setelah kick berhasil
+        if (room?.id) {
+          await fetchPlayers(room.id);
+        }
+        // Tunggu sebentar untuk memastikan real-time sync
+        setTimeout(() => {
+          if (room?.id) fetchPlayers(room.id);
+        }, 500);
+      }
+    } catch (error) {
+      console.error("Kick player error:", error);
+      toast.error(t("kickPlayerError"));
+    } finally {
+      setKickDialogOpen(false);
+      setSelectedPlayer(null);
+    }
+  };
 
   const fetchRoom = useCallback(async () => {
     if (!roomCode) return
@@ -184,13 +233,8 @@ export default function HostPage() {
       100 + Math.random() * 150,
     )
 
-    // const textInterval = setInterval(() => {
-    //   setAtmosphereText(atmosphereTexts[Math.floor(Math.random() * atmosphereTexts.length)]);
-    // }, 2500);
-
     return () => {
       clearInterval(flickerInterval)
-      // clearInterval(textInterval);
     }
   }, [])
 
@@ -236,6 +280,19 @@ export default function HostPage() {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+  const copyRoomCode1 = async () => {
+    if (typeof window === "undefined") return;
+
+    const joinLink = `${window.location.origin}/?code=${roomCode}`;
+    const inviteMessage = t("inviteMessage", {
+      roomCode: roomCode,
+      joinLink: joinLink,
+    });
+
+    await navigator.clipboard.writeText(inviteMessage);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const startGame = async () => {
     if (!room || players.length === 0) {
@@ -492,9 +549,6 @@ export default function HostPage() {
             </h1>
             <HeartPulse className="w-12 h-12 text-red-500 ml-4 animate-pulse" />
           </div>
-          {/* <p className="text-red-400/80 text-lg md:text-xl font-mono animate-pulse tracking-wider mb-6">
-            {atmosphereText}
-          </p> */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -504,7 +558,7 @@ export default function HostPage() {
             <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
               <DialogTrigger asChild>
                 <motion.div
-                  className="w-16 h-16 md:w-24 md:h-24 border bg-white border-red-900/50 rounded overflow-hidden p-1 cursor-pointer hover:scale-105 transition-transform"
+                  className="w-36 h-16 md:w-24 md:h-24 border bg-white border-red-900/50 rounded overflow-hidden p-1 cursor-pointer hover:scale-105 transition-transform"
                   title="Klik untuk memperbesar QR"
                 >
                   <QRCode
@@ -516,44 +570,51 @@ export default function HostPage() {
                 </motion.div>
               </DialogTrigger>
 
-              <DialogContent className="bg-black/95 text-white border-red-500/50 max-w-sm rounded-xl p-6 shadow-[0_0_15px_rgba(255,0,0,0.5)]">
-                <DialogHeader className="mb-4">
-                  <DialogTitle className="text-2xl text-center font-bold text-red-400 font-mono tracking-wider">
-                    {t("scanOrCopy")}
+              <DialogContent
+                className="w-[95vw] max-w-6xl h-[90vh] 
+             bg-black/95 text-white 
+             border border-red-500/50 
+             rounded-3xl p-10 
+             shadow-[0_0_50px_rgba(255,0,0,0.6)]
+             flex flex-col items-center gap-10 overflow-auto"
+              >
+                <DialogHeader>
+                  <DialogTitle className="text-4xl text-center font-bold text-red-400 font-mono tracking-widest drop-shadow-[0_0_12px_rgba(255,0,0,0.7)]">
+                    {t("inviteToPlay")}
                   </DialogTitle>
                 </DialogHeader>
 
-                {/* QR Code besar */}
-                <div className="bg-white p-4 rounded-lg mx-auto w-[70%]">
+                {/* QR dalam dialog */}
+                <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-xl flex items-center justify-center">
                   <QRCode
                     value={`${window.location.origin}/?code=${roomCode}`}
-                    size={256}
-                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                    viewBox={`0 0 256 256`}
+                    size={340}
+                    style={{ height: "auto", width: "100%" }}
                   />
                 </div>
 
-                {/* Tampilan Kode Game & Tombol Copy */}
-                <div className="mt-6 flex items-center justify-center bg-black/40 p-3 rounded-lg border border-red-500/20">
-                  <div className="text-center flex-grow">
-                    <div className="text-red-400 text-sm font-mono">{t("roomCode")}</div>
-                    <div className="text-3xl font-mono font-bold text-red-500 tracking-wider">
-                      {roomCode}
+                {/* Link join */}
+                <div className="flex items-center w-full max-w-3xl bg-black/50 p-6 rounded-2xl border border-red-500/30">
+                  <div className="flex-grow text-center">
+                    <div className="text-red-400 font-mono mb-1">{t("joinLink")}</div>
+                    <div className="text-sm font-mono font-bold text-red-500 tracking-widest break-words">
+                      {`${window.location.origin}/?code=${roomCode}`}
                     </div>
                   </div>
                   <Button
                     variant="ghost"
-                    size="lg" // Ukuran lebih besar agar mudah diklik
+                    size="lg"
                     onClick={copyRoomCode}
-                    className="text-red-400 hover:bg-red-500/20 rounded-xl p-3 ml-4"
-                    aria-label="Salin kode game"
+                    className="ml-4 text-red-400 hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(255,0,0,0.6)] rounded-xl p-4 transition-all"
+                    aria-label="Salin tautan game"
                   >
                     <motion.div
                       key={copied ? "check" : "copy"}
-                      initial={{ scale: 0 }}
+                      initial={{ scale: 0.8 }}
                       animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
                     >
-                      {copied ? <Check className="w-6 h-6" /> : <Copy className="w-6 h-6" />}
+                      {copied ? <Check className="w-8 h-8" /> : <Copy className="w-8 h-8" />}
                     </motion.div>
                   </Button>
                 </div>
@@ -628,15 +689,6 @@ export default function HostPage() {
               <div className="text-red-400 text-sm font-mono">{t("question")}</div>
             </CardContent>
           </Card>
-          {/* <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-            <CardContent className="p-4 md:p-6 text-center">
-              <Zap className="w-6 h-6 md:w-8 md:h-8 text-red-500 mx-auto mb-2" />
-              <div className="text-2xl md:text-3xl font-bold text-red-500 mb-1 font-mono">
-                {countdown !== null ? "Hitung Mundur" : room.status === "waiting" ? "Siap" : "Aktif"}
-              </div>
-              <div className="text-red-400 text-sm font-mono">Status</div>
-            </CardContent>
-          </Card> */}
         </motion.div>
 
         <motion.div
@@ -693,6 +745,7 @@ export default function HostPage() {
                     key="players"
                     className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"
                     layout
+                    transition={{ layout: { duration: 0.3, type: "spring", stiffness: 100, damping: 20 } }}
                   >
                     <AnimatePresence>
                       {players.map((player, index) => {
@@ -704,9 +757,15 @@ export default function HostPage() {
                           <motion.div
                             key={player.id}
                             layout
-                            initial={{ opacity: 0, scale: 0, y: 20 }}
+                            initial={{ opacity: 0, scale: 0.8, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0, y: -20 }}
+                            exit={{
+                              opacity: 0,
+                              scale: 0.5,
+                              x: Math.random() > 0.5 ? 200 : -200,
+                              rotate: Math.random() * 360,
+                              transition: { duration: 0.5, ease: "easeIn" },
+                            }}
                             transition={{
                               type: "spring",
                               stiffness: 500,
@@ -716,9 +775,8 @@ export default function HostPage() {
                             whileHover={{ scale: 1.05 }}
                             className="bg-black/40 border border-red-900/50 rounded-lg p-4 text-center hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]"
                           >
-                            {/* --- GANTI DENGAN TAG IMG DAN AMBIL GIFNYA --- */}
                             <motion.div
-                              className="text-2xl md:text-3xl mb-2"
+                              className="mb-2"
                               animate={{
                                 rotate: [0, 10, -10, 0],
                               }}
@@ -728,26 +786,36 @@ export default function HostPage() {
                                 delay: index * 0.2,
                               }}
                             >
-                              {/* Tampilkan GIF jika karakter ditemukan, jika tidak, tampilkan teks default */}
                               {selectedCharacter ? (
                                 <img
                                   src={selectedCharacter.gif}
                                   alt={selectedCharacter.alt}
-                                  className="w-15 mx-auto" // Sesuaikan ukuran sesuai kebutuhan
+                                  className="w-15 mx-auto"
                                 />
                               ) : (
-                                player.character_type // Tampilkan teks robot jika GIF tidak ditemukan
+                                player.character_type
                               )}
                             </motion.div>
                             <div className="text-red-500 font-medium text-sm truncate mb-1 font-mono">{player.nickname}</div>
-                            {player.is_host && (
+                            {player.is_host ? (
                               <Badge variant="secondary" className="text-xs bg-red-900 text-red-400 font-mono">
-                                Tuan Rumah
+                                {t("host")}
                               </Badge>
+                            ) : (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => kickPlayer(player.id, player.nickname)}
+                                className="mt-2 bg-red-900/80 hover:bg-red-700 text-white"
+                                aria-label={t("kickPlayer", { nickname: player.nickname })}
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" />
+                                {t("kick")}
+                              </Button>
                             )}
-                            <div className="text-red-400/80 text-xs mt-1 font-mono">
+                            {/* <div className="text-red-400/80 text-xs mt-1 font-mono">
                               {new Date(player.joined_at).toLocaleTimeString()}
-                            </div>
+                            </div> */}
                           </motion.div>
                         );
                       })}
@@ -794,6 +862,24 @@ export default function HostPage() {
           </Button>
         </motion.div>
       </div>
+      <Dialog open={kickDialogOpen} onOpenChange={setKickDialogOpen}>
+        <DialogContent className="bg-black/95 border border-red-500/50 text-red-400">
+          <DialogHeader>
+            <DialogTitle>{t("kickPlayerConfirmTitle")}</DialogTitle>
+          </DialogHeader>
+          <p>{t("kickPlayerConfirm", { nickname: selectedPlayer?.nickname })}</p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setKickDialogOpen(false)}>
+              {t("cancel")}
+            </Button>
+            <Button variant="destructive" onClick={confirmKickPlayer}>
+              {t("confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Toaster position="top-right" toastOptions={{ style: { background: "#1a0000", color: "#ff4444", border: "1px solid #ff0000" } }} />
 
       <style jsx global>{`
         @keyframes fall {

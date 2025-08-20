@@ -179,5 +179,6 @@
     "retry": "Try Again"
   },
   "playAgain": "Restart",
-  "creatingSession": "Creating Session..."
+  "creatingSession": "Creating Session...",
+  "youWereKicked": "You have been kicked from the room."
 }

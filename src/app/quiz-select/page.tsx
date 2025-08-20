@@ -126,12 +126,16 @@ export default function QuizSelectPage() {
       setIsCreating(true);
       try {
         const roomCode = generateRoomCode();
+        const tabHostId = crypto.randomUUID();
+        sessionStorage.setItem("currentHostId", tabHostId);
+
         const { data, error } = await supabase
           .from("game_rooms")
           .insert({
             room_code: roomCode,
             title: t("title"),
             quiz_id: quizId,
+            host_id: tabHostId,
           })
           .select()
           .single();
@@ -307,9 +311,8 @@ export default function QuizSelectPage() {
             className="text-center mb-4"
           >
             <h1
-              className={`text-4xl md:text-6xl font-bold font-mono tracking-wider transition-all duration-150 ${
-                flickerText ? "text-red-500 opacity-100" : "text-red-900 opacity-30"
-              } drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]`}
+              className={`text-4xl md:text-6xl font-bold font-mono tracking-wider transition-all duration-150 ${flickerText ? "text-red-500 opacity-100" : "text-red-900 opacity-30"
+                } drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]`}
               style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
             >
               {t("selectQuizTitle")}
@@ -432,11 +435,10 @@ export default function QuizSelectPage() {
             ) : (
               <div className="flex flex-col flex-1">
                 <div
-                  className={`${
-                    filteredQuizzes.length <= 4
+                  className={`${filteredQuizzes.length <= 4
                       ? "flex flex-wrap justify-center gap-4"
                       : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
-                  } max-w-full mx-auto flex-1`}
+                    } max-w-full mx-auto flex-1`}
                 >
                   {filteredQuizzes.map((quiz) => (
                     <motion.div
