@@ -23,23 +23,23 @@ interface ZombieCharacterProps {
 
 const chaserImages = {
   zombie: {
-    src: "/images/zombie.gif",
+    src: "/character/chaser/zombie.gif",
     alt: "Zombie",
   },
   monster1: {
-    src: "/images/monster1.gif",
+    src: "/character/chaser/monster1.gif",
     alt: "Mutant Gila",
   },
   monster2: {
-    src: "/images/monster2.gif",
+    src: "/character/chaser/monster2.gif",
     alt: "Monster Rawa",
   },
     monster3: {
-    src: "/images/monster3.gif",
+    src: "/character/chaser/monster3.gif",
     alt: "Samurai GIla",
   },
   darknight: {
-    src: "/images/darknight.gif",
+    src: "/character/chaser/darknight.gif",
     alt: "Ksatria Gelap",
   },
 };
