@@ -870,11 +870,11 @@ export default function HostGamePage() {
         status[character.src] = works;
       }
       const chaserFiles = [
-        "/character/player/zombie.gif",
-        "/character/player/monster1.gif",
-        "/character/player/monster2.gif",
-        "/character/player/monster3.gif",
-        "/character/player/darknight.gif",
+        "/character/chaser/zombie.gif",
+        "/character/chaser/monster1.gif",
+        "/character/chaser/monster2.gif",
+        "/character/chaser/monster3.gif",
+        "/character/chaser/darknight.gif",
       ];
       for (const file of chaserFiles) {
         const works = await testImageLoad(file);
