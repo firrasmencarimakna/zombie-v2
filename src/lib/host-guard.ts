@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 
 export function useHostGuard(roomCode: string) {
   const router = useRouter();
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
 
   useEffect(() => {
     // 1. Pastikan jalan di browser
@@ -24,7 +25,8 @@ export function useHostGuard(roomCode: string) {
         .single();
 
       if (error || !room || room.host_id !== hostId) {
-        router.replace(`/?isHost=0`);
+        const redirectTo = sessionStorage.getItem("redirectTo") || `/game/${roomCode}`;
+        router.replace(redirectTo);
       }
     })();
   }, [roomCode, router]);
