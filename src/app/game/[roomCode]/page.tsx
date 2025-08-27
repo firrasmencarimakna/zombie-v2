@@ -80,6 +80,7 @@ export default function GamePage() {
   const [playerHealthStates, setPlayerHealthStates] = useState<{ [playerId: string]: PlayerHealthState }>({})
   const [isUnderAttack, setIsUnderAttack] = useState(false)
   const [attackAnimation, setAttackAnimation] = useState(false)
+  sessionStorage.setItem("redirectTo", window.location.pathname);
 
   const safeSetTimeout = useCallback((callback: () => void, delay: number) => {
     if (!isMountedRef.current) return null

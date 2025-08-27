@@ -11,9 +11,12 @@ export function useHostGuard(roomCode: string) {
     if (typeof window === "undefined") return;
 
     const hostId = sessionStorage.getItem("currentHostId");
-    if (!hostId) {
+    const redirectTo = sessionStorage.getItem("redirectTo") || `/game/${roomCode}` || `/game/${roomCode}/results`;
+
+    if (!hostId && redirectTo == "/") {
       router.replace(`/?isHost=0`);
-      return;
+    } else if (!hostId) {
+      router.replace(redirectTo);
     }
 
     (async () => {
@@ -24,7 +27,11 @@ export function useHostGuard(roomCode: string) {
         .single();
 
       if (error || !room || room.host_id !== hostId) {
-        router.replace(`/?isHost=0`);
+        if (redirectTo == "/") {
+          router.replace(`/?isHost=0`);
+        } else if (!hostId) {
+          router.replace(redirectTo);
+        }
       }
     })();
   }, [roomCode, router]);
