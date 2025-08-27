@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import Image from "next/image";
 import Confetti from "react-confetti";
 import { Trophy, Clock, Ghost, Zap, HeartPulse } from "lucide-react";
@@ -91,18 +91,41 @@ export default function ResultsHostPage() {
   const totalPages = Math.max(1, Math.ceil(playerResults.length / pageSize));
 
   // framer variants
-  const listVariants = {
+  const listVariants: Variants = {
     hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.08 } },
-  };
-  const cardVariants = {
-    hidden: (i: number) => ({ opacity: 0, y: 18, scale: 0.97 }),
-    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 180, damping: 20 } },
-  };
-  const infoVariants = {
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05, delayChildren: 0.08 },
+    },
+  }
+
+  const cardVariants: Variants = {
+    hidden: (i: number) => ({
+      opacity: 0,
+      y: 18,
+      scale: 0.97,
+    }),
+    show: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring", // ✅ literal, bukan string generic
+        stiffness: 180,
+        damping: 20,
+      },
+    },
+  }
+
+  const infoVariants: Variants = {
     hidden: { opacity: 0, x: -14 },
-    show: { opacity: 1, x: 0, transition: { duration: 0.45 } },
-  };
+    show: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.45 },
+    },
+  }
+
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
@@ -507,29 +530,30 @@ export default function ResultsHostPage() {
               {t("title")}
             </h1>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <motion.button
                 onClick={() => router.push("/")}
-                whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(239, 68, 68, 0.8)" }}
+                whileHover={{ scale: 1.05, boxShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-red-800 text-white font-mono py-3 px-6 text-sm md:text-base uppercase border-2 border-red-600 rounded-lg"
+                className="bg-red-800 text-white font-mono py-2 px-4 text-xs md:text-sm uppercase border-2 border-red-600 rounded-md"
               >
                 {t("homeButton")}
               </motion.button>
+
               <motion.button
                 onClick={handlePlayAgain}
                 disabled={isCreatingNewSession}
-                whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(239, 68, 68, 0.9)" }}
+                whileHover={{ scale: 1.05, boxShadow: "0 0 12px rgba(239, 68, 68, 0.8)" }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-mono py-3 px-6 text-sm md:text-base uppercase border-2 border-red-600 rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-mono py-2 px-4 text-xs md:text-sm uppercase border-2 border-red-600 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCreatingNewSession ? (
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-4 h-4 mr-2 inline-block"
+                    className="w-3 h-3 mr-1 inline-block"
                   >
-                    <Zap className="w-4 h-4" />
+                    <Zap className="w-3 h-3" />
                   </motion.div>
                 ) : null}
                 {isCreatingNewSession ? t("creatingSession") : t("playAgain")}
