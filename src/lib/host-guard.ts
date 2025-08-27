@@ -5,16 +5,18 @@ import { supabase } from "@/lib/supabase";
 
 export function useHostGuard(roomCode: string) {
   const router = useRouter();
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
 
   useEffect(() => {
     // 1. Pastikan jalan di browser
     if (typeof window === "undefined") return;
 
     const hostId = sessionStorage.getItem("currentHostId");
-    if (!hostId) {
+    const redirectTo = sessionStorage.getItem("redirectTo") || `/game/${roomCode}` || `/game/${roomCode}/results`;
+
+    if (!hostId && redirectTo == "/") {
       router.replace(`/?isHost=0`);
-      return;
+    } else if (!hostId) {
+      router.replace(redirectTo);
     }
 
     (async () => {
@@ -25,8 +27,11 @@ export function useHostGuard(roomCode: string) {
         .single();
 
       if (error || !room || room.host_id !== hostId) {
-        const redirectTo = sessionStorage.getItem("redirectTo") || `/game/${roomCode}`;
-        router.replace(redirectTo);
+        if (redirectTo == "/") {
+          router.replace(`/?isHost=0`);
+        } else if (!hostId) {
+          router.replace(redirectTo);
+        }
       }
     })();
   }, [roomCode, router]);
