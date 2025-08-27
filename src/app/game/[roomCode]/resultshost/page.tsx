@@ -85,6 +85,25 @@ export default function ResultsHostPage() {
   const roomCode = params.roomCode as string;
   const [gameRoom, setGameRoom] = useState<GameRoom | null>(null);
   const [playerResults, setPlayerResults] = useState<PlayerResult[]>([]);
+  // --- PAGINATION + ANIMATIONS untuk players display (10 per page) ---
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(playerResults.length / pageSize));
+
+  // framer variants
+  const listVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.08 } },
+  };
+  const cardVariants = {
+    hidden: (i: number) => ({ opacity: 0, y: 18, scale: 0.97 }),
+    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 180, damping: 20 } },
+  };
+  const infoVariants = {
+    hidden: { opacity: 0, x: -14 },
+    show: { opacity: 1, x: 0, transition: { duration: 0.45 } },
+  };
+
   const [isLoading, setIsLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -402,7 +421,9 @@ export default function ResultsHostPage() {
     );
   }
 
-  const columnsData = getColumnsLayout(playerResults);
+  // gunakan paging supaya hanya 10 player dirender per layar
+  const pagedPlayers = playerResults.slice(page * pageSize, (page + 1) * pageSize);
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 relative overflow-hidden select-none font-mono">
@@ -480,7 +501,7 @@ export default function ResultsHostPage() {
         >
           <div className="flex justify-between items-start">
             <h1
-              className="text-3xl md:text-4xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]"
+              className="text-4xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]"
               style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
             >
               {t("title")}
@@ -524,7 +545,7 @@ export default function ResultsHostPage() {
           >
             <HeartPulse className="w-12 h-12 text-red-500 mr-4 animate-pulse" />
             <h1
-              className={`text-5xl md:text-8xl font-bold font-mono tracking-wider transition-all duration-150 ${flickerText ? "text-red-500 opacity-100" : "text-red-900 opacity-30"
+              className={`text-7xl font-bold font-mono tracking-wider transition-all duration-150 ${flickerText ? "text-red-500 opacity-100" : "text-red-900 opacity-30"
                 } drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]`}
               style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
             >
@@ -534,147 +555,114 @@ export default function ResultsHostPage() {
           </motion.div>
         </motion.header>
 
+        {/* ===== PLAYER GRID 5 x 2 (10 per page) ===== */}
         <motion.section
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.6, type: "spring", stiffness: 100 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto"
+          variants={listVariants}
+          initial="hidden"
+          animate="show"
+          className="max-w-7xl mx-auto"
         >
-          {columnsData.map((column, columnIndex) => (
-            <div key={columnIndex} className="space-y-6">
-              {column.map((player, playerIndex) => {
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-5">
+            <AnimatePresence mode="popLayout">
+              {pagedPlayers.map((player, idx) => {
                 const character = getCharacterByType(player.character_type);
-                const animationDelay = 1.2 + (player.rank - 1) * 0.15;
-
+                const globalIndex = page * pageSize + idx; // nomor global untuk efek stagger
                 return (
                   <motion.div
                     key={player.id}
-                    initial={{ opacity: 0, x: player.rank % 2 === 0 ? 50 : -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{
-                      duration: 0.7,
-                      delay: animationDelay,
-                      type: "spring",
-                      stiffness: 140,
-                    }}
-                    whileHover={{
-                      scale: 1.02,
-                      boxShadow: "0 0 25px rgba(220, 38, 38, 0.7)",
-                      transition: { duration: 0.3 },
-                    }}
-                    className="relative bg-gradient-to-br from-gray-950/90 to-black/90 border-2 border-red-600/60 rounded-xl p-5 hover:border-red-500 transition-all duration-300 backdrop-blur-md overflow-hidden"
-                    style={{
-                      minHeight: "180px",
-                      boxShadow: "0 0 15px rgba(220, 38, 38, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.7)",
-                    }}
+                    custom={globalIndex}
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="show"
+                    exit={{ opacity: 0, scale: 0.85, x: globalIndex % 2 ? 80 : -80, transition: { duration: 0.36 } }}
+                    whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(220,38,38,0.18)" }}
+                    className="relative bg-gradient-to-br from-gray-950/80 to-black/90 border border-red-800/50 rounded-lg p-3 text-left overflow-hidden"
+                    style={{ minHeight: 120 }}
                   >
-                    <div className="absolute top-3 right-3 w-2 h-2 bg-red-700 rounded-full opacity-50" />
-                    <div className="absolute bottom-3 left-3 w-3 h-3 bg-red-800 rounded-full opacity-40" />
-
-                    <div className="absolute -top-3 -left-3 w-14 h-14 bg-gradient-to-br from-red-600 to-red-800 rounded-full flex items-center justify-center text-white font-bold text-xl border-3 border-red-500/80 shadow-[0_0_10px_rgba(220,38,38,0.7)]">
-                      <div className="relative">
-                        {player.rank}
-                        <motion.div
-                          animate={{ y: [0, 3, 0] }}
-                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                          className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-1 h-2 bg-red-600 rounded-b-full opacity-60"
-                        />
-                      </div>
-                      {player.rank === 1 && (
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          className="absolute -top-2 -right-2"
-                        >
-                          <Trophy className="w-5 h-5 text-yellow-300 drop-shadow-[0_0_6px_rgba(234,179,8,0.9)]" />
-                        </motion.div>
-                      )}
+                    {/* Rank bubble top-left */}
+                    <div className="absolute -top-3 -left-3 w-12 h-12 rounded-full bg-red-700 flex items-center justify-center text-white font-bold text-lg border-2 border-red-500/80 shadow-[0_6px_18px_rgba(220,38,38,0.4)] z-10">
+                      {player.rank}
                     </div>
 
-                    <div className="flex items-center gap-6 h-full pt-3">
-                      <div className="flex-shrink-0">
-                        <div className="relative">
-                          <div className="w-24 h-24 rounded-lg overflow-hidden border-3 border-red-500/70 shadow-[0_0_15px_rgba(220,38,38,0.5)] bg-gradient-to-br from-gray-900/50 to-black/50">
-                            <Image
-                              src={character.src || "/placeholder.svg"}
-                              alt={character.alt}
-                              width={96}
-                              height={96}
-                              className="w-full h-full object-cover"
-                              style={{
-                                filter: !player.isLolos
-                                  ? "grayscale(80%) brightness(0.6) contrast(1.3) sepia(10%) hue-rotate(300deg)"
-                                  : "brightness(1.1) contrast(1.2) saturate(1.2) drop-shadow(0 0 6px rgba(220,38,38,0.5))"
-                              }}
-                            />
-                          </div>
-                          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-700 to-purple-800 text-white text-xs px-2 py-1 rounded-full border border-purple-600 shadow-[0_0_8px_rgba(147,51,234,0.5)]">
-                            {character.name}
-                          </div>
-                          <motion.div
-                            animate={{ opacity: [0.2, 0.4, 0.2] }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                            className="absolute inset-0 rounded-lg bg-gradient-to-br from-red-500/15 via-transparent to-red-500/15 pointer-events-none"
-                          />
-                        </div>
+                    {/* Content: character (left) + info (right) */}
+                    <div className="flex items-center gap-4 h-full">
+                      {/* Character box (fixed size, object-contain to avoid gepeng) */}
+                      <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-black/60 flex items-center justify-center shadow-[inset_0_2px_8px_rgba(0,0,0,0.6)]">
+                        <img
+                          src={character.src}
+                          alt={character.alt}
+                          className="w-full h-full object-contain"
+                        />
                       </div>
 
-                      <div className="flex-grow space-y-3">
-                        <div className="relative from-gray-800 to-black text-red-300 px-3 py-2 rounded-lg border border-red-600/50 flex items-center gap-2 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)]">
-                          <h3 className="font-bold text-lg truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
-                            {player.nickname}
-                          </h3>
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full opacity-60" />
+                      {/* Info area: single-column grid (name / duration / qualification) */}
+                      <motion.div
+                        variants={infoVariants}
+                        className="flex-1 grid grid-rows-[auto_auto_auto] gap-2"
+                      >
+                        {/* Name (single line, truncate with tooltip) */}
+                        <div
+                          className="text-red-300 font-bold text-lg truncate font-mono"
+                          title={player.nickname}
+                          aria-label={player.nickname}
+                        >
+                          {player.nickname}
                         </div>
 
-                        <div className="flex gap-3">
-                          <div className="flex-1 from-gray-800 to-black text-red-300 px-3 py-2 rounded-lg border border-red-600/50 flex items-center gap-2 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)]">
-                            <Clock className="w-4 h-4 text-red-400" />
-                            <span className="font-mono text-base font-bold">{player.duration}</span>
-                          </div>
+                        {/* Duration (smaller, mono) */}
+                        <div className="flex items-center gap-2 text-red-300 text-sm font-mono">
+                          <Clock className="w-4 h-4 text-red-400" />
+                          <span className="font-semibold">{player.duration ?? "--:--"}</span>
+                        </div>
 
+                        {/* Qualification badge (big & clear) */}
+                        <div>
                           <div
-                            className={`flex-1 px-3 py-2 rounded-lg border text-center font-bold text-base shadow-[0_0_12px_rgba(0,0,0,0.7)] ${
-                              player.isLolos
-                                ? "bg-gradient-to-r from-green-600 to-green-700 text-red-300 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
-                                : "bg-gradient-to-r from-red-600 to-red-700 text-white-300 border-red-500 shadow-[inset_0_1px_6px_rgba(0,0,0,0.7)]"
-                            }`}
+                            className={`inline-block px-3 py-1 rounded-md text-sm font-bold select-none
+                            ${player.isLolos
+                                ? "bg-gradient-to-r from-green-400 to-green-500 text-black border border-green-300 shadow-[0_8px_24px_rgba(34,197,94,0.12)]"
+                                : "bg-gradient-to-r from-red-700 to-red-800 text-white border border-red-700 shadow-[inset_0_1px_6px_rgba(0,0,0,0.6)]"
+                              }`}
+                            aria-label={player.isLolos ? "Passed" : "Failed"}
+                            title={player.isLolos ? t("pass") : t("fail")}
                           >
                             {player.isLolos ? t("pass") : t("fail")}
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     </div>
-
-                    <motion.div
-                      animate={{ y: [-3, 3, -3], opacity: [0.2, 0.4, 0.2] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                      className="absolute top-3 right-3 text-red-400/30"
-                    >
-                      <Ghost className="w-5 h-5" />
-                    </motion.div>
-
-                    {player.isLolos && (
-                      <motion.div
-                        animate={{ opacity: [0.1, 0.3, 0.1] }}
-                        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute inset-0 rounded-xl bg-gradient-to-br from-green-500/10 via-transparent to-green-500/10 pointer-events-none"
-                      />
-                    )}
-
-                    {!player.isLolos && (
-                      <motion.div
-                        animate={{ opacity: [0.15, 0.3, 0.15] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute inset-0 rounded-xl bg-gradient-to-br from-red-900/15 via-transparent to-red-900/15 pointer-events-none"
-                      />
-                    )}
                   </motion.div>
                 );
               })}
+            </AnimatePresence>
+          </div>
+
+          {/* PAGINATION (visible only if more than one page) */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-4">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-3 py-2 rounded-md bg-black/40 border border-red-800 text-red-300 disabled:opacity-40"
+              >
+                Prev
+              </button>
+
+              <div className="text-sm text-red-400 font-mono">
+                page {page + 1} / {totalPages}
+              </div>
+
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="px-3 py-2 rounded-md bg-black/40 border border-red-800 text-red-300 disabled:opacity-40"
+              >
+                Next
+              </button>
             </div>
-          ))}
+          )}
         </motion.section>
+
       </motion.div>
 
       <style jsx global>{`
