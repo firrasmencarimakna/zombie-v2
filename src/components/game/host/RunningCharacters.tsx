@@ -108,7 +108,7 @@ export default function RunningCharacters({
 
   return (
     <div className="absolute bottom-20 z-30">
-      {players.slice(0, 5).map((player, i) => {
+      {players.map((player, i) => {
         const character = getCharacterByType(player.character_type);
         const workingPath = getWorkingImagePath(character);
         const playerState = playerStates[player.id];
