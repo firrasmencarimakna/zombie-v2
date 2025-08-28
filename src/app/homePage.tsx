@@ -114,7 +114,7 @@ export default function HomePage() {
     ];
 
     const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-    const randomNumber = Math.floor(Math.random() * 10000);
+    const randomNumber = Math.floor(Math.random() * 10000); // pakai 4 digit biar lebih unik
     const newNickname = `${randomPrefix}${randomNumber}`;
 
     setNickname(newNickname);
@@ -220,23 +220,30 @@ export default function HomePage() {
         return;
       }
 
-      const { count } = await supabase
-        .from("players")
-        .select("*", { count: "exact" })
-        .eq("room_id", room.id);
+      // const { count } = await supabase
+      //   .from("players")
+      //   .select("*", { count: "exact" })
+      //   .eq("room_id", room.id);
 
       // if (count && count >= room.max_players) {
       //   setErrorMessage(t("errorMessages.roomFull"));
       //   return;
       // }
 
-      const { error: playerError } = await supabase.from("players").insert({
-        room_id: room.id,
-        nickname,
-        character_type: `robot${Math.floor(Math.random() * 4) + 1}`,
-      });
+      const { error: playerError } = await supabase
+        .from("players")
+        .insert({
+          room_id: room.id,
+          nickname,
+          character_type: `robot${Math.floor(Math.random() * 10) + 1}`,
+        })
+        .select()
+        .single()
 
-      if (playerError) throw playerError;
+      if (playerError) {
+        // toast.error("Failed to register player");
+        return;
+      }
 
       localStorage.setItem("nickname", nickname);
       localStorage.setItem("roomCode", gameCode.toUpperCase());

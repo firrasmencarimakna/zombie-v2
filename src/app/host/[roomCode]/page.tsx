@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Play, Copy, Check, Clock, Trophy, Zap, Wifi, Skull, Bone, HeartPulse, Trash2, Maximize, Maximize2, CopyIcon } from "lucide-react";
+import { Users, Play, Copy, Check, Clock, Trophy, Zap, Wifi, Skull, Bone, HeartPulse, Trash2, Maximize, Maximize2, CopyIcon, HelpCircle } from "lucide-react";
 import { supabase, type Player } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -72,7 +72,7 @@ function QRModal({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center"
-    >  
+    >
       {/* backdrop */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
@@ -610,14 +610,14 @@ export default function HostPage() {
         )}
       </AnimatePresence>
 
-      <div className={`relative z-10 container mx-auto px-4 py-4 ${countdown !== null ? "hidden" : ""}`}>
+      <div className={`relative z-10 container mx-auto px-5 ${countdown !== null ? "hidden" : ""}`}>
         <motion.div
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="text-center m-6"
         >
-          <div className="flex items-center justify-center py-4 mb-10">
+          <div className="flex items-center justify-center py-3 mb-10">
             <HeartPulse className="w-12 h-12 text-red-500 mr-4 animate-pulse" />
             <h1
               className={`text-5xl md:text-6xl font-bold font-mono tracking-widest transition-all duration-150 ${flickerText ? "text-red-500 opacity-100" : "text-red-900 opacity-30"
@@ -629,41 +629,53 @@ export default function HostPage() {
             <HeartPulse className="w-12 h-12 text-red-500 ml-4 animate-pulse" />
           </div>
         </motion.div>
-        <div className="grid grid-cols-7 gap-7 mb-8">
+        <div className="grid grid-cols-5 gap-4 mb-5">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="grid grid-cols-1 col-span-2 gap-6"
+            className="grid grid-cols-1 col-span-1 gap-4"
           >
-            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-              <CardContent className="text-center">
-                <Users className="w-6 h-6 md:w-8 md:h-8 text-red-500 mx-auto mb-2" />
-                <motion.div
-                  key={players.length}
-                  initial={{ scale: 1.2 }}
-                  animate={{ scale: 1 }}
-                  className="text-2xl md:text-xl font-bold text-red-500 mb-1 font-mono"
-                >
-                  {players.length}
-                </motion.div>
-                <div className="text-red-400 text-sm font-mono">{t("players")}</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-              <CardContent className="text-center">
-                <Clock className="w-6 h-6 md:w-8 md:h-8 text-red-500 mx-auto mb-2" />
-                <div className="text-xl font-bold text-red-500 mb-1 font-mono">
-                  {Math.floor((room.duration || 600) / 60)}:{((room.duration || 600) % 60).toString().padStart(2, "0")}
+            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] justify-center">
+              <CardContent className="r">
+                <div className="flex items-center gap-6">
+                  <Users className="w-8 h-8 text-red-500 flex-shrink-0" />
+                  <div>
+                    <motion.div
+                      key={players.length}
+                      initial={{ scale: 1.2 }}
+                      animate={{ scale: 1 }}
+                      className="text-4xl font-bold text-red-500 font-mono"
+                    >
+                      {players.length}
+                    </motion.div>
+                    {/* <div className="text-red-400 text-sm font-mono">{t("players")}</div> */}
+                  </div>
                 </div>
-                <div className="text-red-400 text-sm font-mono">{t("duration")}</div>
               </CardContent>
             </Card>
-            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-              <CardContent className="text-center">
-                <Trophy className="w-6 h-6 md:w-8 md:h-8 text-red-500 mx-auto mb-2" />
-                <div className="text-xl font-bold text-red-500 mb-1 font-mono">{room.question_count || 20}</div>
-                <div className="text-red-400 text-sm font-mono">{t("question")}</div>
+            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] justify-center">
+              <CardContent>
+                <div className="flex items-center gap-6">
+                  <Clock className="w-8 h-8 text-red-500 flex-shrink-0" />
+                  <div>
+                    <div className="text-4xl font-bold text-red-500 font-mono">
+                      {Math.floor((room.duration || 600) / 60)}:{((room.duration || 600) % 60).toString().padStart(2, "0")}
+                    </div>
+                    {/* <div className="text-red-400 text-sm font-mono">{t("duration")}</div> */}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] justify-center">
+              <CardContent>
+                <div className="flex items-center gap-6">
+                  <HelpCircle className="w-8 h-8 text-red-500 flex-shrink-0" />
+                  <div>
+                    <div className="text-4xl font-bold text-red-500 font-mono">{room.question_count || 20}</div>
+                    {/* <div className="text-red-400 text-sm font-mono">{t("question")}</div> */}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -671,59 +683,62 @@ export default function HostPage() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="flex items-center gap-6 bg-black/40 border border-red-900/50 rounded-lg p-6 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] col-span-5"
+            className="relative flex items-center gap-4 bg-black/40 border border-red-900/50 rounded-lg p-4 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] col-span-4"
           >
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsQrModalOpen(true)}
+              className="absolute top-2 right-2 bg-black/60 text-red-400 hover:bg-red-700/20 border border-red-800/20 p-2 rounded-md"
+            >
+              <Maximize2 className="w-5 h-5" />
+            </Button>
             <motion.div
-              className="w-[50%] h-auto bg-white border border-red-900/50 rounded overflow-hidden p-2 cursor-pointer hover:scale-105 transition-transform"
+              className="w-[40%] h-auto bg-white border border-red-900/50 rounded overflow-hidden p-2 cursor-pointer hover:scale-105 transition-transform"
               onClick={() => setIsQrModalOpen(true)}
             >
               <QRCode
                 value={`${window.location.origin}/?code=${roomCode}`}
-                size={512}
+                size={256}
                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                viewBox={`0 0 512 512`}
+                viewBox={`0 0 256 256`}
               />
             </motion.div>
-            <div className="grid gap-8">
+            <div className="grid gap-4 w-full">
               {/* big code box — copy di pojok kanan atas */}
-              <div className="relative w-full max-w-3xl bg-black/50 p-6 rounded-2xl border border-red-500/30">
+              <div className="relative w-full max-w-xl mx-auto bg-black/50 p-4 rounded-2xl border border-red-500/30">
                 {/* tombol copy fixed top-right */}
-                <div className="absolute top-3 right-3 z-20">
+                <div className="absolute top-2 right-2 z-20">
                   <Button
                     variant="ghost"
-                    size="lg"
+                    size="sm"
                     onClick={copyRoomCode}
-                    className="text-red-400 hover:bg-red-500/20 hover:shadow-[0_0_20px_rgba(255,0,0,0.6)] rounded-xl p-3 pointer-events-auto"
-                    aria-label={t("copyCode")}
+                    className="text-red-400 hover:bg-red-500/20 rounded-full p-2 pointer-events-auto"
+                    aria-label={t("copyInvite")}
                   >
-                    <motion.div
-                      key={copied ? "check" : "copy"}
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                    >
-                      {copied ? <Check className="w-6 h-6" /> : <Copy className="w-6 h-6" />}
+                    <motion.div key={copied ? "check" : "copy"} initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                      {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                     </motion.div>
                   </Button>
                 </div>
 
                 {/* konten tetap centered */}
                 <div className="flex flex-col items-center">
-                  <div className="text-red-400 font-mono mb-1">{t("roomCode")}</div>
-                  <div className="text-7xl font-mono font-bold text-red-500 tracking-widest break-words select-text">
+                  {/* <div className="text-red-400 font-mono mb-1">{t("roomCode")}</div> */}
+                  <div className="text-5xl font-mono font-bold text-red-500 tracking-widest break-words select-text">
                     {roomCode}
                   </div>
                 </div>
               </div>
 
               {/* small join link box — copy di pojok kanan atas */}
-              <div className="relative w-full max-w-3xl bg-black/50 p-6 rounded-2xl border border-red-500/30">
-                <div className="absolute top-3 right-3 z-20">
+              <div className="relative w-full max-w-xl mx-auto bg-black/50 p-4 rounded-2xl border border-red-500/30">
+                <div className="absolute top-2 right-2 z-20">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={copyRoomCode1}
-                    className="text-red-400 hover:bg-red-500/20 rounded-lg p-2 pointer-events-auto"
+                    className="text-red-400 hover:bg-red-500/20 rounded-full p-2 pointer-events-auto"
                     aria-label={t("copyInvite")}
                   >
                     <motion.div key={copied1 ? "check" : "copy"} initial={{ scale: 0 }} animate={{ scale: 1 }}>
@@ -734,33 +749,46 @@ export default function HostPage() {
 
                 <div className="flex flex-col items-center">
                   <div className="text-red-400 font-mono mb-1">{t("joinLink")}</div>
-                  <div className="text-base font-mono font-bold text-red-500 text-center break-words">
+                  <div className="text-lg font-mono font-bold text-red-500 text-center break-words">
                     {`${window.location.origin}/?code=${roomCode}`}
                   </div>
                 </div>
               </div>
 
-              {/* icons cluster — taruh di dalam parent .relative */}
-              <div className="flex items-center justify-center gap-5">
-                {/* Maximize (opens QR dialog) */}
+              {/* start button moved here */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="flex justify-center"
+              >
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsQrModalOpen(true)}
-                  className="bg-black/60 text-red-400 hover:bg-red-700/20 border border-red-800/20 p-2 rounded-md"
+                  onClick={startGame}
+                  disabled={players.length === 0 || isStarting || countdown !== null}
+                  className="relative overflow-hidden bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 text-white font-mono text-lg md:text-xl px-8 md:px-10 py-4 md:py-6 rounded-lg border-2 border-red-700 shadow-[0_0_20px_rgba(239,68,68,0.5)] hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group w-full sm:w-auto"
                 >
-                  <Maximize2 className="w-5 h-5" />
+                  <span className="relative z-10 flex items-center">
+                    {isStarting || countdown !== null ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                        className="w-5 h-5 mr-2"
+                      >
+                        <Zap className="w-5 h-5" />
+                      </motion.div>
+                    ) : (
+                      <Play className="w-5 h-5 mr-2" />
+                    )}
+                    {countdown !== null
+                      ? t("startGame.start?")
+                      : isStarting
+                        ? t("startGame.start?")
+                        : t("startGame.start")}
+                  </span>
+                  <span className="absolute inset-0 bg-red-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                  <span className="absolute bottom-0 left-0 right-0 h-1 bg-red-500 animate-pulse" />
                 </Button>
-
-                {/* Wifi/status (informational) */}
-                <div
-                  className={`flex items-center justify-center w-9 h-9 rounded-md p-1 ${connectionStatus === "connected" ? "text-red-400" : connectionStatus === "connecting" ? "text-yellow-400" : "text-red-900"}`}
-                  title={connectionStatus}
-                  aria-hidden="true"
-                >
-                  <Wifi className="w-5 h-5" />
-                </div>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         </div>
@@ -777,21 +805,12 @@ export default function HostPage() {
           transition={{ delay: 0.4 }}
           className="mb-12"
         >
-          <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+          <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] gap-3">
             <CardHeader>
               <CardTitle className="text-red-500 text-xl md:text-2xl font-mono flex items-center gap-3">
                 <Users className="w-5 h-5 md:w-6 md:h-6" />
                 {t("players")}
-                <Badge variant="secondary" className="bg-red-900/50 text-red-400 font-mono">
-                  {players.length} {t("online")}
-                </Badge>
-                {connectionStatus === "connected" && (
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                    className="w-2 h-2 bg-red-400 rounded-full"
-                  />
-                )}
+                
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -802,11 +821,11 @@ export default function HostPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-center py-12"
+                    className="text-center py-10"
                   >
                     <motion.div
                       animate={{
-                        scale: [1, 1.1, 1],
+                        // scale: [1, 1.1, 1],
                         opacity: [0.5, 1, 0.5],
                       }}
                       transition={{
@@ -815,10 +834,10 @@ export default function HostPage() {
                         ease: "easeInOut",
                       }}
                     >
-                      <Users className="w-12 h-12 md:w-16 md:h-16 text-red-900/50 mx-auto mb-4" />
-                    </motion.div>
+                      {/* <Users className="w-12 h-12 md:w-16 md:h-16 text-red-900/50 mx-auto mb-4" /> */}
                     <p className="text-red-400 text-lg font-mono">{t("waitingHost")}</p>
                     <p className="text-red-400/80 text-sm font-mono">{t("shareCode")}</p>
+                    </motion.div>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -904,41 +923,6 @@ export default function HostPage() {
               </AnimatePresence>
             </CardContent>
           </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="flex justify-center"
-        >
-          <Button
-            onClick={startGame}
-            disabled={players.length === 0 || isStarting || countdown !== null}
-            className="relative overflow-hidden bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 text-white font-mono text-lg md:text-xl px-8 md:px-10 py-4 md:py-6 rounded-lg border-2 border-red-700 shadow-[0_0_20px_rgba(239,68,68,0.5)] hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group w-full sm:w-auto"
-          >
-            <span className="relative z-10 flex items-center">
-              {isStarting || countdown !== null ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                  className="w-5 h-5 mr-2"
-                >
-                  <Zap className="w-5 h-5" />
-                </motion.div>
-              ) : (
-                <Play className="w-5 h-5 mr-2" />
-              )}
-              {countdown !== null
-                ? t("startGame.start?")
-                : isStarting
-                  ? t("startGame.start?")
-                  : t("startGame.start")}
-
-            </span>
-            <span className="absolute inset-0 bg-red-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-            <span className="absolute bottom-0 left-0 right-0 h-1 bg-red-500 animate-pulse" />
-          </Button>
         </motion.div>
       </div>
       <Dialog open={kickDialogOpen} onOpenChange={setKickDialogOpen}>
