@@ -144,7 +144,7 @@ export default function HostGamePage() {
         position: index,
         lastAttackTime,
         attackIntensity: 0,
-        countdown: currentSpeed <= 30 && !isBeingAttacked && currentHealth > 0 && player.is_alive ? 99999 : undefined,
+        countdown: currentSpeed <= 30 && !isBeingAttacked && currentHealth > 0 && player.is_alive ? 10 : undefined,
       };
 
       if (healthState) {
@@ -1009,6 +1009,7 @@ const testAllImages = async () => {
         centerX={centerX}
         chaserType={chaserType}
         players={activePlayers}
+        playerStates={playerStates}
       />
 
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">

@@ -1,3 +1,6 @@
+// RunningCharacters.tsx
+// Versi lengkap dengan modifikasi kecil untuk efek visual saat menjadi target zombie
+
 "use client";
 
 import { Heart } from "lucide-react";
@@ -5,6 +8,7 @@ import { useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { getGridPosition } from "@/utils/gridUtils"; // Impor fungsi getGridPosition
 
 interface Player {
   id: string;
@@ -85,7 +89,7 @@ const characterConfigs = [
     width: 50, 
     height: 46, 
     verticalOffset: 2,
-    horizontalOffset: -10
+    horizontalOffset: -60
   },
   { 
     src: "/character/player/character3.gif", 
@@ -95,7 +99,7 @@ const characterConfigs = [
     width: 48, 
     height: 48, 
     verticalOffset: 0,
-    horizontalOffset: 5
+    horizontalOffset: -100
   },
   { 
     src: "/character/player/character4.gif", 
@@ -208,22 +212,6 @@ export default function RunningCharacters({
     return characterConfigs.find((char) => char.type === type) || characterConfigs[0];
   };
 
-  // Fungsi getGridPosition
-  const getGridPosition = (index: number, totalPlayers: number) => {
-    const playersPerRow = 100;
-    const row = Math.floor(index / playersPerRow);
-    const col = index % playersPerRow;
-    const spacingX = 100;
-    const spacingY = -120;
-    const offsetX = 300;
-    const offsetY = -30;
-
-    return {
-      x: offsetX + col * spacingX,
-      y: offsetY + row * spacingY,
-    };
-  };
-
   return (
     <div className="absolute bottom-50 z-30 w-full">
       {activePlayers.map((player, i) => {
@@ -261,9 +249,14 @@ export default function RunningCharacters({
             initial={{ opacity: 1, scale: 1 }}
             animate={{
               opacity: 1,
-              scale: isBeingAttacked ? 1.2 : gameMode === "panic" ? 1.3 : 1.1,
+              scale: isBeingAttacked ? [1, 1.2, 1] : gameMode === "panic" ? 1.3 : 1.1,
               x: charX + attackShakeX,
               y: charY + attackShakeY,
+              filter: isZombieTarget
+                ? "brightness(2) contrast(2.2) saturate(2) hue-rotate(15deg) drop-shadow(0 0 10px rgba(255,50,50,0.8))"
+                : gameMode === "panic"
+                  ? "brightness(1.2) contrast(1.4) saturate(1.2)"
+                  : "brightness(1.1) contrast(1.2)",
             }}
             transition={{
               opacity: { duration: 0.1 },

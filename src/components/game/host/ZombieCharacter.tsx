@@ -1,9 +1,9 @@
-
 "use client";
 
 import Image from "next/image";
 import { useRef, useEffect } from "react";
 import { motion, useAnimation } from "framer-motion";
+import { getGridPosition } from "@/utils/gridUtils";
 
 interface ZombieState {
   isAttacking: boolean;
@@ -13,13 +13,24 @@ interface ZombieState {
   currentPosition: number;
 }
 
+interface PlayerState {
+  id: string;
+  health: number;
+  speed: number;
+  isBeingAttacked: boolean;
+  position: number;
+  lastAttackTime: number;
+  attackIntensity: number;
+}
+
 interface ZombieCharacterProps {
   zombieState: ZombieState;
   animationTime: number;
   gameMode: "normal" | "panic";
   centerX: number;
   chaserType: string;
-  players: Array<{ id: string; nickname: string }>;
+  players: Array<{ id: string; nickname: string; character_type: string }>;
+  playerStates: { [playerId: string]: PlayerState };
 }
 
 const chaserImages = {
@@ -29,7 +40,7 @@ const chaserImages = {
     width: 200,
     height: 50,
     verticalOffset: "80%",
-    horizontalOffset: -350,
+    horizontalOffset: -300,
   },
   monster1: {
     src: "/character/chaser/monster1.gif",
@@ -65,6 +76,109 @@ const chaserImages = {
   },
 };
 
+const characterConfigs = [
+  { 
+    src: "/character/player/character.gif", 
+    alt: "Karakter Hijau", 
+    type: "robot1", 
+    name: "Hijau", 
+    width: 48, 
+    height: 48, 
+    verticalOffset: 5,
+    horizontalOffset: 0
+  },
+  { 
+    src: "/character/player/character1.gif", 
+    alt: "Karakter Biru", 
+    type: "robot2", 
+    name: "Biru", 
+    width: 52, 
+    height: 50, 
+    verticalOffset: -2,
+    horizontalOffset: 10
+  },
+  { 
+    src: "/character/player/character2.gif", 
+    alt: "Karakter Merah", 
+    type: "robot3", 
+    name: "Merah", 
+    width: 50, 
+    height: 46, 
+    verticalOffset: 2,
+    horizontalOffset: -10
+  },
+  { 
+    src: "/character/player/character3.gif", 
+    alt: "Karakter Ungu", 
+    type: "robot4", 
+    name: "Ungu", 
+    width: 48, 
+    height: 48, 
+    verticalOffset: 0,
+    horizontalOffset: 5
+  },
+  { 
+    src: "/character/player/character4.gif", 
+    alt: "Karakter Oranye", 
+    type: "robot5", 
+    name: "Oranye", 
+    width: 46, 
+    height: 50, 
+    verticalOffset: -4,
+    horizontalOffset: -5
+  },
+  { 
+    src: "/character/player/character5.gif", 
+    alt: "Karakter Kuning", 
+    type: "robot6", 
+    name: "Kuning", 
+    width: 50, 
+    height: 48, 
+    verticalOffset: 0,
+    horizontalOffset: 15
+  },
+  { 
+    src: "/character/player/character6.gif", 
+    alt: "Karakter Abu-abu", 
+    type: "robot7", 
+    name: "Abu-abu", 
+    width: 48, 
+    height: 46, 
+    verticalOffset: 2,
+    horizontalOffset: -15
+  },
+  { 
+    src: "/character/player/character7.gif", 
+    alt: "Karakter Pink", 
+    type: "robot8", 
+    name: "Pink", 
+    width: 52, 
+    height: 50, 
+    verticalOffset: -2,
+    horizontalOffset: 20
+  },
+  { 
+    src: "/character/player/character8.gif", 
+    alt: "Karakter Cokelat", 
+    type: "robot9", 
+    name: "Cokelat", 
+    width: 48, 
+    height: 48, 
+    verticalOffset: 0,
+    horizontalOffset: -20
+  },
+  { 
+    src: "/character/player/character9.gif", 
+    alt: "Karakter Emas", 
+    type: "robot10", 
+    name: "Emas", 
+    width: 50, 
+    height: 52, 
+    verticalOffset: -4,
+    horizontalOffset: 25
+  },
+];
+
 export default function ZombieCharacter({
   zombieState,
   animationTime,
@@ -72,13 +186,36 @@ export default function ZombieCharacter({
   centerX,
   chaserType,
   players,
+  playerStates,
 }: ZombieCharacterProps) {
   const attackRef = useRef<HTMLDivElement>(null);
   const controls = useAnimation();
   const ZOMBIE_SPEED = 30;
-  const ATTACK_DISTANCE = 300;
 
   const selectedChaser = chaserImages[chaserType as keyof typeof chaserImages] || chaserImages.zombie;
+
+  // Hitung posisi pemain target dengan offset karakter pemain
+  const getPlayerPosition = (playerId: string | null) => {
+    if (!playerId || !playerStates[playerId]) {
+      return { x: 0, y: 0 };
+    }
+    const playerState = playerStates[playerId];
+    const playerIndex = players.findIndex((p) => p.id === playerId);
+    const player = players[playerIndex];
+    const character = characterConfigs.find((char) => char.type === player.character_type) || characterConfigs[0];
+    const { x: gridX, y: gridY } = getGridPosition(playerIndex, players.length);
+    const speedOffset = (playerState.speed - 5) * 8; // Offset berdasarkan kecepatan pemain
+    const charX =
+      gridX +
+      speedOffset +
+      Math.sin(animationTime * 0.4 + playerIndex) * (gameMode === "panic" ? 15 : 8) +
+      character.horizontalOffset;
+    const charY =
+      gridY +
+      Math.abs(Math.sin(animationTime * 0.6 + playerIndex * 0.5)) * (gameMode === "panic" ? 10 : 5) +
+      character.verticalOffset;
+    return { x: charX, y: charY };
+  };
 
   // Efek kilatan dan skala saat serangan dimulai
   useEffect(() => {
@@ -103,21 +240,24 @@ export default function ZombieCharacter({
     }
   }, [zombieState.isAttacking, gameMode, controls]);
 
-  // Logging untuk debugging
+  // Logging untuk debugging posisi dan offset
   useEffect(() => {
     const targetPlayer = zombieState.isAttacking
       ? players.find((p) => p.id === zombieState.targetPlayerId)
       : null;
+    const targetPosition = getPlayerPosition(zombieState.targetPlayerId);
     console.log("ZombieCharacter render:", {
       chaserType,
       selectedChaser: selectedChaser.src,
       isAttacking: zombieState.isAttacking,
       targetPlayer: targetPlayer?.nickname || "Tidak ada target",
+      targetPosition,
       attackProgress: zombieState.attackProgress,
+      horizontalOffset: selectedChaser.horizontalOffset,
     });
-  }, [chaserType, zombieState.isAttacking, selectedChaser.src, zombieState.targetPlayerId, zombieState.attackProgress, players]);
+  }, [chaserType, zombieState.isAttacking, selectedChaser.src, zombieState.targetPlayerId, zombieState.attackProgress, players, playerStates]);
 
-  // Pergerakan normal
+  // Pergerakan normal dengan horizontalOffset
   const normalMovement = {
     x: Math.sin(animationTime * 0.4) * (gameMode === "panic" ? 140 : 30),
     y: Math.sin(animationTime * 1.0) * (gameMode === "panic" ? 50 : 15),
@@ -125,24 +265,36 @@ export default function ZombieCharacter({
     scale: gameMode === "panic" ? 2.0 : 1.8,
   };
 
-  // Pergerakan saat menyerang
-  const attackMovement = {
-    x: zombieState.attackProgress * ATTACK_DISTANCE,
-    y: 0,
-    rotation: 0,
-    scale: gameMode === "panic" ? 2.2 : 2.0,
+  // Pergerakan saat menyerang dengan fokus pada horizontal dan mempertimbangkan kecepatan pemain
+  const attackMovement = () => {
+    const targetPosition = getPlayerPosition(zombieState.targetPlayerId);
+    const playerState = zombieState.targetPlayerId ? playerStates[zombieState.targetPlayerId] : null;
+    const playerSpeed = playerState ? playerState.speed : 5; // Default kecepatan jika tidak ada data
+    const speedFactor = playerSpeed / 5; // Skala kecepatan relatif terhadap kecepatan default
+    const adjustedZombieSpeed = ZOMBIE_SPEED * speedFactor; // Kecepatan zombie disesuaikan dengan kecepatan pemain
+    const startX = centerX - zombieState.currentPosition + selectedChaser.horizontalOffset;
+    const targetX = targetPosition.x + selectedChaser.horizontalOffset;
+    const distance = targetX - startX;
+    const attackX = startX + zombieState.attackProgress * distance * speedFactor; // Faktor kecepatan memengaruhi jarak serangan
+    const attackY = targetPosition.y * zombieState.attackProgress; // Gerakan vertikal tetap smooth
+
+    return {
+      x: attackX,
+      y: attackY,
+      rotation: 0,
+      scale: gameMode === "panic" ? 2.2 : 2.0,
+    };
   };
 
-  const currentMovement = zombieState.isAttacking ? attackMovement : normalMovement;
+  const currentMovement = zombieState.isAttacking ? attackMovement() : normalMovement;
 
   return (
     <motion.div
       ref={attackRef}
       className="absolute z-40 origin-bottom"
       style={{
-        left: `${centerX - zombieState.currentPosition + currentMovement.x + selectedChaser.horizontalOffset}px`,
-        top: selectedChaser.verticalOffset,
-        transform: `translateY(${currentMovement.y}px)`,
+        left: `${centerX - zombieState.currentPosition + currentMovement.x}px`,
+        top: `calc(${selectedChaser.verticalOffset} + ${currentMovement.y}px)`,
       }}
       animate={controls}
     >
