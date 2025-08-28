@@ -101,25 +101,25 @@ export default function HomePage() {
   );
 
   // Generator nama acak
-const generateRandomNickname = useCallback(() => {
-  const prefixes = [
-    "Salsa", "Zombi", "Vampir", "Downey", "Robert", "Windah",
-    "Neko", "Shadow", "Ghost", "Pixel", "Nova", "Luna",
-    "Blaze", "Frost", "Echo", "Cyber", "Storm", "Phantom",
-    "Night", "Inferno", "Zephyr", "Hunter", "Draco", "Falcon",
-    "Toxic", "Venom", "Aqua", "Raven", "Sky", "Zero",
-    "Jinx", "Hex", "Bolt", "Ash", "Flame", "Magma",
-    "Comet", "Glitch", "Vortex", "Wraith", "Slayer", "Bane",
-    "Arcade", "Pixelz", "Mysterio", "Oblivion", "Hydra", "Titan"
-  ];
+  const generateRandomNickname = useCallback(() => {
+    const prefixes = [
+      "Salsa", "Zombi", "Vampir", "Downey", "Robert", "Windah",
+      "Neko", "Shadow", "Ghost", "Pixel", "Nova", "Luna",
+      "Blaze", "Frost", "Echo", "Cyber", "Storm", "Phantom",
+      "Night", "Inferno", "Zephyr", "Hunter", "Draco", "Falcon",
+      "Toxic", "Venom", "Aqua", "Raven", "Sky", "Zero",
+      "Jinx", "Hex", "Bolt", "Ash", "Flame", "Magma",
+      "Comet", "Glitch", "Vortex", "Wraith", "Slayer", "Bane",
+      "Arcade", "Pixelz", "Mysterio", "Oblivion", "Hydra", "Titan"
+    ];
 
-  const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-  const randomNumber = Math.floor(Math.random() * 10000); // pakai 4 digit biar lebih unik
-  const newNickname = `${randomPrefix}${randomNumber}`;
+    const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const randomNumber = Math.floor(Math.random() * 10000); // pakai 4 digit biar lebih unik
+    const newNickname = `${randomPrefix}${randomNumber}`;
 
-  setNickname(newNickname);
-  return newNickname;
-}, []);
+    setNickname(newNickname);
+    return newNickname;
+  }, []);
 
   // Handler kode permainan dengan validasi regex
   const handleGameCodeChange = useCallback(
@@ -227,23 +227,30 @@ const generateRandomNickname = useCallback(() => {
         return;
       }
 
-      const { count } = await supabase
-        .from("players")
-        .select("*", { count: "exact" })
-        .eq("room_id", room.id);
+      // const { count } = await supabase
+      //   .from("players")
+      //   .select("*", { count: "exact" })
+      //   .eq("room_id", room.id);
 
       // if (count && count >= room.max_players) {
       //   setErrorMessage(t("errorMessages.roomFull"));
       //   return;
       // }
 
-      const { error: playerError } = await supabase.from("players").insert({
-        room_id: room.id,
-        nickname,
-        character_type: `robot${Math.floor(Math.random() * 4) + 1}`,
-      });
+      const { error: playerError } = await supabase
+        .from("players")
+        .insert({
+          room_id: room.id,
+          nickname,
+          character_type: `robot${Math.floor(Math.random() * 10) + 1}`,
+        })
+        .select()
+        .single()
 
-      if (playerError) throw playerError;
+      if (playerError) {
+        // toast.error("Failed to register player");
+        return;
+      }
 
       localStorage.setItem("nickname", nickname);
       localStorage.setItem("roomCode", gameCode.toUpperCase());

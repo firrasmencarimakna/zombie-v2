@@ -576,9 +576,9 @@ export default function ResultsHostPage() {
           variants={listVariants}
           initial="hidden"
           animate="show"
-          className="max-w-7xl mx-auto"
+          className="max-w-none mx-auto"
         >
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 px-12">
             <AnimatePresence mode="popLayout">
               {playerResults.map((player, idx) => {
                 const character = getCharacterByType(player.character_type);
