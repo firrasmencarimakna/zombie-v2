@@ -112,7 +112,9 @@ export default function QuizPhase({
   const [isClient, setIsClient] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [isAnswered, setIsAnswered] = useState(false)
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(
+    Math.min(resumeState?.currentIndex ?? 0, (room?.questions?.length ?? 1) - 1)
+  )
 
   const [playerHealth, setPlayerHealth] = useState(resumeState?.health || 3)
   const [playerSpeed, setPlayerSpeed] = useState(resumeState?.speed || 20)
@@ -323,7 +325,8 @@ export default function QuizPhase({
   }
 
   useEffect(() => {
-    if (!timeLoaded) return; // skip kalau belum load
+    if (!timeLoaded || timeLeft > 0) return; // skip kalau belum load
+    if (isProcessingAnswer) return;
     if (timeLeft === 0 && !isProcessingAnswer) {
       redirectToResults(playerHealth, correctAnswers, currentQuestionIndex + 1, true);
     }

@@ -374,6 +374,7 @@ export default function GamePage() {
         )
 
       case "quiz":
+        if (!room.questions?.length) return <LoadingScreen />;
         return (
           <>
             <QuizPhase
