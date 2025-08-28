@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone } from "lucide-react";
+import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
@@ -156,13 +156,6 @@ export default function HomePage() {
     localStorage.setItem("language", value);
   };
 
-  // Generate nama acak saat halaman dimuat
-  useEffect(() => {
-    if (!nickname) {
-      generateRandomNickname();
-    }
-  }, [nickname, generateRandomNickname]);
-
   // Handle parameter URL
   useEffect(() => {
     const updates: Record<string, string | null> = {};
@@ -201,7 +194,7 @@ export default function HomePage() {
   // Host permainan
   const handleHostGame = useCallback(() => {
     setIsCreating(true);
-    if (navigator.vibrate) navigator.vibrate(50); // Umpan balik getar
+    if (navigator.vibrate) navigator.vibrate(50);
     router.push("/quiz-select");
   }, [router]);
 
@@ -255,7 +248,7 @@ export default function HomePage() {
       localStorage.setItem("nickname", nickname);
       localStorage.setItem("roomCode", gameCode.toUpperCase());
 
-      if (navigator.vibrate) navigator.vibrate(50); // Umpan balik getar
+      if (navigator.vibrate) navigator.vibrate(50);
       router.push(`/game/${gameCode.toUpperCase()}`);
     } catch (error) {
       console.error("Error bergabung ke permainan:", error);
@@ -425,23 +418,23 @@ export default function HomePage() {
                         aria-label="Kode permainan"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
                       <Input
                         placeholder={t("nicknamePlaceholder")}
                         value={nickname}
                         onChange={(e) => handleNicknameChange(e.target.value)}
-                        className="bg-black/50 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-center text-base sm:text-xl font-mono h-10 sm:h-12 rounded-xl focus:border-red-500 focus:ring-red-500/30"
+                        className="bg-black/50 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-center text-base sm:text-xl font-mono h-10 sm:h-12 rounded-xl focus:border-red-500 focus:ring-red-500/30 flex-1"
                         maxLength={20}
                         aria-label="Nama panggilan"
                       />
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="icon"
                         onClick={generateRandomNickname}
-                        className="w-full border-red-500/50 text-red-400 hover:bg-red-500/20 text-sm sm:text-base"
+                        className="border-red-500/50 text-red-400 hover:bg-red-500/20 h-10 sm:h-12 w-10 sm:w-12"
                         aria-label="Buat nama acak"
                       >
-                        {t("generateNickname")}
+                        <RefreshCw className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>
