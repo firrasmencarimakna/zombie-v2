@@ -147,7 +147,7 @@ export default function ZombieCharacter({
     >
       <div className="relative">
         {/* Indikator serangan dengan nama pemain */}
-        {zombieState.isAttacking && targetPlayer && (
+        {/* {zombieState.isAttacking && targetPlayer && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -156,7 +156,7 @@ export default function ZombieCharacter({
           >
             Menyerang {targetPlayer.nickname}!
           </motion.div>
-        )}
+        )} */}
 
         {/* Efek darah saat menyerang */}
         {zombieState.isAttacking && (
