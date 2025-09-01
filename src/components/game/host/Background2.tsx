@@ -11,47 +11,50 @@ export default function Background1({ isFlashing }: Background1Props) {
         className={`absolute inset-0 blood-background ${isFlashing ? "flash-effect" : ""}`}
       >
         {/* Container untuk 1.png (langit) */}
-        <div className="background-container-grounddua">
+        <div className="background-container-ground">
           <div
             className="background-image"
             style={{
-              backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/map5/1.jpg')",
-              backgroundSize: "100%",
-              backgroundPosition: "center calc(100% + 25px)",
+              backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/map5/1.png')",
+              backgroundSize: "145%",
+              backgroundPosition: "center calc(100% + 1px)",
               backgroundRepeat: "no-repeat",
             }}
           />
           <div
             className="background-image"
             style={{
-              backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/map5/1.jpg')",
-              backgroundSize: "100%",
-              backgroundPosition: "center calc(100% + 25px)",
+              backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/map5/1.png')",
+              backgroundSize: "145%",
+              backgroundPosition: "center calc(100% + 1px)",
               backgroundRepeat: "no-repeat",
             }}
           />
         </div>
+
+
         {/* Container untuk 2.png (awan) */}
-        {/* <div className="background-container-groundtiga">
+        <div className="background-container-groundtiga">
           <div
             className="background-image"
             style={{
-              backgroundImage: "url('/map4/2.png')",
+              backgroundImage: "url('/map5/2.png')",
               backgroundSize: "100%",
-              backgroundPosition: "center calc(100% + 25px)",
+              backgroundPosition: "center calc(100% + -175px)",
               backgroundRepeat: "no-repeat",
             }}
           />
           <div
             className="background-image"
             style={{
-              backgroundImage: "url('/map4/2.png')",
+              backgroundImage: "url('/map5/2.png')",
               backgroundSize: "100%",
-              backgroundPosition: "center calc(100% + 25px)",
+              backgroundPosition: "center calc(100% + -175px)",
               backgroundRepeat: "no-repeat",
             }}
           />
-        </div> */}
+        </div>
+
         {/* Container untuk 3.png (tanah) */}
         {/* <div className="background-container-grounddua">
           <div

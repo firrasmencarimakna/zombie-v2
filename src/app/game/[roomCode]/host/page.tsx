@@ -5,11 +5,14 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Background1 from "@/components/game/host/Background1";
+import Backgroud2 from "@/components/game/host/Background2";
 import GameUI from "@/components/game/host/GameUI";
 import { motion, AnimatePresence } from "framer-motion";
 import ZombieCharacter from "@/components/game/host/ZombieCharacter";
 import RunningCharacters from "@/components/game/host/RunningCharacters";
 import { useHostGuard } from "@/lib/host-guard";
+import Background2 from "@/components/game/host/Background2";
+import Background3 from "@/components/game/host/Background3";
 
 interface Player {
   id: string;
@@ -954,7 +957,7 @@ const testAllImages = async () => {
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
       
-      <Background1 isFlashing={backgroundFlash} />
+      <Background3 isFlashing={backgroundFlash} />
       <audio src="/musics/zombies.mp3" autoPlay />
       <audio src="/musics/background-music.mp3" autoPlay loop />
       {/* <AnimatePresence>
