@@ -25,41 +25,41 @@ const chaserImages = {
   zombie: {
     src: "/character/chaser/zombie.gif",
     alt: "Zombie",
-    width: 200,
+    width: 150,
     height: 50,
-    verticalOffset: "70%", // Posisi vertikal relatif terhadap tinggi layar
+    verticalOffset: "80%", // Posisi vertikal relatif terhadap tinggi layar
     horizontalOffset: -150, // Offset horizontal dari posisi tengah
   },
   monster1: {
     src: "/character/chaser/monster1.gif",
     alt: "Mutant Gila",
-    width: 220,
+    width: 150,
     height: 60,
-    verticalOffset: "70%",
+    verticalOffset: "80%",
     horizontalOffset: -150,
   },
   monster2: {
     src: "/character/chaser/monster2.gif",
     alt: "Monster Rawa",
-    width: 280,
+    width: 150,
     height: 75,
-    verticalOffset: "70%",
+    verticalOffset: "80%",
     horizontalOffset: -150,
   },
   monster3: {
     src: "/character/chaser/monster3.gif",
     alt: "Samurai Gila",
-    width: 210,
+    width: 150,
     height: 65,
-    verticalOffset: "70%",
+    verticalOffset: "80%",
     horizontalOffset: -150,
   },
   darknight: {
     src: "/character/chaser/darknight.gif",
     alt: "Ksatria Gelap",
-    width: 230,
+    width: 150,
     height: 70,
-    verticalOffset: "70%",
+    verticalOffset: "80%",
     horizontalOffset: -150,
   },
 };

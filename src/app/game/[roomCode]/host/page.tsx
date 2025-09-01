@@ -138,7 +138,7 @@ export default function HostGamePage() {
         position: index,
         lastAttackTime,
         attackIntensity: 0,
-        countdown: currentSpeed <= 30 && !isBeingAttacked && currentHealth > 0 && player.is_alive ? 10 : undefined,
+        countdown: currentSpeed <= 30 && !isBeingAttacked && currentHealth > 0 && player.is_alive ? 9999 : undefined,
       };
 
       if (healthState) {
