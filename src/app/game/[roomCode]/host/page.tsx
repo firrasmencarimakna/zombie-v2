@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 
 interface Player {
   id: string;
-  nickname: string;
+  nickname: string; 
   character_type: string;
   score: number;
   is_alive: boolean;
@@ -114,7 +114,7 @@ export default function HostGamePage() {
 
   // Definisikan pengaturan berdasarkan difficulty_level
   const difficultySettings = {
-    easy: { zombieAttackCountdown: 20 },
+    easy: { zombieAttackCountdown: 999920 },
     medium: { zombieAttackCountdown: 10 },
     hard: { zombieAttackCountdown: 5 },
   };
