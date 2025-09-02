@@ -3,20 +3,21 @@ FROM node:20.13.1 AS builder
 
 WORKDIR /app
 
-# Salin file package.json dan lock file yang ada
-COPY package.json ./
-COPY yarn.lock ./ || true
-COPY package-lock.json ./ || true
-COPY pnpm-lock.yaml ./ || true
+# Salin package.json dan lock file khusus pnpm
+# Docker akan menemukan file ini dengan pasti
+COPY package.json pnpm-lock.yaml ./
 
-# Install dependensi
-RUN yarn install --frozen-lockfile || npm install || pnpm install --frozen-lockfile
+# Install dependensi menggunakan pnpm
+# `pnpm` harus diinstal terlebih dahulu
+RUN npm install -g pnpm
+RUN pnpm install --frozen-lockfile
 
-# Salin semua file proyek
+# Salin semua file proyek ke direktori kerja
 COPY . .
 
 # Jalankan proses build Next.js
-RUN yarn build || npm run build || pnpm run build
+RUN pnpm run build
+
 
 
 # Tahap 2: Jalankan Aplikasi Produksi
@@ -24,10 +25,15 @@ FROM node:20.13.1
 
 WORKDIR /app
 
+# Salin folder `standalone` dan `public`
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/public ./public
 
+# Tentukan port aplikasi
 ENV PORT=3000
+
+# Ekspos port
 EXPOSE 3000
 
+# Perintah untuk menjalankan aplikasi
 CMD ["node", "server.js"]
