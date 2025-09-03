@@ -76,7 +76,7 @@ export default function QuizPhase({
 
   // Definisikan pengaturan berdasarkan difficulty_level
   const difficultySettings = {
-    easy: { inactivityPenalty: 25 },
+    easy: { inactivityPenalty: 30 },
     medium: { inactivityPenalty: 15 },
     hard: { inactivityPenalty: 10 },
   }
