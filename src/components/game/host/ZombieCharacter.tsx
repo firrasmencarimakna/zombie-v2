@@ -75,7 +75,7 @@ export default function ZombieCharacter({
   const attackRef = useRef<HTMLDivElement>(null);
   const controls = useAnimation();
   const ZOMBIE_SPEED = 30;
-  const ATTACK_DISTANCE = 300;
+  const ATTACK_DISTANCE = 50;
 
   const selectedChaser = chaserImages[chaserType as keyof typeof chaserImages] || chaserImages.zombie;
   const targetPlayer = zombieState.isAttacking
@@ -309,7 +309,7 @@ export default function ZombieCharacter({
           50% {
             opacity: 0.6;
           }
-        }
+        }zz
         .animate-pulse-slow {
           animation: pulse-slow 1.2s infinite;
         }

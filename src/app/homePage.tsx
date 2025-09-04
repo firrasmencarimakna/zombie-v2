@@ -469,6 +469,18 @@ export default function HomePage() {
               <SelectItem value="id" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
                 Indonesia
               </SelectItem>
+              <SelectItem value="gm" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
+                German
+              </SelectItem>
+              <SelectItem value="fc" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
+                France
+              </SelectItem>
+             <SelectItem value="jp" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
+                Japan
+              </SelectItem>
+              <SelectItem value="sp" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
+                Spain
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
