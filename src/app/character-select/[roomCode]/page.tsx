@@ -66,7 +66,7 @@ export default function CharacterSelectPage() {
   const [gameDuration, setGameDuration] = useState<number>(10);
   const [durationError, setDurationError] = useState<string | null>(null);
   const [questionCount, setQuestionCount] = useState<number>(20);
-  const [totalQuestions, setTotalQuestions] = useState<number>(0);
+  const [totalQuestions, setTotalQuestions] = useState<number>(15);
   const [userSetQuestionCount, setUserSetQuestionCount] = useState(false);
   const [chaserType, setChaserType] = useState<ChaserType>("zombie");
   const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>("medium");
@@ -218,7 +218,7 @@ export default function CharacterSelectPage() {
         const fetchedDifficultyLevel = validateDifficultyLevel(data.difficulty_level);
         setRoom({ ...data, chaser_type: fetchedChaserType, difficulty_level: fetchedDifficultyLevel });
         setGameDuration(data.duration ? data.duration / 60 : 10);
-        setQuestionCount(data.question_count ?? 20);
+        setQuestionCount(data.question_count ?? 15);
         setChaserType(fetchedChaserType);
         setDifficultyLevel(fetchedDifficultyLevel);
 
@@ -229,9 +229,9 @@ export default function CharacterSelectPage() {
 
         if (questionsError) {
           console.error("Error fetching questions count:", questionsError);
-          setTotalQuestions(20);
+          setTotalQuestions(15);
         } else {
-          const total = questionsCount || 20;
+          const total = questionsCount || 15;
           setTotalQuestions(total);
           if (!userSetQuestionCount) {
             if (data.question_count) {
@@ -251,7 +251,7 @@ export default function CharacterSelectPage() {
     };
 
     fetchRoom();
-  }, [roomCode, router, t, userSetQuestionCount]);
+  }, [roomCode, router, t]);
 
   useEffect(() => {
     const whisper = new Audio("/sounds/whisper.mp3");
@@ -632,7 +632,7 @@ export default function CharacterSelectPage() {
                   disabled={isSaving || !isFormValid}
                   className={`w-full bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white rounded-lg font-mono text-lg py-6 shadow-lg shadow-red-900/30 transition-all ${!isFormValid || isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  {isSaving ? t("saving") : t("startButton")}
+                  {isSaving ? t("saving") : t("save")}
                 </Button>
               </motion.div>
             </div>
