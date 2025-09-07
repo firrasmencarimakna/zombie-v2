@@ -328,7 +328,11 @@ export default function HomePage() {
   // if (loading) {
   //   return (
   //     <div className="min-h-screen bg-black flex items-center justify-center">
-  //       <RotateCw className="w-12 h-12 text-red-500 animate-spin" />
+  //       <motion.div
+  //         animate={{ rotate: 360 }}
+  //         transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+  //         className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full"
+  //       />
   //     </div>
   //   );
   // }
