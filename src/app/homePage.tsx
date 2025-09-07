@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle } from "lucide-react";
+import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle, RotateCw, LogOut } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Tipe untuk TypeScript
 interface BloodDrip {
@@ -66,6 +67,8 @@ export default function HomePage() {
   const searchParams = useSearchParams();
   const [openHowToPlay, setOpenHowToPlay] = useState(false);
   const [showTooltipOnce, setShowTooltipOnce] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
+  // const { user, loading } = useAuth()
 
   // Teks suasana
   const atmosphereText = t("atmosphereText");
@@ -227,6 +230,7 @@ export default function HomePage() {
   const handleJoinGame = useCallback(async () => {
     if (!gameCode || !nickname) {
       setErrorMessage(t("errorMessages.missingInput"));
+      setIsJoining(false)
       return;
     }
 
@@ -242,6 +246,7 @@ export default function HomePage() {
 
       if (error || !room) {
         setErrorMessage(t("errorMessages.roomNotFound"));
+        setIsJoining(false)
         return;
       }
 
@@ -278,16 +283,64 @@ export default function HomePage() {
     } catch (error) {
       console.error("Error bergabung ke permainan:", error);
       setErrorMessage(t("errorMessages.joinFailed"));
-    } finally {
-      setIsJoining(false);
+      setIsJoining(false)
     }
   }, [gameCode, nickname, router, t]);
 
-  // Navigasi pengaturan
-  const handleSettingsClick = useCallback(() => {
-    if (navigator.vibrate) navigator.vibrate(50);
-    router.push("/questions");
-  }, [router]);
+  // useEffect(() => {
+  //   // Fungsi untuk mengambil data profil dari tabel 'profiles'
+  //   const fetchProfile = async () => {
+  //     // Pastikan objek user sudah tersedia (setelah login)
+  //     if (user) {
+  //       try {
+  //         const username = (user.email.split("@")[0]).charAt(0).toUpperCase() + (user.email.split("@")[0]).slice(1)
+
+  //         if (username) {
+  //           // Jika data ditemukan dan ada nickname, set state-nya
+  //           setNickname(username);
+  //         }
+
+  //       } catch (err) {
+  //         console.error('Terjadi error saat mengambil profil:', err);
+  //       }
+  //     }
+  //   };
+
+  //   fetchProfile();
+  // }, [user]);
+
+  const handleLogout = () => {
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const confirmLogout = async () => {
+    setIsLogoutConfirmOpen(false);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(t("logoutFailed"));
+      console.error("Error logging out:", error);
+    } else {
+      toast.success(t("logoutSuccess"));
+      router.push('/login');
+    }
+  };
+
+  // if (loading) {
+  //   return (
+  //     <div className="min-h-screen bg-black flex items-center justify-center">
+  //       <motion.div
+  //         animate={{ rotate: 360 }}
+  //         transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+  //         className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full"
+  //       />
+  //     </div>
+  //   );
+  // }
+
+  // if (!user) {
+  //   router.push('/login');
+  //   return null; // Return null agar sisa komponen tidak di-render saat redirect
+  // }
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none">
@@ -314,15 +367,15 @@ export default function HomePage() {
 
       {isClient &&
         bloodDrips.map((drip) => (
-        <motion.div
-          key={drip.id}
-          initial={{ y: -100 }}
-          animate={{ y: "100vh" }}
-          transition={{ duration: drip.speed, delay: drip.delay, ease: "linear", repeat: Infinity }}
-          className="fixed top-0 w-0.5 h-16 bg-gradient-to-b from-red-600 to-red-800/50"
-          style={{ left: `${drip.left}%`, opacity: 0.6 + Math.random() * 0.2 }}
-        />
-      ))}
+          <motion.div
+            key={drip.id}
+            initial={{ y: -100 }}
+            animate={{ y: "100vh" }}
+            transition={{ duration: drip.speed, delay: drip.delay, ease: "linear", repeat: Infinity }}
+            className="fixed top-0 w-0.5 h-16 bg-gradient-to-b from-red-600 to-red-800/50"
+            style={{ left: `${drip.left}%`, opacity: 0.6 + Math.random() * 0.2 }}
+          />
+        ))}
 
       {isClient && (
         <div className="absolute inset-0 pointer-events-none">
@@ -455,7 +508,7 @@ export default function HomePage() {
 
 
         {/* Pemilih bahasa */}
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex gap-2 items-center">
           <Select value={i18n.language} onValueChange={handleLanguageChange}>
             <SelectTrigger
               className="bg-black/50 border-red-500/50 text-red-400 h-10 sm:h-12 text-sm sm:text-base focus:ring-0 focus:outline-none data-[state=open]:bg-black/80 data-[state=open]:border-red-500"
@@ -483,6 +536,18 @@ export default function HomePage() {
               </SelectItem>
             </SelectContent>
           </Select>
+          {/* {user && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg bg-red-800 text-white border-2 border-red-600 rounded-md"
+              aria-label="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          )} */}
+
         </div>
 
         <div className="w-full max-w-4xl">
@@ -648,6 +713,45 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirmOpen}>
+        <AnimatePresence>
+          {isLogoutConfirmOpen && (
+            <DialogContent forceMount className="bg-black/80 border-red-500 text-red-400 max-w-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+              >
+                <DialogHeader>
+                  <DialogTitle className="text-red-500 text-2xl font-mono text-center">
+                    {t("logoutConfirm.title")}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="mt-4 text-center text-red-400/80 font-mono">
+                  {t("logoutConfirm.message")}
+                </div>
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsLogoutConfirmOpen(false)}
+                    className="border-red-500/50 text-red-400 hover:bg-red-500/20 font-mono"
+                  >
+                    {t("cancel")}
+                  </Button>
+                  <Button
+                    onClick={confirmLogout}
+                    className="bg-red-800 hover:bg-red-700 text-white font-mono"
+                  >
+                    {t("logout")}
+                  </Button>
+                </div>
+              </motion.div>
+            </DialogContent>
+          )}
+        </AnimatePresence>
+      </Dialog>
+
 
       <Toaster position="top-center" />
 
