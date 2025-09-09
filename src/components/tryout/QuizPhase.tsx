@@ -235,7 +235,7 @@ export default function QuizPhase({ quizId, nickname }: QuizPhaseProps) {
             </div>
           </Card>
         </div>
-        <ZombieFeedback isCorrect={isCorrect} isVisible={showFeedback} />
+        <ZombieFeedback isCorrect={isCorrect} isVisible={showFeedback} activeZombie={null} activePlayer={null} />
       </div>
     </div>
   );
