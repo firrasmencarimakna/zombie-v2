@@ -1,4 +1,3 @@
-
 "use client";
 
 import i18n from "i18next";
@@ -27,7 +26,7 @@ i18n
       escapeValue: false, // React handles XSS
     },
     detection: {
-      order: ["navigator", "localStorage", "cookie"], // Detection order
+      order: ["localStorage", "navigator", "cookie"], // localStorage first
       caches: ["localStorage", "cookie"], // Cache language preference
     },
   });

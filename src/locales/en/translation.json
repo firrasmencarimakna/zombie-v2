@@ -82,7 +82,9 @@
     "fetchQuizzesFailed": "Failed to load quizzes!",
     "createGameFailed": "Failed to create game!",
     "fetchRoomFailed": "Failed to fetch room!",
-    "saveSettingsFailed": "Failed to save settings!"
+    "saveSettingsFailed": "Failed to save settings!",
+    "nicknameTaken": "Nickname is already taken in this room.",
+    "checkNicknameFailed": "Failed to validate nickname. Please try again."
   },
   "start": "Start Quiz",
   "login": "Login",

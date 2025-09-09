@@ -1,8 +1,6 @@
-// Halaman Lobby Phase (LobbyPhase.js or similar)
 "use client";
 
-// Mengimpor dependensi yang diperlukan
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Users, Skull, Zap, Play, Ghost, Bone, HeartPulse, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
@@ -63,7 +61,6 @@ export default function LobbyPhase({
   // State untuk mengelola efek UI dan data permainan
   const { t } = useTranslation()
   const [flickerText, setFlickerText] = useState(true)
-  const [bloodDrips, setBloodDrips] = useState<Array<{ id: number; left: number; speed: number; delay: number }>>([])
   const [atmosphereText, setAtmosphereText] = useState(() => {
     const texts = t("atmosphereTexts", { returnObjects: true }) as string[];
     return texts[0];
@@ -74,7 +71,7 @@ export default function LobbyPhase({
   const [selectedCharacter, setSelectedCharacter] = useState(currentPlayer.character_type || "robot1")
   const router = useRouter()
   const [isExitDialogOpen, setIsExitDialogOpen] = useState(false)
-
+  const [isMobile, setIsMobile] = useState(false);
 
   // Teks atmosfer untuk menciptakan suasana
   const atmosphereTexts = t("atmosphereTexts", { returnObjects: true }) as string[];
@@ -82,6 +79,17 @@ export default function LobbyPhase({
   useEffect(() => {
     syncServerTime()
   }, [])
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const fetchRoom = async () => {
@@ -187,35 +195,23 @@ export default function LobbyPhase({
     };
   }, [currentPlayer.room_id, currentPlayer.id, router]);
 
-  // Menghasilkan efek tetesan darah
-  useEffect(() => {
-    const generateBlood = () => {
-      const newBlood = Array.from({ length: 15 }, (_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        speed: 2 + Math.random() * 1.5,
-        delay: Math.random() * 5,
-      }))
-      setBloodDrips(newBlood)
-    }
-
-    generateBlood()
-  }, [])
+  const bloodDrips = useMemo(() => {
+    const dripCount = isMobile ? 4 : 8;
+    return Array.from({ length: dripCount }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      speed: 2 + Math.random() * 1.5,
+      delay: Math.random() * 5,
+      opacity: 0.7 + Math.random() * 0.3,
+    }));
+  }, [isMobile]);
 
   useEffect(() => {
-    const flickerInterval = setInterval(
-      () => {
-        setFlickerText((prev) => !prev)
-      },
-      100 + Math.random() * 150,
-    )
-
     const textInterval = setInterval(() => {
       setAtmosphereText(atmosphereTexts[Math.floor(Math.random() * atmosphereTexts.length)])
     }, 2500)
 
     return () => {
-      clearInterval(flickerInterval)
       clearInterval(textInterval)
     }
   }, [atmosphereTexts])
@@ -326,13 +322,20 @@ export default function LobbyPhase({
 
       {/* Tetesan darah */}
       {bloodDrips.map((drip) => (
-        <div
+        <motion.div
           key={drip.id}
-          className="absolute top-0 w-0.5 h-20 bg-red-600/80 animate-fall"
+          initial={{ y: -100 }}
+          animate={{ y: "100vh" }}
+          transition={{
+            duration: drip.speed,
+            delay: drip.delay,
+            ease: "linear",
+            repeat: Infinity,
+          }}
+          className="absolute top-0 w-0.5 h-16 bg-gradient-to-b from-red-600 to-red-800/50"
           style={{
             left: `${drip.left}%`,
-            animation: `fall ${drip.speed}s linear ${drip.delay}s infinite`,
-            opacity: 0.7 + Math.random() * 0.3,
+            opacity: drip.opacity,
           }}
         />
       ))}
@@ -556,7 +559,7 @@ export default function LobbyPhase({
               {t("exitConfirm")}
             </DialogTitle>
           </DialogHeader>
-          <DialogFooter className="mt-4 flex justify-end space-x-2">
+          <DialogFooter className="mt-4 flex">
             <Button
               variant="ghost"
               onClick={() => setIsExitDialogOpen(false)}

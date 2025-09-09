@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function QuizSelectPage() {
   const { t, i18n } = useTranslation();
@@ -60,7 +61,7 @@ export default function QuizSelectPage() {
         setFilteredQuizzes(data || []);
       } catch (error) {
         console.error("Error fetching quizzes:", error);
-        alert(t("errorMessages.fetchQuizzesFailed"));
+        toast.error(t("errorMessages.fetchQuizzesFailed"));
       } finally {
         setIsLoading(false);
       }
@@ -105,8 +106,8 @@ export default function QuizSelectPage() {
     }
 
     setIsLoading(true);
-    const lowerTerm = term.toLowerCase();
     try {
+      const lowerTerm = term.toLowerCase();
       const { data, error } = await supabase
         .from("quizzes")
         .select("*")
@@ -115,9 +116,9 @@ export default function QuizSelectPage() {
       setFilteredQuizzes(data || []);
     } catch (error) {
       console.error("Error searching quizzes:", error);
-      alert(t("errorMessages.searchQuizzesFailed"));
+      toast.error(t("errorMessages.searchQuizzesFailed"));
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }, [searchTerm, t]);
 
@@ -126,7 +127,7 @@ export default function QuizSelectPage() {
     setSearchQuery("");
     setFilteredQuizzes(quizzes);
     setCurrentPage(1); // Reset to first page for consistency
-    searchInputRef.current?.focus();
+    if (typeof window !== "undefined") searchInputRef.current?.focus();
   }, [quizzes]);
 
   const handleKeyDown = useCallback(
@@ -138,8 +139,6 @@ export default function QuizSelectPage() {
     },
     [handleSearchSubmit]
   );
-
-  // --------------------------
 
   const generateRoomCode = useCallback(() => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -166,11 +165,10 @@ export default function QuizSelectPage() {
 
         if (error) throw error;
 
-        router.push(`/character-select/${roomCode}`);
+        await router.push(`/character-select/${roomCode}`);
       } catch (error) {
         console.error("Error creating game:", error);
-        alert(t("errorMessages.createGameFailed"));
-      } finally {
+        toast.error(t("errorMessages.createGameFailed"));
         setIsCreating(false);
       }
     },
@@ -211,11 +209,6 @@ export default function QuizSelectPage() {
       })),
     []
   );
-
-  // Function to change language
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
-  };
 
   const isSearching = searchQuery.trim().length > 0;
 
@@ -364,10 +357,12 @@ export default function QuizSelectPage() {
           {/* If user has submitted a search (Enter or icon click), show results for that query.
     Otherwise show default quiz grid / pagination. */}
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full mx-auto min-h-[50vh]">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i} className="bg-black/40 border-red-500/20 h-[150px] animate-pulse" />
-              ))}
+            <div className="flex items-center justify-center w-full mx-auto mt-10 pt-10">
+              <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full"
+        />
             </div>
           ) : isSearching ? (
             filteredQuizzes.length > 0 ? (
@@ -475,7 +470,7 @@ export default function QuizSelectPage() {
                       variant="outline"
                       className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20 text-sm py-1"
                       onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1 || isCreating}
+                      disabled={currentPage === 1 || isCreating || isSearching}
                     >
                       {t("previousButton")}
                     </Button>
@@ -497,6 +492,36 @@ export default function QuizSelectPage() {
           )}
         </div>
       </div>
+
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        gutter={8}
+        toastOptions={{
+          duration: 2000,
+          style: {
+            background: '#1a0000',      // hitam-merah gelap
+            color: '#ff4444',           // teks merah terang
+            border: '1px solid #ff0000',
+            borderRadius: '8px',
+            fontFamily: 'monospace',
+          },
+          success: {
+            style: {
+              background: '#1a0000',
+              color: '#44ff44',         // hijau neon untuk sukses
+              border: '1px solid #44ff44',
+            },
+          },
+          error: {
+            style: {
+              background: '#1a0000',
+              color: '#ff0000',
+              border: '1px solid #ff0000',
+            },
+          },
+        }}
+      />
 
       <style jsx global>{`
         @keyframes fall {

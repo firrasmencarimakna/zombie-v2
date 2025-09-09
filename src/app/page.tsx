@@ -17,9 +17,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const protocol = host.includes("localhost") ? "http" : "https";
 
   const url = new URL(referer || `${protocol}://${host}`);
-  const lng = url.searchParams.get("lng") || "en";
+  // const lng = url.searchParams.get("lng") || "en";
 
-  await i18n.changeLanguage(lng);
+  // await i18n.changeLanguage(lng);
 
   return {
     title: i18n.t("title"),

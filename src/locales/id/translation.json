@@ -82,7 +82,9 @@
     "fetchQuizzesFailed": "Gagal memuat kuis!",
     "createGameFailed": "Gagal membuat permainan!",
     "fetchRoomFailed": "Gagal mengambil ruangan!",
-    "saveSettingsFailed": "Gagal menyimpan pengaturan!"
+    "saveSettingsFailed": "Gagal menyimpan pengaturan!",
+    "nicknameTaken": "Nickname sudah digunakan di room ini.",
+    "checkNicknameFailed": "Gagal memvalidasi nickname. Silakan coba lagi."
   },
   "start": "Mulai Kuis",
   "login": "Masuk",
