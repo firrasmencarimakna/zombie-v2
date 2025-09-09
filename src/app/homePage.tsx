@@ -45,15 +45,6 @@ interface FloatingIcon {
   isSkull: boolean;
 }
 
-// Custom debounce function
-const debounce = (func: Function, delay: number) => {
-  let timeout: NodeJS.Timeout;
-  return (...args: any[]) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), delay);
-  };
-};
-
 export default function HomePage() {
   const { t, i18n } = useTranslation();
   const [gameCode, setGameCode] = useState<string>("");
@@ -71,19 +62,21 @@ export default function HomePage() {
 
   // Atmosphere text
   const atmosphereText = t("atmosphereText");
+  const [dripCount, setDripCount] = useState(8);   // server fallback
+  const [iconCount, setIconCount] = useState(5);   // server fallback
 
-  // Blood drip effects (reduced for mobile)
-  const bloodDrips = useMemo(
-    () =>
-      Array.from({ length: typeof window !== "undefined" && window.innerWidth < 640 ? 4 : 8 }, (_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        speed: 2 + Math.random() * 1.5,
-        delay: Math.random() * 5,
-        opacity: 0.7 + Math.random() * 0.3,
-      })),
-    []
-  );
+
+  // Efek tetes darah (dikurangi untuk mobile)
+  const bloodDrips = useMemo(() => {
+    if (!isClient) return [];
+    return Array.from({ length: dripCount }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      speed: 2 + Math.random() * 1.5,
+      delay: Math.random() * 5,
+      opacity: 0.7 + Math.random() * 0.3,
+    }));
+  }, [isClient, dripCount]);
 
   // Blood spots
   const bloodSpots = useMemo(
@@ -97,20 +90,30 @@ export default function HomePage() {
     []
   );
 
-  // Floating icons (reduced for mobile)
-  const floatingIcons = useMemo(
-    () =>
-      Array.from({ length: typeof window !== "undefined" && window.innerWidth < 640 ? 3 : 5 }, (_, i) => ({
-        id: i,
-        left: i * 20 + 10,
-        top: i * 20 + 10,
-        fontSize: 2 + (i % 3),
-        animationDelay: i * 0.5,
-        animationDuration: 15 + (i % 5),
-        isSkull: i % 2 === 0,
-      })),
-    []
-  );
+  // Ikon mengambang (dikurangi untuk mobile)
+  const floatingIcons = useMemo(() => {
+    if (!isClient) return [];
+    return Array.from({ length: iconCount }, (_, i) => ({
+      id: i,
+      left: i * 20 + 10,
+      top: i * 20 + 10,
+      fontSize: 2 + (i % 3),
+      animationDelay: i * 0.5,
+      animationDuration: 15 + (i % 5),
+      isSkull: i % 2 === 0,
+    }));
+  }, [isClient, iconCount]);
+
+  useEffect(() => {
+    const update = () => {
+      const mobile = window.innerWidth < 640;
+      setDripCount(mobile ? 4 : 8);
+      setIconCount(mobile ? 3 : 5);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   // Random nickname generator
   const generateRandomNickname = useCallback(() => {
@@ -130,29 +133,25 @@ export default function HomePage() {
     const newNickname = `${randomPrefix}${randomNumber}`;
 
     setNickname(newNickname);
-    return newNickname;
   }, []);
 
-  // Game code handler with regex validation
-  const handleGameCodeChange = useCallback(
-    debounce((value: string) => {
-      let processedCode = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
-      if (value.includes("http") && value.includes("?code=")) {
-        try {
-          const url = new URL(value);
-          const codeFromUrl = url.searchParams.get("code");
-          if (codeFromUrl) {
-            processedCode = codeFromUrl.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
-          }
-        } catch (error) {
-          console.warn("URL tidak valid, diabaikan.");
-          return;
+  // Handler kode permainan dengan validasi regex
+  const handleGameCodeChange = useCallback((value: string) => {
+    let processedCode = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    if (value.includes("http") && value.includes("?code=")) {
+      try {
+        const url = new URL(value);
+        const codeFromUrl = url.searchParams.get("code");
+        if (codeFromUrl) {
+          processedCode = codeFromUrl.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
         }
+      } catch (error) {
+        console.warn("URL tidak valid, diabaikan.");
+        return;
       }
-      setGameCode(processedCode);
-    }, 200),
-    []
-  );
+    }
+    setGameCode(processedCode);
+  }, []);
 
   // Nickname handler
   const handleNicknameChange = useCallback(
@@ -165,7 +164,7 @@ export default function HomePage() {
   // Language change handler
   const handleLanguageChange = (value: string) => {
     i18n.changeLanguage(value);
-    localStorage.setItem("language", value);
+    if (typeof window !== "undefined") localStorage.setItem("language", value);
   };
 
   // Handle URL parameters
@@ -177,11 +176,11 @@ export default function HomePage() {
       updates.code = null;
     }
 
-    const langFromUrl = searchParams.get("lng");
-    if (langFromUrl && i18n.language !== langFromUrl) {
-      handleLanguageChange(langFromUrl);
-      updates.lng = null;
-    }
+    // const langFromUrl = searchParams.get("lng");
+    // if (langFromUrl && i18n.language !== langFromUrl) {
+    //   handleLanguageChange(langFromUrl);
+    //   updates.lng = null;
+    // }
 
     if (searchParams.get("kicked") === "1") {
       toast.error(t("youWereKicked"));
@@ -207,7 +206,7 @@ export default function HomePage() {
     if (!isClient) return;
 
     const timer = setTimeout(() => {
-      const seen = localStorage.getItem("seenHowToPlay");
+      const seen = typeof window !== "undefined" ? localStorage.getItem("seenHowToPlay") : null;
       if (!seen) {
         setOpenHowToPlay(true);
         localStorage.setItem("seenHowToPlay", "1");
@@ -220,12 +219,13 @@ export default function HomePage() {
   // Host game
   const handleHostGame = useCallback(() => {
     setIsCreating(true);
-    if (navigator.vibrate) navigator.vibrate(50);
     router.push("/quiz-select");
   }, [router]);
 
   // Join game
   const handleJoinGame = useCallback(async () => {
+    if (isJoining) return
+
     if (!gameCode || !nickname) {
       setErrorMessage(t("errorMessages.missingInput"));
       setIsJoining(false);
@@ -236,18 +236,53 @@ export default function HomePage() {
     setErrorMessage(null);
 
     try {
-      const { data: room, error } = await supabase
+      // Cari room berdasarkan kode
+      const { data: room, error: roomError } = await supabase
         .from("game_rooms")
         .select("*")
         .eq("room_code", gameCode.toUpperCase())
         .single();
 
-      if (error || !room) {
-        setErrorMessage(t("errorMessages.roomNotFound"));
+      if (roomError || !room) {
+        toast.error(t("errorMessages.roomNotFound"));
         setIsJoining(false);
         return;
       }
 
+      // Cek apakah nickname sudah ada di room ini
+      const { data: existingPlayers, error: checkError } = await supabase
+        .from("players")
+        .select("nickname")
+        .eq("room_id", room.id)
+        .eq("nickname", nickname)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Error checking nickname:", checkError);
+        toast.error(t("errorMessages.checkNicknameFailed"));
+        setIsJoining(false);
+        return;
+      }
+
+      // Jika nickname sudah ada, tampilkan error
+      if (existingPlayers) {
+        toast.error(t("errorMessages.nicknameTaken"));
+        setIsJoining(false);
+        return;
+      }
+
+      // Cek jumlah pemain saat ini (jika diperlukan batasan jumlah pemain)
+      // const { count } = await supabase
+      //   .from("players")
+      //   .select("*", { count: "exact" })
+      //   .eq("room_id", room.id);
+
+      // if (count && count >= room.max_players) {
+      //   setErrorMessage(t("errorMessages.roomFull"));
+      //   return;
+      // }
+
+      // Tambahkan pemain baru
       const { error: playerError } = await supabase
         .from("players")
         .insert({
@@ -259,21 +294,27 @@ export default function HomePage() {
         .single();
 
       if (playerError) {
-        setErrorMessage(t("errorMessages.joinFailed"));
+        if (playerError.code === '23505') { // Error code untuk unique violation
+          toast.error(t("errorMessages.nicknameTaken"));
+        } else {
+          toast.error(t("errorMessages.joinFailed"));
+        } 
+        setIsJoining(false);
         return;
       }
 
+      // Simpan data ke localStorage
       localStorage.setItem("nickname", nickname);
       localStorage.setItem("roomCode", gameCode.toUpperCase());
 
-      if (navigator.vibrate) navigator.vibrate(50);
-      router.push(`/game/${gameCode.toUpperCase()}`);
+      // Redirect ke game
+      await router.push(`/game/${gameCode.toUpperCase()}`);
     } catch (error) {
       console.error("Error bergabung ke permainan:", error);
-      setErrorMessage(t("errorMessages.joinFailed"));
+      toast.error(t("errorMessages.joinFailed"));
       setIsJoining(false);
     }
-  }, [gameCode, nickname, router, t]);
+  }, [gameCode, nickname, router, t, isJoining]);
 
   // Start Tryout mode
   const handleStartTryout = useCallback(() => {
@@ -309,6 +350,21 @@ export default function HomePage() {
       router.push('/login');
     }
   };
+
+  // if (loading) {
+  //   return (
+  //     <motion.div
+  //   animate={{ rotate: 360 }}
+  //   transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+  //   className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full"
+  // />
+  //   );
+  // }
+
+  // if (!user) {
+  //   router.push('/login');
+  //   return null; // Return null agar sisa komponen tidak di-render saat redirect
+  // }
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none">
@@ -350,7 +406,7 @@ export default function HomePage() {
           {floatingIcons.map((icon) => (
             <div
               key={icon.id}
-              className="absolute text-red-900/20 animate-float sm:animate-float"
+              className="absolute text-red-900/20 animate-float"
               style={{
                 left: `${icon.left}%`,
                 top: `${icon.top}%`,
@@ -598,7 +654,7 @@ export default function HomePage() {
                         </div>
                       </div>
                       <Button
-                        onClick={handleJoinGame}
+                        onClick={() => { if (!isJoining) handleJoinGame() }}
                         disabled={!gameCode || !nickname || isJoining}
                         className="w-full bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 text-white font-mono text-base sm:text-lg py-3 sm:py-4 rounded-xl border-2 border-red-700 shadow-[0_0_15px_rgba(239,68,68,0.5)] hover:shadow-[0_0_20px_rgba(239,68,68,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
                         aria-label={isJoining ? t("joining") : t("joinButton")}
@@ -704,7 +760,6 @@ export default function HomePage() {
                     disabled={isCreating}
                     className="w-full bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 text-white font-mono text-base sm:text-lg py-3 sm:py-4 rounded-xl border-2 border-red-700 shadow-[0_0_15px_rgba(239,68,68,0.5)] hover:shadow-[0_0_20px_rgba(239,68,68,0.7)] transition-all duration-300 group"
                     aria-label={isCreating ? t("creatingRoom") : t("createRoomButton")}
-                    aria-disabled={isCreating}
                   >
                     <span className="relative z-10 flex items-center">
                       {isCreating ? (
@@ -766,7 +821,35 @@ export default function HomePage() {
         </AnimatePresence>
       </Dialog>
 
-      <Toaster position="top-center" />
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        gutter={8}
+        toastOptions={{
+          duration: 2000,
+          style: {
+            background: '#1a0000',      // hitam-merah gelap
+            color: '#ff4444',           // teks merah terang
+            border: '1px solid #ff0000',
+            borderRadius: '8px',
+            fontFamily: 'monospace',
+          },
+          success: {
+            style: {
+              background: '#1a0000',
+              color: '#44ff44',         // hijau neon untuk sukses
+              border: '1px solid #44ff44',
+            },
+          },
+          error: {
+            style: {
+              background: '#1a0000',
+              color: '#ff0000',
+              border: '1px solid #ff0000',
+            },
+          },
+        }}
+      />
 
       <style jsx global>{`
         @keyframes fall {

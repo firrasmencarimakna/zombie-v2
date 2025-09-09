@@ -1,11 +1,10 @@
-
 "use client";
 
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientProviders from "./ClientProviders";
 import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
@@ -20,9 +19,10 @@ const geistMono = Geist_Mono({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
+  const [isClient, setIsClient] = useState(false);
 
-  // Load bahasa dari localStorage saat app load
   useEffect(() => {
+    setIsClient(true);
     const savedLang = localStorage.getItem("language");
     if (savedLang && i18n.language !== savedLang) {
       i18n.changeLanguage(savedLang);
@@ -31,11 +31,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   // Update HTML lang attribute when language changes
   useEffect(() => {
-    document.documentElement.lang = i18n.language;
-  }, [i18n.language]);
+    if (isClient) {
+      document.documentElement.lang = i18n.language;
+    }
+  }, [i18n.language, isClient]);
 
   return (
-    <html lang={i18n.language}>
+    <html lang={isClient ? i18n.language : "en"}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
           <ClientProviders>{children}</ClientProviders>
