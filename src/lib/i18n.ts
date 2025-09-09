@@ -5,6 +5,10 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import enTranslation from "../locales/en/translation.json";
 import idTranslation from "../locales/id/translation.json";
+import gmTranslation from "../locales/gm/translation.json";
+import fcTranslation from "../locales/fc/translation.json";
+import jpTranslation from "../locales/jp/translation.json";
+import spTranslation from "../locales/sp/translation.json";
 
 const resources = {
   en: {
@@ -12,6 +16,18 @@ const resources = {
   },
   id: {
     translation: idTranslation,
+  },
+    gm: {
+    translation: gmTranslation,
+  },
+    fc: {
+    translation: fcTranslation,
+  },
+    jp: {
+    translation: jpTranslation,
+  },
+    sp: {
+    translation: spTranslation,
   },
 };
 
@@ -21,7 +37,7 @@ i18n
   .init({
     resources,
     fallbackLng: "en",
-    supportedLngs: ["en", "id"],
+    supportedLngs: ["en", "id","gm","fc","jp","sp"],
     interpolation: {
       escapeValue: false, // React handles XSS
     },

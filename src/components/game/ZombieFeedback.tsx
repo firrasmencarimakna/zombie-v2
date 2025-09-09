@@ -8,8 +8,8 @@ import { useTranslation } from "react-i18next";
 interface ZombieFeedbackProps {
   isCorrect: boolean | null;
   isVisible: boolean;
-  activeZombie: string;
-  activePlayer: string;
+  activeZombie: string | null;
+  activePlayer: string | null;
 }
 
 export default function ZombieFeedback({ isCorrect, isVisible, activeZombie, activePlayer }: ZombieFeedbackProps) {

@@ -36,7 +36,7 @@ export default function Background1({ isFlashing }: Background1Props) {
           <div
             className="background-image"
             style={{
-              backgroundImage: "url('/map4/1.png')",
+              backgroundImage: "url('/map6/1.png')",
               backgroundSize: "100%",
               backgroundPosition: "center calc(100% + 25px)",
               backgroundRepeat: "no-repeat",
@@ -45,7 +45,7 @@ export default function Background1({ isFlashing }: Background1Props) {
           <div
             className="background-image"
             style={{
-              backgroundImage: "url('/map4/1.png')",
+              backgroundImage: "url('/map6/1.png')",
               backgroundSize: "100%",
               backgroundPosition: "center calc(100% + 25px)",
               backgroundRepeat: "no-repeat",
@@ -95,7 +95,6 @@ export default function Background1({ isFlashing }: Background1Props) {
           />
         </div>
 
-             
          <div className="background-container-ground">
           <div
             className="background-image"
@@ -183,9 +182,7 @@ export default function Background1({ isFlashing }: Background1Props) {
           />
         </div>
         
-        
-
-        
+             
         <div className="mist-effect" />
       </div>
       <style jsx>{`

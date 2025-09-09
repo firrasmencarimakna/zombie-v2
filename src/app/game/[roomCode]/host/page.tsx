@@ -126,7 +126,7 @@ export default function HostGamePage() {
   // Initialize player states
   const initializePlayerStates = useCallback(
     (playersData: Player[], healthData: PlayerHealthState[]) => {
-      console.log(t("log.initializePlayerStates", { count: playersData.length }));
+      // console.log(t("log.initializePlayerStates", { count: playersData.length }));
       const newStates: { [playerId: string]: PlayerState } = {};
       const newHealthStates: { [playerId: string]: PlayerHealthState } = {};
 
@@ -168,12 +168,12 @@ export default function HostGamePage() {
   const updatePlayerState = useCallback(
     async (playerId: string, updates: Partial<PlayerHealthState>, localUpdates: Partial<PlayerState> = {}) => {
       if (!gameRoom) {
-        console.log(t("log.noGameRoom"));
+        // console.log(t("log.noGameRoom"));
         return;
       }
 
       try {
-        console.log(t("log.updatePlayerState", { playerId, updates }));
+        // console.log(t("log.updatePlayerState", { playerId, updates }));
         const { error } = await supabase
           .from("player_health_states")
           .update({ ...updates, last_attack_time: new Date().toISOString() })
@@ -199,7 +199,7 @@ export default function HostGamePage() {
             },
           };
         });
-        console.log(t("log.updatePlayerStateSuccess", { playerId }));
+        // console.log(t("log.updatePlayerStateSuccess", { playerId }));
       } catch (error) {
         console.error(t("log.updatePlayerStateError", { playerId, error }));
       }
@@ -213,13 +213,13 @@ export default function HostGamePage() {
       const playerState = playerStates[playerId];
       const player = players.find((p) => p.id === playerId);
       if (!playerState || !player || newHealth < 0 || !player.is_alive) {
-        console.log(t("log.invalidPlayerForAttack", { playerId, health: newHealth, is_alive: player?.is_alive }));
+        // console.log(t("log.invalidPlayerForAttack", { playerId, health: newHealth, is_alive: player?.is_alive }));
         setAttackQueue((prev) => prev.filter((id) => id !== playerId));
         return;
       }
 
       if (zombieState.isAttacking && zombieState.targetPlayerId !== playerId) {
-        console.log(t("log.chaserBusy", { targetPlayerId: zombieState.targetPlayerId, playerId }));
+        // console.log(t("log.chaserBusy", { targetPlayerId: zombieState.targetPlayerId, playerId }));
         setAttackQueue((prev) => (prev.includes(playerId) ? prev : [...prev, playerId]));
         return;
       }
@@ -229,7 +229,7 @@ export default function HostGamePage() {
         attackIntervalRef.current = null;
       }
 
-      console.log(t("log.startAttack", { playerId, health: newHealth, speed: newSpeed }));
+      // console.log(t("log.startAttack", { playerId, health: newHealth, speed: newSpeed }));
       setZombieState({
         isAttacking: true,
         targetPlayerId: playerId,
@@ -270,7 +270,7 @@ export default function HostGamePage() {
           clearInterval(attackIntervalRef.current!);
           attackIntervalRef.current = null;
 
-          console.log(t("log.attackFinished", { playerId, health: newHealth, speed: finalSpeed }));
+          // console.log(t("log.attackFinished", { playerId, health: newHealth, speed: finalSpeed }));
           setZombieState({
             isAttacking: false,
             targetPlayerId: null,
@@ -302,12 +302,12 @@ export default function HostGamePage() {
               const nextState = playerStates[nextPlayerId];
               const nextPlayer = players.find((p) => p.id === nextPlayerId);
               if (nextState && nextState.speed <= 30 && nextState.health > 0 && nextPlayer?.is_alive) {
-                console.log(t("log.processNextQueue", { nextPlayerId }));
+                // console.log(t("log.processNextQueue", { nextPlayerId }));
                 setTimeout(() => {
                   handleZombieAttack(nextPlayerId, nextState.health - 1, nextState.speed);
                 }, 500);
               } else {
-                console.log(t("log.nextPlayerInvalid", { nextPlayerId }));
+                // console.log(t("log.nextPlayerInvalid", { nextPlayerId }));
               }
             }
             return nextQueue;
@@ -329,7 +329,7 @@ export default function HostGamePage() {
       const elapsed = now - countdownStartTime;
       const remaining = Math.max(0, Math.ceil((countdownDuration - elapsed) / 1000));
 
-      console.log(t("log.countdownSync", { elapsed, remaining }));
+      // console.log(t("log.countdownSync", { elapsed, remaining }));
       setCountdown(remaining);
 
       if (remaining <= 0) {
@@ -359,14 +359,14 @@ export default function HostGamePage() {
     (playerId: string) => {
       const playerState = playerStates[playerId];
       if (!playerState) {
-        console.log(t("log.playerNotFoundCorrect", { playerId }));
+        // console.log(t("log.playerNotFoundCorrect", { playerId }));
         return;
       }
 
       const newSpeed = Math.min(playerState.speed + 5, 100);
       const shouldResetCountdown = newSpeed <= 30;
 
-      console.log(t("log.correctAnswer", { playerId, newSpeed }));
+      // console.log(t("log.correctAnswer", { playerId, newSpeed }));
       updatePlayerState(
         playerId,
         {
@@ -382,7 +382,7 @@ export default function HostGamePage() {
       );
 
       if (zombieState.targetPlayerId === playerId && zombieState.isAttacking) {
-        console.log(t("log.stopAttackCorrect", { playerId }));
+        // console.log(t("log.stopAttackCorrect", { playerId }));
         clearInterval(attackIntervalRef.current!);
         attackIntervalRef.current = null;
         setZombieState({
@@ -406,14 +406,14 @@ export default function HostGamePage() {
     (playerId: string) => {
       const playerState = playerStates[playerId];
       if (!playerState) {
-        console.log(t("log.playerNotFoundWrong", { playerId }));
+        // console.log(t("log.playerNotFoundWrong", { playerId }));
         return;
       }
 
       const newSpeed = Math.max(20, playerState.speed - 5);
       const shouldStartCountdown = newSpeed <= 30 && playerState.health > 0 && !playerState.isBeingAttacked;
 
-      console.log(t("log.wrongAnswer", { playerId, newSpeed }));
+      // console.log(t("log.wrongAnswer", { playerId, newSpeed }));
       updatePlayerState(
         playerId,
         {
@@ -432,7 +432,7 @@ export default function HostGamePage() {
   // Manage player status and inactivity penalties
   const managePlayerStatus = useCallback(() => {
     if (!gameRoom) {
-      console.log(t("log.noGameRoom"));
+      // console.log(t("log.noGameRoom"));
       return;
     }
 
@@ -450,12 +450,12 @@ export default function HostGamePage() {
           return;
         }
 
-        console.log(t("log.playerStatus", {
-          nickname: player?.nickname || playerId,
-          health: state.health,
-          is_alive: player?.is_alive,
-          isCompleted
-        }));
+        // console.log(t("log.playerStatus", {
+        //   nickname: player?.nickname || playerId,
+        //   health: state.health,
+        //   is_alive: player?.is_alive,
+        //   isCompleted
+        // }));
         activePlayers++;
         if (state.speed <= 30 && !state.isBeingAttacked) {
           eligiblePlayer = playerId;
@@ -465,10 +465,12 @@ export default function HostGamePage() {
         }
       });
 
-      console.log(t("log.activePlayers", { count: activePlayers, queue: newAttackQueue }));
+      
+
+      // console.log(t("log.activePlayers", { count: activePlayers, queue: newAttackQueue }));
 
       if (activePlayers === 0 && players.length > 0) {
-        console.log(t("log.allPlayersCompleted"));
+        // console.log(t("log.allPlayersCompleted"));
         supabase
           .from("game_rooms")
           .update({ current_phase: "completed" })
@@ -479,6 +481,7 @@ export default function HostGamePage() {
         return updatedStates;
       }
 
+      
       Object.entries(updatedStates).forEach(async ([playerId, state]) => {
         const player = players.find((p) => p.id === playerId);
         const isCompleted = completedPlayers.some((cp) => cp.id === playerId);
@@ -492,7 +495,7 @@ export default function HostGamePage() {
           const timeSinceLastAnswer = (Date.now() - new Date(healthState.last_answer_time).getTime()) / 1000;
           if (timeSinceLastAnswer >= zombieAttackCountdown + 5 && state.speed > 20) {
             const newSpeed = Math.max(20, state.speed - 10);
-            console.log(t("log.playerInactive", { playerId, newSpeed }));
+            // console.log(t("log.playerInactive", { playerId, newSpeed }));
             await updatePlayerState(
               playerId,
               {
@@ -506,15 +509,15 @@ export default function HostGamePage() {
 
         if (state.speed <= 30 && !state.isBeingAttacked && state.health > 0) {
           if (state.countdown === undefined) {
-            console.log(t("log.addCountdown", { playerId }));
+            // console.log(t("log.addCountdown", { playerId }));
             updatedStates[playerId] = { ...state, countdown: zombieAttackCountdown };
           } else if (state.countdown > 0) {
             const newCountdown = state.countdown - 1;
-            console.log(t("log.countdown", { playerId, countdown: newCountdown }));
+            // console.log(t("log.countdown", { playerId, countdown: newCountdown }));
             updatedStates[playerId] = { ...state, countdown: newCountdown };
             if (newCountdown <= 0) {
               if (!zombieState.isAttacking || activePlayers === 1) {
-                console.log(t("log.startAttack", { playerId, health: state.health }));
+                // console.log(t("log.startAttack", { playerId, health: state.health }));
                 await updatePlayerState(
                   playerId,
                   {
@@ -546,7 +549,7 @@ export default function HostGamePage() {
       );
 
       if (activePlayers === 1 && !zombieState.isAttacking && eligiblePlayer) {
-        console.log(t("log.singlePlayerAttack", { playerId: eligiblePlayer }));
+        // console.log(t("log.singlePlayerAttack", { playerId: eligiblePlayer }));
         const state = updatedStates[eligiblePlayer];
         if (state && state.countdown !== undefined && state.countdown <= 0) {
           updatePlayerState(
@@ -590,12 +593,12 @@ export default function HostGamePage() {
         console.error(t("log.fetchRoomError", { error: roomError?.message }));
         throw new Error(t("error.roomNotFound"));
       }
-      console.log(t("log.fetchRoomSuccess", { room }));
+      // console.log(t("log.fetchRoomSuccess", { room }));
       setGameRoom(room);
       setChaserType(room.chaser_type || "zombie");
 
       if (room.current_phase === "completed") {
-        console.log(t("log.phaseCompleted"));
+        // console.log(t("log.phaseCompleted"));
         setIsLoading(false);
         router.push(`/game/${roomCode}/resultshost`);
         return;
@@ -613,7 +616,7 @@ export default function HostGamePage() {
         console.error(t("log.fetchPlayersError", { error: playersError.message }));
         throw new Error(t("error.fetchPlayers"));
       }
-      console.log(t("log.fetchPlayersSuccess", { count: playersData?.length }));
+      // console.log(t("log.fetchPlayersSuccess", { count: playersData?.length }));
       setPlayers(playersData || []);
 
       console.time("fetchHealth");
@@ -648,7 +651,7 @@ export default function HostGamePage() {
       }
 
       if (playersData && completionData && playersData.length === completionData.length) {
-        console.log(t("log.allPlayersCompletedFetch"));
+        // console.log(t("log.allPlayersCompletedFetch"));
         await supabase.from("game_rooms").update({ current_phase: "completed" }).eq("id", room.id);
         setIsLoading(false);
         router.push(`/game/${roomCode}/resultshost`);
@@ -670,7 +673,7 @@ export default function HostGamePage() {
   const syncCompletedPlayers = useCallback(async () => {
     if (!gameRoom) return;
     try {
-      console.log(t("log.syncCompletedPlayers"));
+      // console.log(t("log.syncCompletedPlayers"));
       const { data, error } = await supabase
         .from("game_completions")
         .select("*, players(nickname, character_type)")
@@ -685,7 +688,7 @@ export default function HostGamePage() {
         const newCompleted = completed.filter(
           (player: Player) => !prev.some((p) => p.id === player.id)
         );
-        console.log(t("log.newCompletedPlayers", { nicknames: newCompleted.map((p: Player) => p.nickname).join(", ") }));
+        // console.log(t("log.newCompletedPlayers", { nicknames: newCompleted.map((p: Player) => p.nickname).join(", ") }));
         return [...prev, ...newCompleted];
       });
     } catch (error) {
@@ -703,7 +706,7 @@ export default function HostGamePage() {
   useEffect(() => {
     if (!gameRoom) return;
 
-    console.log(t("log.setupRealtime", { roomId: gameRoom.id }));
+    // console.log(t("log.setupRealtime", { roomId: gameRoom.id }));
     const roomChannel = supabase.channel(`room-${gameRoom.id}`);
     const healthChannel = supabase.channel(`health-${gameRoom.id}`);
     const answerChannel = supabase.channel(`answers-${gameRoom.id}`);
@@ -715,19 +718,19 @@ export default function HostGamePage() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "game_rooms", filter: `id=eq.${gameRoom.id}` },
         (payload) => {
-          console.log(t("log.roomChangeDetected", { room: payload.new }));
+          // console.log(t("log.roomChangeDetected", { room: payload.new }));
           const newRoom = payload.new as GameRoom;
           setGameRoom(newRoom);
           setChaserType(newRoom.chaser_type || "zombie");
           if (newRoom.current_phase === "completed") {
-            console.log(t("log.redirectToResultsHost"));
+            // console.log(t("log.redirectToResultsHost"));
             setIsLoading(false);
             router.push(`/game/${roomCode}/resultshost`);
           }
         }
       )
       .subscribe((status) => {
-        console.log(t("log.roomSubscriptionStatus", { status }));
+        // console.log(t("log.roomSubscriptionStatus", { status }));
       });
 
     healthChannel
@@ -735,7 +738,7 @@ export default function HostGamePage() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "player_health_states", filter: `room_id=eq.${gameRoom.id}` },
         (payload) => {
-          console.log(t("log.healthChangeDetected", { payload }));
+          // console.log(t("log.healthChangeDetected", { payload }));
           const healthState = payload.new as PlayerHealthState;
           setPlayerHealthStates((prev) => ({
             ...prev,
@@ -761,7 +764,7 @@ export default function HostGamePage() {
         }
       )
       .subscribe((status) => {
-        console.log(t("log.healthSubscriptionStatus", { status }));
+        // console.log(t("log.healthSubscriptionStatus", { status }));
       });
 
     answerChannel
@@ -769,7 +772,7 @@ export default function HostGamePage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "player_answers", filter: `room_id=eq.${gameRoom.id}` },
         (payload) => {
-          console.log(t("log.newAnswerReceived", { payload }));
+          // console.log(t("log.newAnswerReceived", { payload }));
           const answer = payload.new as any;
           if (answer.is_correct) {
             handleCorrectAnswer(answer.player_id);
@@ -779,7 +782,7 @@ export default function HostGamePage() {
         }
       )
       .subscribe((status) => {
-        console.log(t("log.answerSubscriptionStatus", { status }));
+        // console.log(t("log.answerSubscriptionStatus", { status }));
       });
 
     completionChannel
@@ -787,13 +790,13 @@ export default function HostGamePage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "game_completions", filter: `room_id=eq.${gameRoom.id}` },
         async (payload) => {
-          console.log(t("log.completionDetected", { payload }));
+          // console.log(t("log.completionDetected", { payload }));
           const completion = payload.new as GameCompletion;
-          console.log(t("log.playerCompletion", { playerId: completion.player_id, completion_type: completion.completion_type }));
+          // console.log(t("log.playerCompletion", { playerId: completion.player_id, completion_type: completion.completion_type }));
           if (completion.completion_type === "completed") {
             const player = players.find((p) => p.id === completion.player_id);
             if (player) {
-              console.log(t("log.addToCompletedPlayers", { nickname: player.nickname }));
+              // console.log(t("log.addToCompletedPlayers", { nickname: player.nickname }));
               setCompletedPlayers((prev) => {
                 if (!prev.some((p) => p.id === player.id)) {
                   return [...prev, player];
@@ -809,9 +812,9 @@ export default function HostGamePage() {
           if (error) {
             console.error(t("log.checkCompletionsError", { error: error.message }));
           } else {
-            console.log(t("log.totalCompletions", { count: data.length, totalPlayers: players.length }));
+            // console.log(t("log.totalCompletions", { count: data.length, totalPlayers: players.length }));
             if (data.length === players.length) {
-              console.log(t("log.allPlayersCompletedRedirect"));
+              // console.log(t("log.allPlayersCompletedRedirect"));
               await supabase.from("game_rooms").update({ current_phase: "completed" }).eq("id", gameRoom.id);
               setIsLoading(false);
               router.push(`/game/${roomCode}/resultshost`);
@@ -820,9 +823,9 @@ export default function HostGamePage() {
         }
       )
       .subscribe((status) => {
-        console.log(t("log.completionSubscriptionStatus", { status }));
+        // console.log(t("log.completionSubscriptionStatus", { status }));
         if (status === "SUBSCRIBED") {
-          console.log(t("log.completionSubscriptionSuccess"));
+          // console.log(t("log.completionSubscriptionSuccess"));
         } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
           console.warn(t("log.completionSubscriptionError", { status }));
         }
@@ -833,17 +836,17 @@ export default function HostGamePage() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "players", filter: `room_id=eq.${gameRoom.id}` },
         (payload) => {
-          console.log(t("log.playerChangeDetected", { payload }));
+          // console.log(t("log.playerChangeDetected", { payload }));
           const updatedPlayer = payload.new as Player;
           setPlayers((prev) => prev.map((p) => (p.id === updatedPlayer.id ? { ...p, ...updatedPlayer } : p)));
         }
       )
       .subscribe((status) => {
-        console.log(t("log.playerSubscriptionStatus", { status }));
+        // console.log(t("log.playerSubscriptionStatus", { status }));
       });
 
     return () => {
-      console.log(t("log.unsubscribeChannels"));
+      // console.log(t("log.unsubscribeChannels"));
       supabase.removeChannel(roomChannel);
       supabase.removeChannel(healthChannel);
       supabase.removeChannel(answerChannel);
@@ -854,21 +857,27 @@ export default function HostGamePage() {
 
   // Initialize game data
   useEffect(() => {
-    console.log(t("log.initHostPage", { roomCode }));
+    // console.log(t("log.initHostPage", { roomCode }));
     fetchGameData();
   }, [roomCode, fetchGameData, t]);
 
   // Interval for player status
-  useEffect(() => {
-    if (!gameRoom) return;
-    const interval = setInterval(managePlayerStatus, 1000);
-    return () => clearInterval(interval);
-  }, [managePlayerStatus, gameRoom]);
+  // useEffect(() => {
+  //   if (!gameRoom) return;
+  //   const interval = setInterval(managePlayerStatus, 1000);
+  //   return () => clearInterval(interval);
+  // }, [managePlayerStatus, gameRoom]);
+
+useEffect(() => {
+  if (!gameRoom) return;
+  const interval = setInterval(managePlayerStatus, 1500); // Ubah dari 1000 ke 1500
+  return () => clearInterval(interval);
+}, [managePlayerStatus, gameRoom]);
 
   // Check image loading
   useEffect(() => {
     const testAllImages = async () => {
-      console.log(t("log.checkImageLoading"));
+      // console.log(t("log.checkImageLoading"));
       const status: { [key: string]: boolean } = {};
       const characterFiles = [
         "/character/player/character.gif",
@@ -898,7 +907,7 @@ export default function HostGamePage() {
         status[file] = works;
       }
       setImageLoadStatus(status);
-      console.log(t("log.imageLoadingComplete", { status }));
+      // console.log(t("log.imageLoadingComplete", { status }));
     };
     testAllImages();
   }, [t]);
@@ -915,7 +924,7 @@ export default function HostGamePage() {
 
   // Set client and screen size
   useEffect(() => {
-    console.log(t("log.setIsClient"));
+    // console.log(t("log.setIsClient"));
     setIsClient(true);
     setScreenWidth(window.innerWidth);
     const handleResize = () => setScreenWidth(window.innerWidth);
@@ -933,7 +942,7 @@ export default function HostGamePage() {
   useEffect(() => {
     const checkConnection = () => {
       const state = supabase.getChannels()[0]?.state || "closed";
-      console.log(t("log.supabaseConnectionStatus", { state }));
+      // console.log(t("log.supabaseConnectionStatus", { state }));
       setIsConnected(state === "joined");
     };
 

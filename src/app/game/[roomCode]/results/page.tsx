@@ -683,9 +683,7 @@ export default function ResultsPage() {
   // Render utama jika playerData berhasil dimuat
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('/map1/dark-clouds.png')] opacity-30" />
-      <div className="absolute inset-0 bg-[url('/map1/fog-texture1.png')] opacity-15 animate-pulse" />
-      <div className="absolute inset-0 bg-gradient-to-b from-red-900/10 via-black to-purple-900/10" />
+
 
       {/* ... sisa dari JSX (elemen dekoratif, dll.) tetap sama ... */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
@@ -695,15 +693,8 @@ export default function ResultsPage() {
         <div className="absolute bottom-1/3 right-1/4 w-20 h-20 bg-red-900 rounded-full opacity-10 blur-xl" />
       </div>
 
-      <div className="absolute top-20 left-10 opacity-20">
-        <Image src="/map1/tombstone.png" width={80} height={80} alt="Nisan" />
-      </div>
-      <div className="absolute top-1/3 right-10 opacity-20">
-        <Image src="/map1/dead-tree.png" width={120} height={120} alt="Pohon mati" />
-      </div>
-      <div className="absolute bottom-20 left-20 opacity-20">
-        <Image src="/map1/spooky-tree-2.png" width={100} height={100} alt="Pohon seram" />
-      </div>
+
+
 
       <div className="absolute inset-0">
         {[...Array(30)].map((_, i) => (
