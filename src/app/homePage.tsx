@@ -26,7 +26,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Tipe untuk TypeScript
+// Types for TypeScript
 interface BloodDrip {
   id: number;
   left: number;
@@ -45,7 +45,7 @@ interface FloatingIcon {
   isSkull: boolean;
 }
 
-// Fungsi debounce kustom
+// Custom debounce function
 const debounce = (func: Function, delay: number) => {
   let timeout: NodeJS.Timeout;
   return (...args: any[]) => {
@@ -60,6 +60,7 @@ export default function HomePage() {
   const [nickname, setNickname] = useState<string>("");
   const [isJoining, setIsJoining] = useState<boolean>(false);
   const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [isStartingTryout, setIsStartingTryout] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isClient, setIsClient] = useState<boolean>(false);
   const router = useRouter();
@@ -67,10 +68,10 @@ export default function HomePage() {
   const [openHowToPlay, setOpenHowToPlay] = useState(false);
   const [showTooltipOnce, setShowTooltipOnce] = useState(false);
 
-  // Teks suasana
+  // Atmosphere text
   const atmosphereText = t("atmosphereText");
 
-  // Efek tetes darah (dikurangi untuk mobile)
+  // Blood drip effects (reduced for mobile)
   const bloodDrips = useMemo(
     () =>
       Array.from({ length: typeof window !== "undefined" && window.innerWidth < 640 ? 4 : 8 }, (_, i) => ({
@@ -83,7 +84,7 @@ export default function HomePage() {
     []
   );
 
-  // Noda darah
+  // Blood spots
   const bloodSpots = useMemo(
     () =>
       Array.from({ length: 5 }, (_, i) => ({
@@ -95,7 +96,7 @@ export default function HomePage() {
     []
   );
 
-  // Ikon mengambang (dikurangi untuk mobile)
+  // Floating icons (reduced for mobile)
   const floatingIcons = useMemo(
     () =>
       Array.from({ length: typeof window !== "undefined" && window.innerWidth < 640 ? 3 : 5 }, (_, i) => ({
@@ -110,7 +111,7 @@ export default function HomePage() {
     []
   );
 
-  // Generator nama acak
+  // Random nickname generator
   const generateRandomNickname = useCallback(() => {
     const prefixes = [
       "Salsa", "Zombi", "Vampir", "Downey", "Robert", "Windah",
@@ -124,14 +125,14 @@ export default function HomePage() {
     ];
 
     const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-    const randomNumber = Math.floor(Math.random() * 10000); // pakai 4 digit biar lebih unik
+    const randomNumber = Math.floor(Math.random() * 10000);
     const newNickname = `${randomPrefix}${randomNumber}`;
 
     setNickname(newNickname);
     return newNickname;
   }, []);
 
-  // Handler kode permainan dengan validasi regex
+  // Game code handler with regex validation
   const handleGameCodeChange = useCallback(
     debounce((value: string) => {
       let processedCode = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
@@ -152,7 +153,7 @@ export default function HomePage() {
     []
   );
 
-  // Handler nickname
+  // Nickname handler
   const handleNicknameChange = useCallback(
     (value: string) => {
       setNickname(value.slice(0, 20));
@@ -160,13 +161,13 @@ export default function HomePage() {
     []
   );
 
-  // Handler perubahan bahasa
+  // Language change handler
   const handleLanguageChange = (value: string) => {
     i18n.changeLanguage(value);
     localStorage.setItem("language", value);
   };
 
-  // Handle parameter URL
+  // Handle URL parameters
   useEffect(() => {
     const updates: Record<string, string | null> = {};
     const codeFromUrl = searchParams.get("code");
@@ -196,7 +197,7 @@ export default function HomePage() {
     }
   }, [searchParams, i18n.language, t]);
 
-  // Set flag client-side
+  // Set client-side flag
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -210,20 +211,19 @@ export default function HomePage() {
         setOpenHowToPlay(true);
         localStorage.setItem("seenHowToPlay", "1");
       }
-    }, 2500); // 3 detik
+    }, 2500);
 
-    // Bersihkan timer kalau komponen unmount sebelum 3 detik
     return () => clearTimeout(timer);
   }, [isClient]);
 
-  // Host permainan
+  // Host game
   const handleHostGame = useCallback(() => {
     setIsCreating(true);
     if (navigator.vibrate) navigator.vibrate(50);
     router.push("/quiz-select");
   }, [router]);
 
-  // Gabung permainan
+  // Join game
   const handleJoinGame = useCallback(async () => {
     if (!gameCode || !nickname) {
       setErrorMessage(t("errorMessages.missingInput"));
@@ -245,16 +245,6 @@ export default function HomePage() {
         return;
       }
 
-      // const { count } = await supabase
-      //   .from("players")
-      //   .select("*", { count: "exact" })
-      //   .eq("room_id", room.id);
-
-      // if (count && count >= room.max_players) {
-      //   setErrorMessage(t("errorMessages.roomFull"));
-      //   return;
-      // }
-
       const { error: playerError } = await supabase
         .from("players")
         .insert({
@@ -263,10 +253,10 @@ export default function HomePage() {
           character_type: `robot${Math.floor(Math.random() * 10) + 1}`,
         })
         .select()
-        .single()
+        .single();
 
       if (playerError) {
-        // toast.error("Failed to register player");
+        setErrorMessage(t("errorMessages.joinFailed"));
         return;
       }
 
@@ -283,7 +273,20 @@ export default function HomePage() {
     }
   }, [gameCode, nickname, router, t]);
 
-  // Navigasi pengaturan
+  // Start Tryout mode
+  const handleStartTryout = useCallback(() => {
+    if (!nickname) {
+      setErrorMessage(t("errorMessages.missingNickname"));
+      return;
+    }
+
+    setIsStartingTryout(true);
+    localStorage.setItem("nickname", nickname);
+    if (navigator.vibrate) navigator.vibrate(50);
+    router.push("/quiz-select-tryout");
+  }, [nickname, router, t]);
+
+  // Settings navigation
   const handleSettingsClick = useCallback(() => {
     if (navigator.vibrate) navigator.vibrate(50);
     router.push("/questions");
@@ -291,7 +294,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none">
-      {/* Latar gradien dengan efek kabut */}
+      {/* Background gradient with fog effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-red-900/5 via-black to-purple-900/5">
         {isClient && (
           <div className="absolute inset-0 opacity-20">
@@ -308,21 +311,21 @@ export default function HomePage() {
             ))}
           </div>
         )}
-        {/* Overlay kabut */}
+        {/* Fog overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/30 backdrop-blur-sm sm:backdrop-blur-md" />
       </div>
 
       {isClient &&
         bloodDrips.map((drip) => (
-        <motion.div
-          key={drip.id}
-          initial={{ y: -100 }}
-          animate={{ y: "100vh" }}
-          transition={{ duration: drip.speed, delay: drip.delay, ease: "linear", repeat: Infinity }}
-          className="fixed top-0 w-0.5 h-16 bg-gradient-to-b from-red-600 to-red-800/50"
-          style={{ left: `${drip.left}%`, opacity: 0.6 + Math.random() * 0.2 }}
-        />
-      ))}
+          <motion.div
+            key={drip.id}
+            initial={{ y: -100 }}
+            animate={{ y: "100vh" }}
+            transition={{ duration: drip.speed, delay: drip.delay, ease: "linear", repeat: Infinity }}
+            className="fixed top-0 w-0.5 h-16 bg-gradient-to-b from-red-600 to-red-800/50"
+            style={{ left: `${drip.left}%`, opacity: 0.6 + Math.random() * 0.2 }}
+          />
+        ))}
 
       {isClient && (
         <div className="absolute inset-0 pointer-events-none">
@@ -346,7 +349,7 @@ export default function HomePage() {
       )}
 
       <div className="relative z-10 flex items-center justify-center min-h-screen p-2 sm:p-4">
-        {/* Tombol Help Circle */}
+        {/* Help Circle Button */}
         <div className="absolute top-4 left-4 z-20">
           <TooltipProvider>
             <Tooltip open={showTooltipOnce}>
@@ -378,10 +381,9 @@ export default function HomePage() {
             localStorage.setItem("seenTooltipOnce", "1");
             setTimeout(() => {
               setShowTooltipOnce(false);
-            }, 5000); // tooltip hilang setelah 5 detik
+            }, 5000);
           }
-        }}
-        >
+        }}>
           <AnimatePresence>
             {openHowToPlay && (
               <DialogContent forceMount className="bg-black/80 border-red-500 text-red-400 max-w-sm sm:max-w-lg">
@@ -391,19 +393,14 @@ export default function HomePage() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
                 >
-                  {/* --- your existing DialogHeader + Tabs --- */}
                   <DialogHeader>
                     <DialogTitle className="text-red-500 text-2xl font-mono">{t("howToPlay")}</DialogTitle>
                   </DialogHeader>
-
-                  {/* 2. ANIMATED TABS */}
                   <Tabs defaultValue="join" className="mt-4">
                     <TabsList className="grid w-full grid-cols-2 bg-black/50 border-red-500/50">
                       <TabsTrigger value="join" className="text-red-400 data-[state=active]:bg-red-500/20 data-[state=active]:text-red-300 font-mono">{t("join")}</TabsTrigger>
-                      <TabsTrigger value="main" className="text-red-400 data-[state=active]:bg-red-500/20 data-[state=active]:text-red-300 font-mono">{t("play")}</TabsTrigger>
+                      <TabsTrigger value="tryout" className="text-red-400 data-[state=active]:bg-red-500/20 data-[state=active]:text-red-300 font-mono">{t("tryout")}</TabsTrigger>
                     </TabsList>
-
-                    {/* wrap each content in motion.div */}
                     <TabsContent value="join" asChild>
                       <motion.div
                         className="mt-4"
@@ -420,8 +417,7 @@ export default function HomePage() {
                         </ol>
                       </motion.div>
                     </TabsContent>
-
-                    <TabsContent value="main" asChild>
+                    <TabsContent value="tryout" asChild>
                       <motion.div
                         className="mt-4"
                         initial={{ opacity: 0, x: 20 }}
@@ -429,18 +425,10 @@ export default function HomePage() {
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <h3 className="text-xl font-bold mb-2">{t("playTitle")}</h3>
+                        <h3 className="text-xl font-bold mb-2">{t("tryoutTitle")}</h3>
                         <ol className="list-decimal list-outside pl-6 space-y-2 text-sm sm:text-base font-mono">
-                          {(t("playSteps", { returnObjects: true }) as string[]).map((step: string, idx: number) => (
-                            <li key={idx}>
-                              {step}
-                              {idx === 1 && (
-                                <ul className="list-disc list-outside pl-6 mt-1 space-y-1">
-                                  <li>{t("speedRuleCorrect")}</li>
-                                  <li>{t("speedRuleWrong")}</li>
-                                </ul>
-                              )}
-                            </li>
+                          {(t("tryoutSteps", { returnObjects: true }) as string[]).map((step: string, idx: number) => (
+                            <li key={idx}>{step}</li>
                           ))}
                         </ol>
                       </motion.div>
@@ -452,9 +440,7 @@ export default function HomePage() {
           </AnimatePresence>
         </Dialog>
 
-
-
-        {/* Pemilih bahasa */}
+        {/* Language selector */}
         <div className="absolute top-4 right-4">
           <Select value={i18n.language} onValueChange={handleLanguageChange}>
             <SelectTrigger
@@ -475,7 +461,7 @@ export default function HomePage() {
               <SelectItem value="fc" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
                 France
               </SelectItem>
-             <SelectItem value="jp" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
+              <SelectItem value="jp" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
                 Japan
               </SelectItem>
               <SelectItem value="sp" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
@@ -518,6 +504,7 @@ export default function HomePage() {
           </motion.div>
 
           <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
+            {/* Combined Join & Tryout Card */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
@@ -529,9 +516,9 @@ export default function HomePage() {
                 <CardHeader className="text-center pb-4 sm:pb-6">
                   <motion.div
                     className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-red-900 to-black border-2 border-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 group-hover:shadow-[0_0_15px_rgba(239,68,68,0.7)] transition-all duration-300"
-                    whileHover={{ rotate: -5 }}
+                    whileHover={{ rotate: -3 }}
                   >
-                    <Hash className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" aria-hidden="true" />
+                    <Play className="w-8 h-8 sm:w-10 sm:h-10 text-red-400" aria-hidden="true" />
                   </motion.div>
                   <CardTitle className="text-2xl sm:text-3xl font-bold text-red-400 font-mono mb-2">
                     {t("joinGame")}
@@ -541,62 +528,136 @@ export default function HomePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 sm:space-y-6 pt-0">
-                  <div className="space-y-3 sm:space-y-4">
-                    <div>
-                      <Input
-                        placeholder={t("gameCodePlaceholder")}
-                        value={gameCode}
-                        onChange={(e) => handleGameCodeChange(e.target.value)}
-                        className="bg-black/50 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-center text-base sm:text-xl font-mono h-10 sm:h-12 rounded-xl focus:border-red-500 focus:ring-red-500/30"
-                        aria-label="Kode permainan"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        placeholder={t("nicknamePlaceholder")}
-                        value={nickname}
-                        onChange={(e) => handleNicknameChange(e.target.value)}
-                        className="bg-black/50 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-center text-base sm:text-xl font-mono h-10 sm:h-12 rounded-xl focus:border-red-500 focus:ring-red-500/30 flex-1"
-                        maxLength={20}
-                        aria-label="Nama panggilan"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={generateRandomNickname}
-                        className="border-red-500/50 text-red-400 hover:bg-red-500/20 h-10 sm:h-12 w-10 sm:w-12"
-                        aria-label="Buat nama acak"
+                  {/* Tabs for Join vs Tryout */}
+                  <Tabs defaultValue="join" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 bg-black/50 border border-red-400 mb-4 sm:mb-6">
+                      <TabsTrigger 
+                        value="join" 
+                        className="text-red-400 data-[state=active]:bg-red-500/20 data-[state=active]:text-red-300 font-mono text-sm sm:text-base transition-all duration-200"
                       >
-                        <RefreshCw className="h-5 w-5" />
+                        <Hash className="w-4 h-4 mr-2" />
+                        {t("joinGame")}
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="tryout" 
+                        className="text-red-400 data-[state=active]:bg-red-500/20 data-[state=active]:text-red-300 font-mono text-sm sm:text-base transition-all duration-200"
+                      >
+                        <Gamepad2 className="w-4 h-4 mr-2" />
+                        {t("tryout")}
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    {/* Join Game Tab */}
+                    <TabsContent value="join" className="space-y-4 sm:space-y-6 mt-0">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div>
+                          <Input
+                            placeholder={t("gameCodePlaceholder")}
+                            value={gameCode}
+                            onChange={(e) => handleGameCodeChange(e.target.value)}
+                            className="bg-black/50 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-center text-base sm:text-xl font-mono h-10 sm:h-12 rounded-xl focus:border-red-500 focus:ring-red-500/30"
+                            aria-label="Kode permainan"
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            placeholder={t("nicknamePlaceholder")}
+                            value={nickname}
+                            onChange={(e) => handleNicknameChange(e.target.value)}
+                            className="bg-black/50 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-center text-base sm:text-xl font-mono h-10 sm:h-12 rounded-xl focus:border-red-500 focus:ring-red-500/30 flex-1"
+                            maxLength={20}
+                            aria-label="Nama panggilan"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={generateRandomNickname}
+                            className="border-red-500/50 text-red-400 hover:bg-red-500/20 h-10 sm:h-12 w-10 sm:w-12"
+                            aria-label="Buat nama acak"
+                          >
+                            <RefreshCw className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleJoinGame}
+                        disabled={!gameCode || !nickname || isJoining}
+                        className="w-full bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 text-white font-mono text-base sm:text-lg py-3 sm:py-4 rounded-xl border-2 border-red-700 shadow-[0_0_15px_rgba(239,68,68,0.5)] hover:shadow-[0_0_20px_rgba(239,68,68,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
+                        aria-label={isJoining ? t("joining") : t("joinButton")}
+                        aria-disabled={!gameCode || !nickname || isJoining}
+                      >
+                        <span className="relative z-10 flex items-center">
+                          {isJoining ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                              className="w-5 h-5 mr-2"
+                            >
+                              <Zap className="w-5 h-5" aria-hidden="true" />
+                            </motion.div>
+                          ) : (
+                            <Hash className="w-5 h-5 mr-2" aria-hidden="true" />
+                          )}
+                          {isJoining ? t("joining") : t("joinButton")}
+                        </span>
                       </Button>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleJoinGame}
-                    disabled={!gameCode || !nickname || isJoining}
-                    className="w-full bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 text-white font-mono text-base sm:text-lg py-3 sm:py-4 rounded-xl border-2 border-red-700 shadow-[0_0_15px_rgba(239,68,68,0.5)] hover:shadow-[0_0_20px_rgba(239,68,68,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
-                    aria-label={isJoining ? t("joining") : t("joinButton")}
-                    aria-disabled={!gameCode || !nickname || isJoining}
-                  >
-                    <span className="relative z-10 flex items-center">
-                      {isJoining ? (
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                          className="w-5 h-5 mr-2"
-                        >
-                          <Zap className="w-5 h-5" aria-hidden="true" />
-                        </motion.div>
-                      ) : (
-                        <Hash className="w-5 h-5 mr-2" aria-hidden="true" />
-                      )}
-                      {isJoining ? t("joining") : t("joinButton")}
-                    </span>
-                  </Button>
+                    </TabsContent>
+                    
+                    {/* Tryout Tab */}
+                    <TabsContent value="tryout" className="space-y-4 sm:space-y-6 mt-0">
+                      <div>
+                        <p className="text-red-400/70 text-sm font-mono mb-4 text-center">
+                          {/* {t("tryoutInfo")} */}
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            placeholder={t("nicknamePlaceholder")}
+                            value={nickname}
+                            onChange={(e) => handleNicknameChange(e.target.value)}
+                            className="bg-black/50 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-center text-base sm:text-xl font-mono h-10 sm:h-12 rounded-xl focus:border-red-500 focus:ring-red-500/30 flex-1"
+                            maxLength={20}
+                            aria-label="Nama panggilan"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={generateRandomNickname}
+                            className="border-red-500/50 text-red-400 hover:bg-red-500/20 h-10 sm:h-12 w-10 sm:w-12"
+                            aria-label="Buat nama acak"
+                          >
+                            <RefreshCw className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleStartTryout}
+                        disabled={!nickname || isStartingTryout}
+                        className="w-full bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 text-white font-mono text-base sm:text-lg py-3 sm:py-4 rounded-xl border-2 border-red-700 shadow-[0_0_15px_rgba(239,68,68,0.5)] hover:shadow-[0_0_20px_rgba(239,68,68,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
+                        aria-label={isStartingTryout ? t("startingTryout") : t("startTryoutButton")}
+                        aria-disabled={!nickname || isStartingTryout}
+                      >
+                        <span className="relative z-10 flex items-center">
+                          {isStartingTryout ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                              className="w-5 h-5 mr-2"
+                            >
+                              <Zap className="w-5 h-5" aria-hidden="true" />
+                            </motion.div>
+                          ) : (
+                            <Gamepad2 className="w-5 h-5 mr-2" aria-hidden="true" />
+                          )}
+                          {isStartingTryout ? t("startingTryout") : t("startTryoutButton")}
+                        </span>
+                      </Button>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             </motion.div>
 
+            {/* Host Game Card */}
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}

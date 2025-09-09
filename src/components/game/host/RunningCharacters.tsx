@@ -262,115 +262,59 @@ export default function RunningCharacters({
         const attackShakeY = isBeingAttacked ? Math.sin(animationTime * 8) * attackShakeIntensity : 0;
 
         return (
-          <motion.div
-            key={`character-${player.id}`}
-            className="absolute"
-            initial={{ opacity: 1, scale: 1 }}
-            animate={{
-              opacity: 1,
-              scale: isBeingAttacked ? 1.2 : gameMode === "panic" ? 1.3 : 1.1,
-              x: charX + attackShakeX,
-              y: charY + attackShakeY,
-            }}
-            transition={{
-              opacity: { duration: 0.1 },
-              scale: { duration: isBeingAttacked ? 0.1 : 0.2 },
-              x: { duration: 0.1 },
-              y: { duration: 0.1 },
-            }}
-            style={{
-              zIndex: isZombieTarget ? 40 : 35,
-            }}
-          >
-            <div className="relative flex flex-col items-center">
-              {/* Efek aura saat diserang */}
-              {isZombieTarget && (
-                <motion.div
-                  className="absolute -inset-2 rounded-full bg-red-600 opacity-30 blur-lg"
-                  animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
-                />
-              )}
-
-              {/* Efek partikel saat diserang */}
-              {isZombieTarget &&
-                [...Array(2)].map((_, i) => (
-                  <motion.div
-                    key={`particle-${i}`}
-                    className="absolute w-2 h-2 bg-red-500 rounded-full"
-                    initial={{ x: 0, y: 0, opacity: 1 }}
-                    animate={{
-                      x: (Math.random() - 0.5) * 20,
-                      y: (Math.random() - 0.5) * 20,
-                      opacity: 0,
-                    }}
-                    transition={{ duration: 0.4, delay: i * 0.1 }}
-                  />
-                ))}
-
-              {/* Informasi karakter di atas karakter */}
-              <motion.div
-                className="absolute -top-1 left-1/2 transform -translate-x-1/2 flex items-center gap-1 bg-gradient-to-r from-black/90 to-gray-900/90 rounded-full px-2.5 py-1 shadow-md border border-white/10"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 0.95, y: 0 }}
-                whileHover={{ opacity: 1, scale: 1.05, boxShadow: "0 0 8px rgba(255,255,255,0.3)" }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                style={{ zIndex: 50 }}
-              >
-                <div className="flex gap-0.5">
-                  {[...Array(3)].map((_, heartIndex) => (
-                    <Heart
-                      key={heartIndex}
-                      className={`w-3.5 h-3.5 transition-all duration-300 ${
-                        heartIndex < health
-                          ? isZombieTarget
-                            ? "text-red-600 fill-red-600 animate-pulse"
-                            : "text-red-500 fill-red-500"
-                          : "text-gray-600 fill-gray-600 opacity-50"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-white font-sans text-[10px] font-medium max-w-[50px] truncate ml-1.5">
-                  {player.nickname}
-                </span>
-                <span className="text-gray-200 font-sans text-[10px] font-light">|</span>
-                <span className="text-gray-200 font-sans text-[10px] font-light">{speed}</span>
-              </motion.div>
-
-              <motion.div
-                animate={{
-                  scale: isBeingAttacked ? [1, 1.1, 1] : 1,
-                  filter: isZombieTarget
-                    ? "brightness(2) contrast(2.2) saturate(2) hue-rotate(15deg) drop-shadow(0 0 10px rgba(255,50,50,0.8))"
-                    : gameMode === "panic"
-                      ? "brightness(1.2) contrast(1.4) saturate(1.2)"
-                      : "brightness(1.1) contrast(1.2)",
-                }}
-                transition={{ duration: isBeingAttacked ? 0.3 : 0.2 }}
-              >
-                <Image
-                  src={workingPath}
-                  alt={character.alt}
-                  width={gameMode === "panic" ? character.width * 4.2 : character.width * 4.3}
-                  height={gameMode === "panic" ? character.height * 2.1 : character.height * 2.25}
-                  className="drop-shadow-2xl"
-                  unoptimized
-                  style={{
-                    imageRendering: "pixelated",
-                  }}
-                />
-              </motion.div>
-
-              {/* Bayangan dinamis */}
-              <div
-                className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 w-12 h-2 bg-black rounded-full opacity-30 blur-md"
-                style={{
-                  transform: `translateX(-50%) scaleX(${0.8 + Math.sin(animationTime * 0.6) * 0.2})`,
-                }}
-              />
-            </div>
-          </motion.div>
+<motion.div
+  key={`character-${player.id}`}
+  className="absolute"
+  initial={{ opacity: 1, scale: 1 }}
+  animate={{
+    opacity: 1,
+    scale: isBeingAttacked ? 1.1 : 1.0, // Hilangkan skala untuk mode panic
+    x: charX + attackShakeX * 0.5, // Kurangi getaran
+    y: charY + attackShakeY * 0.5,
+  }}
+  transition={{ duration: 0.4, ease: "easeOut" }} // Transisi lebih lambat
+  style={{ zIndex: isZombieTarget ? 40 : 35 }}
+>
+  {/* Hapus efek aura dan partikel jika tidak kritis */}
+  {isZombieTarget && isBeingAttacked && (
+    <div className="absolute -inset-2 rounded-full bg-red-600 opacity-20 blur-md" /> // Ganti motion dengan div statis
+  )}
+  {/* Hapus partikel untuk optimasi */}
+  {/* {isZombieTarget && [...Array(2)].map(...)} <- Hapus ini */}
+  
+  {/* Informasi karakter: Sederhanakan without whileHover */}
+  <motion.div
+    className="absolute -top-1 left-1/2 transform -translate-x-1/2 flex items-center gap-1 bg-gradient-to-r from-black/90 to-gray-900/90 rounded-full px-2 py-0.5 shadow-md border border-white/10"
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 0.9, y: 0 }}
+    transition={{ duration: 0.4 }}
+    style={{ zIndex: 50 }}
+  >
+    {/* ... kode heart dan nickname ... */}
+  </motion.div>
+  
+  <motion.div
+    animate={{
+      scale: isBeingAttacked ? [1, 1.05, 1] : 1, // Kurangi skala
+      filter: isZombieTarget ? "brightness(1.2) drop-shadow(0 0 5px rgba(255,50,50,0.5))" : "brightness(1.0)",
+    }}
+    transition={{ duration: 0.4 }}
+  >
+    <Image
+      src={workingPath}
+      alt={character.alt}
+      width={character.width * 3.0} // Kurangi ukuran dari 4.3 ke 3.0
+      height={character.height * 1.5} // Kurangi ukuran
+      className="drop-shadow-xl"
+      unoptimized={false} // Hapus unoptimized untuk gunakan optimasi Next.js
+      loading="lazy"
+      style={{ imageRendering: "pixelated" }}
+    />
+  </motion.div>
+  
+  {/* Bayangan: Ganti dengan statis */}
+  <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 w-10 h-1.5 bg-black rounded-full opacity-20 blur-sm" />
+</motion.div>
         );
       })}
       <style jsx>{`
