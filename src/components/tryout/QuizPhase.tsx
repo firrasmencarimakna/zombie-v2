@@ -175,7 +175,8 @@ export default function QuizPhase({ quizId, nickname }: QuizPhaseProps) {
                 className="text-4xl md:text-6xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse"
                 style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
               >
-                {t("title", { defaultValue: "Quiz Game" })} - {nickname}
+                {t("title")}
+                {/* {t("title", { defaultValue: "Quiz Game" })} - {nickname} */}
               </h1>
             </motion.div>
           </div>

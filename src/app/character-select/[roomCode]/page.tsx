@@ -124,8 +124,8 @@ export default function CharacterSelectPage() {
   const difficultyOptions: DifficultyOption[] = useMemo(
     () => [
       { value: "easy", zombieAttackCountdown: 30, inactivityPenalty: 25 },
-      { value: "medium", zombieAttackCountdown: 20, inactivityPenalty: 20 },
-      { value: "hard", zombieAttackCountdown: 10, inactivityPenalty: 15 },
+      { value: "medium", zombieAttackCountdown: 20, inactivityPenalty: 10 },
+      { value: "hard", zombieAttackCountdown: 10, inactivityPenalty: 5 },
     ],
     []
   );
