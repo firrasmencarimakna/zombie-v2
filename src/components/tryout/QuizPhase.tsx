@@ -27,7 +27,7 @@ interface Question {
   correct_answer: string;
 }
 
-export default function QuizPhase({ quizId, nickname, questionsCount, durationInSeconds  }: QuizPhaseProps) {
+export default function QuizPhase({ quizId, nickname, questionsCount, durationInSeconds }: QuizPhaseProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -45,6 +45,14 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
 
+  const shuffleQuestions = (questions: any[]) => {
+    return questions
+      .map((value) => ({ value, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ value }) => value)
+      .slice(0, Math.min(questionsCount, questions.length));
+  };
+
   useEffect(() => {
     const fetchQuestions = async () => {
       setIsLoading(true);
@@ -52,8 +60,7 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
         const { data, error } = await supabase
           .from("quiz_questions")
           .select("id, quiz_id, question_text, question_type, image_url, options, correct_answer")
-          .eq("quiz_id", quizId)
-          .limit(questionsCount)
+          .eq("quiz_id", quizId);
 
         if (error) {
           console.error("Supabase error fetching quiz_questions:", error.message);
@@ -63,17 +70,19 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
           setError(t("errorMessages.noQuestionsFound", { defaultValue: "No questions found for this quiz" }));
           return;
         }
-        setQuestions(data);
+
+        // Shuffle questions using separate function
+        const shuffledQuestions = shuffleQuestions(data);
+        setQuestions(shuffledQuestions);
+        setIsLoading(false);
       } catch (err: any) {
         console.error("Failed to fetch quiz_questions:", err.message);
         setError(t("errorMessages.fetchQuestionsFailed", { defaultValue: "Failed to fetch questions" }));
-      } finally {
-        setIsLoading(false);
       }
     };
 
     fetchQuestions();
-  }, [quizId, t]);
+  }, [quizId, questionsCount, t]);
 
   const handleAnswerSelect = async (answer: string) => {
     if (isAnswered || !currentQuestion || isProcessingAnswer) return;
@@ -193,48 +202,55 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
           <Card className="max-w-4xl mx-auto bg-gray-900/90 border-red-900/50 backdrop-blur-sm p-0">
             <div className="p-8 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-purple-500/5" />
-              <div className="relative z-10">
-                {currentQuestion.question_type === "IMAGE" && currentQuestion.image_url && (
-                  <div className="mb-4 text-center">
-                    <img
-                      src={currentQuestion.image_url || "/placeholder.svg"}
-                      alt={currentQuestion.question_text}
-                      className="max-w-xs max-h-48 mx-auto rounded-lg"
-                    />
+              <motion.div
+                key={currentQuestionIndex} // Use key to trigger animation on question change
+                initial={{ opacity: 0, y: 0 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="relative z-10">
+                  {currentQuestion.question_type === "IMAGE" && currentQuestion.image_url && (
+                    <div className="mb-4 text-center">
+                      <img
+                        src={currentQuestion.image_url || "/placeholder.svg"}
+                        alt={currentQuestion.question_text}
+                        className="max-w-xs max-h-48 mx-auto rounded-lg"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-start space-x-4 mb-8">
+                    <h2 className="text-2xl font-bold text-white leading-relaxed">{currentQuestion.question_text}</h2>
                   </div>
-                )}
-                <div className="flex items-start space-x-4 mb-8">
-                  <h2 className="text-2xl font-bold text-white leading-relaxed">{currentQuestion.question_text}</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {currentQuestion.options.map((option: string, index: number) => (
-                    <Button
-                      key={index}
-                      onClick={() => handleAnswerSelect(option)}
-                      disabled={isAnswered || isProcessingAnswer}
-                      className={`${getAnswerButtonClass(option)} p-6 text-left justify-start font-mono text-lg border-2 transition-all duration-300 relative overflow-hidden group ${
-                        isProcessingAnswer ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                      <div className="flex items-center space-x-3 relative z-10">
-                        <span className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center text-sm font-bold">
-                          {String.fromCharCode(65 + index)}
-                        </span>
-                        <span className="flex-1 whitespace-normal">{option}</span>
-                        {isAnswered && option === currentQuestion.correct_answer && (
-                          <CheckCircle className="w-5 h-5 ml-auto animate-pulse" />
-                        )}
-                        {isAnswered &&
-                          option === selectedAnswer &&
-                          option !== currentQuestion.correct_answer && (
-                            <XCircle className="w-5 h-5 ml-auto animate-pulse" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {currentQuestion.options.map((option: string, index: number) => (
+                      <Button
+                        key={index}
+                        onClick={() => handleAnswerSelect(option)}
+                        disabled={isAnswered || isProcessingAnswer}
+                        className={`${getAnswerButtonClass(option)} p-6 text-left justify-start font-mono text-lg border-2 transition-all duration-300 relative overflow-hidden group ${isProcessingAnswer ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                        <div className="flex items-center space-x-3 relative z-10">
+                          <span className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center text-sm font-bold">
+                            {String.fromCharCode(65 + index)}
+                          </span>
+                          <span className="flex-1 whitespace-normal">{option}</span>
+                          {isAnswered && option === currentQuestion.correct_answer && (
+                            <CheckCircle className="w-5 h-5 ml-auto animate-pulse" />
                           )}
-                      </div>
-                    </Button>
-                  ))}
+                          {isAnswered &&
+                            option === selectedAnswer &&
+                            option !== currentQuestion.correct_answer && (
+                              <XCircle className="w-5 h-5 ml-auto animate-pulse" />
+                            )}
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </Card>
         </div>

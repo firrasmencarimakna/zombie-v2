@@ -168,15 +168,6 @@ export default function CharacterSelectPage() {
     setSelectedChaser(chaser);
   };
 
-  const changeLanguage = (lng: string) => {
-    if (Array.isArray(i18n.options.supportedLngs) && i18n.options.supportedLngs.includes(lng)) {
-      i18n.changeLanguage(lng);
-      router.push(`/character-select/${roomCode}?lng=${lng}`);
-    } else {
-      console.warn(`Unsupported language: ${lng}`);
-    }
-  };
-
   useEffect(() => {
     if (!roomCode || typeof roomCode !== "string") {
       toast.error(t("errorMessages.invalidRoomCode"));
