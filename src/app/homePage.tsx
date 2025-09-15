@@ -189,7 +189,7 @@ export default function HomePage() {
   //   setMassJoinInProgress(true);
   //   setJoinCount(0);
     
-  //   for (let i = 0; i < 12; i++) {
+  //   for (let i = 0; i < 20; i++) {
   //     try {
   //       // Generate nickname unik untuk setiap join
   //       const uniqueNickname = `${nickname}_${i + 1}`;

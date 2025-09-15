@@ -848,8 +848,7 @@ export default function HostPage() {
                   <motion.div
                     key="players"
                     className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-10 gap-4 md:gap-6"
-                    layout
-                    transition={{ layout: { duration: 0.3, type: "spring", stiffness: 100, damping: 20 } }}
+                    transition={{ layout: { type: "spring", stiffness: 200, damping: 20 } }}
                   >
                     <AnimatePresence>
                       {players.map((player, index) => {
@@ -860,9 +859,8 @@ export default function HostPage() {
                         return (
                           <motion.div
                             key={player.id}
-                            layout
-                            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
                             exit={{
                               opacity: 0,
                               scale: 0.5,
@@ -872,9 +870,8 @@ export default function HostPage() {
                             }}
                             transition={{
                               type: "spring",
-                              stiffness: 500,
-                              damping: 30,
-                              delay: index * 0.05,
+                              stiffness: 200,
+                              damping: 20,
                             }}
                             className="bg-black/40 border border-red-900/50 rounded-lg p-4 text-center hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] relative"
                           >

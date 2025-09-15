@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skull, Bone, HeartPulse, Search, Loader2, X, Clock, ArrowRight } from "lucide-react";
+import { Skull, Bone, HeartPulse, Search, Loader2, X, Clock, ArrowRight, List, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
@@ -12,6 +12,8 @@ import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import Image from "next/image";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 
 export default function QuizSelectTryoutPage() {
   const { t, i18n } = useTranslation();
@@ -31,6 +33,9 @@ export default function QuizSelectTryoutPage() {
   const [selectedQuiz, setSelectedQuiz] = useState<any | null>(null);
   const [numQuestions, setNumQuestions] = useState(10); // Nilai default
   const [duration, setDuration] = useState(300); // Nilai default dalam detik (5 menit)
+  const [totalQuestions, setTotalQuestions] = useState(25); // Default max, will fetch actual
+  const [questionError, setQuestionError] = useState<string | null>(null);
+  const [durationError, setDurationError] = useState<string | null>(null);
   const quizzesPerPage = 15;
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -152,22 +157,70 @@ export default function QuizSelectTryoutPage() {
     setIsSettingsModalOpen(true);
   }, []);
 
-  const handleStartQuiz = useCallback(() => {
-    if (!selectedQuiz) return;
-    setIsSelectingQuiz(true); // Gunakan state loading yang sudah ada
-    localStorage.setItem("quizConfig", JSON.stringify({
-      questions: numQuestions,
-      duration: duration,
-    }));
-    // Redirect dengan parameter URL
-    setTimeout(() => {
-      router.push(`/tryout/${selectedQuiz.id}`);
-    }, 500);
-  }, [router, selectedQuiz, numQuestions, duration]);
+  // Fetch total questions when selectedQuiz changes
+useEffect(() => {
+  if (!selectedQuiz) return;
 
-  const handleBackClick = useCallback(() => {
-    router.push("/");
-  }, [router]);
+  const fetchTotalQuestions = async () => {
+    try {
+      const { count: questionsCount, error: questionsError } = await supabase
+        .from("quiz_questions")
+        .select("*", { count: "exact", head: true })
+        .eq("quiz_id", selectedQuiz.id);
+
+      if (questionsError) {
+        console.error("Error fetching questions count:", questionsError);
+        setTotalQuestions(25); // Fallback
+      } else {
+        const total = questionsCount || 25;
+        setTotalQuestions(total);
+        // Adjust numQuestions if current value exceeds total
+        if (numQuestions > total) {
+          setNumQuestions(total);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch total questions:", error);
+    }
+  };
+
+  fetchTotalQuestions();
+}, [selectedQuiz]);
+
+// Handler for duration slider
+const handleDurationChange = (value: number[]) => {
+  const newValue = value[0];
+  if (newValue < 5 || newValue > 30) {
+    setDurationError(t("durationError")); // Assuming you have translation for error
+    return;
+  }
+  setDurationError(null);
+  setDuration(newValue * 60); // Convert minutes to seconds
+};
+
+// Handler for question count slider
+const handleQuestionCountChange = (value: number[]) => {
+  const newValue = value[0];
+  if (newValue >= 5 && newValue <= totalQuestions) {
+    setQuestionError(null);
+    setNumQuestions(newValue);
+  } else {
+    setQuestionError(t("questionError")); // Assuming translation for error
+  }
+};
+
+// In handleStartQuiz, store in minutes for duration if needed, but since you store seconds, adjust accordingly
+const handleStartQuiz = useCallback(() => {
+  if (!selectedQuiz) return;
+  setIsSelectingQuiz(true);
+  localStorage.setItem("quizConfig", JSON.stringify({
+    questions: numQuestions,
+    duration: duration, // Already in seconds
+  }));
+  setTimeout(() => {
+    router.push(`/tryout/${selectedQuiz.id}`);
+  }, 500);
+}, [router, selectedQuiz, numQuestions, duration]);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -481,64 +534,91 @@ export default function QuizSelectTryoutPage() {
           )}
           {/* MODAL PENGATURAN KUIS */}
           {isSettingsModalOpen && selectedQuiz && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-              onClick={() => setIsSettingsModalOpen(false)} // Menutup modal saat klik di luar
-            >
-              <motion.div
-                initial={{ y: -50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -50, opacity: 0 }}
-                className="bg-gray-900 border border-red-500/50 rounded-lg p-8 w-full max-w-md font-mono text-red-400 relative"
-                onClick={(e) => e.stopPropagation()} // Mencegah modal tertutup saat klik di dalam
-              >
-                <h2 className="text-2xl font-bold mb-2 text-red-500">{t("settingsTitle")}</h2>
-                <p className="text-gray-300 mb-6">{selectedQuiz.theme}</p>
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+    onClick={() => setIsSettingsModalOpen(false)}
+  >
+    <motion.div
+      initial={{ y: -50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -50, opacity: 0 }}
+      className="bg-gray-900 border border-red-500/50 rounded-lg p-8 w-full max-w-md font-mono text-red-400 relative"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center mb-1 space-x-2">
+        <Settings />
+        <h2 className="text-2xl font-mono font-semibold text-red-500">{t("settingsTitle")}</h2>
+      </div>
+      <p className="text-gray-300 mb-6">{selectedQuiz.theme}</p>
 
-                {/* Pengaturan Jumlah Soal */}
-                <div className="mb-4">
-                  <label htmlFor="numQuestions" className="block mb-2">{t("selectQuestionCount")}: <span className="text-white font-bold">{numQuestions}</span></label>
-                  <Input
-                    id="numQuestions"
-                    type="range"
-                    min="5"
-                    max="25" // Anda bisa sesuaikan max ini
-                    step="5"
-                    value={numQuestions}
-                    onChange={(e) => setNumQuestions(Number(e.target.value))}
-                    className="w-full h-2 bg-red-900/50 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
+      {/* Pengaturan Durasi - Using Slider */}
+      <div className="mb-6">
+        <Label htmlFor="duration" className="text-red-300 mb-2 block font-medium text-sm font-mono flex items-center">
+          {t("duration")}
+          <Clock className="w-4 h-4 ml-2 text-red-500" />
+        </Label>
+        <Slider
+          id="duration"
+          min={5}
+          max={30}
+          step={5}
+          value={[duration / 60]} // Display in minutes
+          onValueChange={handleDurationChange}
+          className="w-full mb-4"
+          aria-label={t("duration")}
+        />
+        <p className="text-red-400 font-mono text-sm">
+          {duration / 60} {t("minutes")}
+        </p>
+        {durationError && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-red-500 text-xs mt-1 animate-pulse"
+          >
+            {durationError}
+          </motion.p>
+        )}
+      </div>
 
-                {/* Pengaturan Durasi */}
-                <div className="mb-8">
-                  <label htmlFor="duration" className="block mb-2">{t("duration")}: <span className="text-white font-bold">{Math.floor(duration / 60)} {t("minutes")}</span></label>
-                  <Input
-                    id="duration"
-                    type="range"
-                    min="300" // 1 menit
-                    max="1800" // 30 menit
-                    step="300"
-                    value={duration}
-                    onChange={(e) => setDuration(Number(e.target.value))}
-                    className="w-full h-2 bg-red-900/50 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
+      {/* Pengaturan Jumlah Soal - Using Slider */}
+      <div className="mb-6">
+        <Label htmlFor="numQuestions" className="text-red-300 mb-2 block font-medium text-sm font-mono flex items-center">
+          {t("questionCountLabel")}
+          <List className="w-4 h-4 ml-2 text-red-500" />
+        </Label>
+        <Slider
+          id="numQuestions"
+          min={5}
+          max={totalQuestions}
+          step={5}
+          value={[numQuestions]}
+          onValueChange={handleQuestionCountChange}
+          className="w-full"
+          aria-label={t("selectQuestionCount")}
+        />
+        <p className="text-red-400 font-mono text-sm mt-2">
+          {numQuestions} {t("questions")} {numQuestions === totalQuestions ? `(${t("allLabel")})` : ""}
+        </p>
+        {questionError && (
+          <p className="text-red-500 text-xs mt-1 animate-pulse">{questionError}</p>
+        )}
+      </div>
 
-                <div className="flex justify-between items-center">
-                  <Button variant="outline" className="border-red-500/50 hover:bg-red-900/20" onClick={() => setIsSettingsModalOpen(false)}>
-                    {t("cancel")}
-                  </Button>
-                  <Button className="bg-red-700 hover:bg-red-600 text-white" onClick={handleStartQuiz}>
-                    {t("start")} <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
+      <div className="flex justify-between items-center">
+        <Button variant="outline" className="border-red-500/50 hover:bg-red-900/20" onClick={() => setIsSettingsModalOpen(false)}>
+          {t("cancel")}
+        </Button>
+        <Button className="bg-red-700 hover:bg-red-600 text-white" onClick={handleStartQuiz}>
+          {t("start")}
+        </Button>
+      </div>
+    </motion.div>
+  </motion.div>
+)}
         </div>
       </div>
 

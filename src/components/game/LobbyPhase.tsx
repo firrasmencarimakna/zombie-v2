@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Dispatch, SetStateAction } from "react";
 import { Users, Skull, Zap, Play, Ghost, Bone, HeartPulse, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
@@ -8,7 +8,7 @@ import SoulStatus from "./SoulStatus";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { syncServerTime, calculateCountdown } from "@/lib/server-time"
 
 import { useTranslation } from "react-i18next";
@@ -51,6 +51,40 @@ const characterOptions = [
   { value: "robot10", name: "Emas", gif: "/character/player/character9-crop.gif", alt: "Karakter Emas" },
 ]
 
+export function useDetectBackAction(
+  setIsExitDialogOpen: Dispatch<SetStateAction<boolean>>
+) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // "Jebak" back pertama → dorong dummy state
+    window.history.pushState(null, "", window.location.href);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        setIsExitDialogOpen(true);
+        // dorong lagi biar bisa deteksi back berkali-kali
+        window.history.pushState(null, "", window.location.href);
+      }
+    };
+
+    const handlePopState = () => {
+      setIsExitDialogOpen(true);
+      // push lagi, biar user gak benar-benar keluar
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [setIsExitDialogOpen]);
+}
+
 export default function LobbyPhase({
   currentPlayer,
   players,
@@ -70,6 +104,9 @@ export default function LobbyPhase({
   const [isCharacterDialogOpen, setIsCharacterDialogOpen] = useState(false)
   const [selectedCharacter, setSelectedCharacter] = useState(currentPlayer.character_type || "robot1")
   const router = useRouter()
+  const pathname = usePathname()
+  const params = useParams()
+  const roomCode = params.roomCode as string
   const [isExitDialogOpen, setIsExitDialogOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false);
 
@@ -301,6 +338,8 @@ export default function LobbyPhase({
     roomCountdownStart: room?.countdown_start,
   })
 
+  useDetectBackAction(setIsExitDialogOpen);
+
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none">
       {/* Latar belakang bernoda darah */}
@@ -401,14 +440,13 @@ export default function LobbyPhase({
           className="flex flex-col gap-1 mb-10"
         >
           <div className="flex items-center justify-between mb-5">
-            <Link href={"/"}>
               <h1
                 className="text-2xl md:text-4xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]"
                 style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
+                onClick={() => setIsExitDialogOpen(true)}
               >
                 {t("title")}
               </h1>
-            </Link>
             <Button
               onClick={() => setIsExitDialogOpen(true)}
               variant="ghost"
