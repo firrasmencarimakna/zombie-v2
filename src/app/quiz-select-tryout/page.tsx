@@ -158,69 +158,69 @@ export default function QuizSelectTryoutPage() {
   }, []);
 
   // Fetch total questions when selectedQuiz changes
-useEffect(() => {
-  if (!selectedQuiz) return;
+  useEffect(() => {
+    if (!selectedQuiz) return;
 
-  const fetchTotalQuestions = async () => {
-    try {
-      const { count: questionsCount, error: questionsError } = await supabase
-        .from("quiz_questions")
-        .select("*", { count: "exact", head: true })
-        .eq("quiz_id", selectedQuiz.id);
+    const fetchTotalQuestions = async () => {
+      try {
+        const { count: questionsCount, error: questionsError } = await supabase
+          .from("quiz_questions")
+          .select("*", { count: "exact", head: true })
+          .eq("quiz_id", selectedQuiz.id);
 
-      if (questionsError) {
-        console.error("Error fetching questions count:", questionsError);
-        setTotalQuestions(25); // Fallback
-      } else {
-        const total = questionsCount || 25;
-        setTotalQuestions(total);
-        // Adjust numQuestions if current value exceeds total
-        if (numQuestions > total) {
-          setNumQuestions(total);
+        if (questionsError) {
+          console.error("Error fetching questions count:", questionsError);
+          setTotalQuestions(25); // Fallback
+        } else {
+          const total = questionsCount || 25;
+          setTotalQuestions(total);
+          // Adjust numQuestions if current value exceeds total
+          if (numQuestions > total) {
+            setNumQuestions(total);
+          }
         }
+      } catch (error) {
+        console.error("Failed to fetch total questions:", error);
       }
-    } catch (error) {
-      console.error("Failed to fetch total questions:", error);
+    };
+
+    fetchTotalQuestions();
+  }, [selectedQuiz]);
+
+  // Handler for duration slider
+  const handleDurationChange = (value: number[]) => {
+    const newValue = value[0];
+    if (newValue < 5 || newValue > 30) {
+      setDurationError(t("durationError")); // Assuming you have translation for error
+      return;
+    }
+    setDurationError(null);
+    setDuration(newValue * 60); // Convert minutes to seconds
+  };
+
+  // Handler for question count slider
+  const handleQuestionCountChange = (value: number[]) => {
+    const newValue = value[0];
+    if (newValue >= 5 && newValue <= totalQuestions) {
+      setQuestionError(null);
+      setNumQuestions(newValue);
+    } else {
+      setQuestionError(t("questionError")); // Assuming translation for error
     }
   };
 
-  fetchTotalQuestions();
-}, [selectedQuiz]);
-
-// Handler for duration slider
-const handleDurationChange = (value: number[]) => {
-  const newValue = value[0];
-  if (newValue < 5 || newValue > 30) {
-    setDurationError(t("durationError")); // Assuming you have translation for error
-    return;
-  }
-  setDurationError(null);
-  setDuration(newValue * 60); // Convert minutes to seconds
-};
-
-// Handler for question count slider
-const handleQuestionCountChange = (value: number[]) => {
-  const newValue = value[0];
-  if (newValue >= 5 && newValue <= totalQuestions) {
-    setQuestionError(null);
-    setNumQuestions(newValue);
-  } else {
-    setQuestionError(t("questionError")); // Assuming translation for error
-  }
-};
-
-// In handleStartQuiz, store in minutes for duration if needed, but since you store seconds, adjust accordingly
-const handleStartQuiz = useCallback(() => {
-  if (!selectedQuiz) return;
-  setIsSelectingQuiz(true);
-  localStorage.setItem("quizConfig", JSON.stringify({
-    questions: numQuestions,
-    duration: duration, // Already in seconds
-  }));
-  setTimeout(() => {
-    router.push(`/tryout/${selectedQuiz.id}`);
-  }, 500);
-}, [router, selectedQuiz, numQuestions, duration]);
+  // In handleStartQuiz, store in minutes for duration if needed, but since you store seconds, adjust accordingly
+  const handleStartQuiz = useCallback(() => {
+    if (!selectedQuiz) return;
+    setIsSelectingQuiz(true);
+    localStorage.setItem("quizConfig", JSON.stringify({
+      questions: numQuestions,
+      duration: duration, // Already in seconds
+    }));
+    setTimeout(() => {
+      router.push(`/tryout/${selectedQuiz.id}`);
+    }, 500);
+  }, [router, selectedQuiz, numQuestions, duration]);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -339,7 +339,11 @@ const handleStartQuiz = useCallback(() => {
                 {t("title")}
               </h1>
             </Link>
-            <Image src={`/logo/Gemini_Generated_Image_90360u90360u9036-removebg-preview.png`} alt="" width={254} height={0} />
+            <img
+              src={`/logo/Gemini_Generated_Image_90360u90360u9036-removebg-preview.png`}
+              alt="Game for Smart Logo"
+              className="w-40 md:w-52 lg:w-64 h-auto"
+            />
           </div>
 
           <motion.div
@@ -348,14 +352,14 @@ const handleStartQuiz = useCallback(() => {
             transition={{ duration: 0.8, delay: 0.5, type: "spring", stiffness: 100 }}
             className="flex justify-center items-center text-center"
           >
-            <HeartPulse className="w-12 h-12 text-red-500 mr-4 animate-pulse" />
+            <HeartPulse className="w-10 h-10 text-red-500 mr-4 animate-pulse" />
             <h1
               className={`text-4xl md:text-6xl font-bold font-mono tracking-wider transition-all duration-150 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse`}
               style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
             >
               {t("selectQuizTitle")}
             </h1>
-            <HeartPulse className="w-12 h-12 text-red-500 ml-4 animate-pulse" />
+            <HeartPulse className="w-10 h-10 text-red-500 ml-4 animate-pulse" />
           </motion.div>
         </motion.header>
 
@@ -534,91 +538,91 @@ const handleStartQuiz = useCallback(() => {
           )}
           {/* MODAL PENGATURAN KUIS */}
           {isSettingsModalOpen && selectedQuiz && (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-    onClick={() => setIsSettingsModalOpen(false)}
-  >
-    <motion.div
-      initial={{ y: -50, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: -50, opacity: 0 }}
-      className="bg-gray-900 border border-red-500/50 rounded-lg p-8 w-full max-w-md font-mono text-red-400 relative"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="flex items-center mb-1 space-x-2">
-        <Settings />
-        <h2 className="text-2xl font-mono font-semibold text-red-500">{t("settingsTitle")}</h2>
-      </div>
-      <p className="text-gray-300 mb-6">{selectedQuiz.theme}</p>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+              onClick={() => setIsSettingsModalOpen(false)}
+            >
+              <motion.div
+                initial={{ y: -50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -50, opacity: 0 }}
+                className="bg-gray-900 border border-red-500/50 rounded-lg p-8 w-full max-w-md font-mono text-red-400 relative"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center mb-1 space-x-2">
+                  <Settings />
+                  <h2 className="text-2xl font-mono font-semibold text-red-500">{t("settingsTitle")}</h2>
+                </div>
+                <p className="text-gray-300 mb-6">{selectedQuiz.theme}</p>
 
-      {/* Pengaturan Durasi - Using Slider */}
-      <div className="mb-6">
-        <Label htmlFor="duration" className="text-red-300 mb-2 block font-medium text-sm font-mono flex items-center">
-          {t("duration")}
-          <Clock className="w-4 h-4 ml-2 text-red-500" />
-        </Label>
-        <Slider
-          id="duration"
-          min={5}
-          max={30}
-          step={5}
-          value={[duration / 60]} // Display in minutes
-          onValueChange={handleDurationChange}
-          className="w-full mb-4"
-          aria-label={t("duration")}
-        />
-        <p className="text-red-400 font-mono text-sm">
-          {duration / 60} {t("minutes")}
-        </p>
-        {durationError && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-red-500 text-xs mt-1 animate-pulse"
-          >
-            {durationError}
-          </motion.p>
-        )}
-      </div>
+                {/* Pengaturan Durasi - Using Slider */}
+                <div className="mb-6">
+                  <Label htmlFor="duration" className="text-red-300 mb-2 block font-medium text-sm font-mono flex items-center">
+                    {t("duration")}
+                    <Clock className="w-4 h-4 ml-2 text-red-500" />
+                  </Label>
+                  <Slider
+                    id="duration"
+                    min={5}
+                    max={30}
+                    step={5}
+                    value={[duration / 60]} // Display in minutes
+                    onValueChange={handleDurationChange}
+                    className="w-full mb-4"
+                    aria-label={t("duration")}
+                  />
+                  <p className="text-red-400 font-mono text-sm">
+                    {duration / 60} {t("minutes")}
+                  </p>
+                  {durationError && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-red-500 text-xs mt-1 animate-pulse"
+                    >
+                      {durationError}
+                    </motion.p>
+                  )}
+                </div>
 
-      {/* Pengaturan Jumlah Soal - Using Slider */}
-      <div className="mb-6">
-        <Label htmlFor="numQuestions" className="text-red-300 mb-2 block font-medium text-sm font-mono flex items-center">
-          {t("questionCountLabel")}
-          <List className="w-4 h-4 ml-2 text-red-500" />
-        </Label>
-        <Slider
-          id="numQuestions"
-          min={5}
-          max={totalQuestions}
-          step={5}
-          value={[numQuestions]}
-          onValueChange={handleQuestionCountChange}
-          className="w-full"
-          aria-label={t("selectQuestionCount")}
-        />
-        <p className="text-red-400 font-mono text-sm mt-2">
-          {numQuestions} {t("questions")} {numQuestions === totalQuestions ? `(${t("allLabel")})` : ""}
-        </p>
-        {questionError && (
-          <p className="text-red-500 text-xs mt-1 animate-pulse">{questionError}</p>
-        )}
-      </div>
+                {/* Pengaturan Jumlah Soal - Using Slider */}
+                <div className="mb-6">
+                  <Label htmlFor="numQuestions" className="text-red-300 mb-2 block font-medium text-sm font-mono flex items-center">
+                    {t("questionCountLabel")}
+                    <List className="w-4 h-4 ml-2 text-red-500" />
+                  </Label>
+                  <Slider
+                    id="numQuestions"
+                    min={5}
+                    max={totalQuestions}
+                    step={5}
+                    value={[numQuestions]}
+                    onValueChange={handleQuestionCountChange}
+                    className="w-full"
+                    aria-label={t("selectQuestionCount")}
+                  />
+                  <p className="text-red-400 font-mono text-sm mt-2">
+                    {numQuestions} {t("questions")} {numQuestions === totalQuestions ? `(${t("allLabel")})` : ""}
+                  </p>
+                  {questionError && (
+                    <p className="text-red-500 text-xs mt-1 animate-pulse">{questionError}</p>
+                  )}
+                </div>
 
-      <div className="flex justify-between items-center">
-        <Button variant="outline" className="border-red-500/50 hover:bg-red-900/20" onClick={() => setIsSettingsModalOpen(false)}>
-          {t("cancel")}
-        </Button>
-        <Button className="bg-red-700 hover:bg-red-600 text-white" onClick={handleStartQuiz}>
-          {t("start")}
-        </Button>
-      </div>
-    </motion.div>
-  </motion.div>
-)}
+                <div className="flex justify-between items-center">
+                  <Button variant="outline" className="border-red-500/50 hover:bg-red-900/20" onClick={() => setIsSettingsModalOpen(false)}>
+                    {t("cancel")}
+                  </Button>
+                  <Button className="bg-red-700 hover:bg-red-600 text-white" onClick={handleStartQuiz}>
+                    {t("start")}
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
         </div>
       </div>
 

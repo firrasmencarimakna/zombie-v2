@@ -215,19 +215,19 @@ export default function QuizSelectPage() {
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none flex flex-col">
-      
+
 
       {isClient &&
         bloodDrips.map((drip) => (
-        <motion.div
-          key={drip.id}
-          initial={{ y: -100 }}
-          animate={{ y: "100vh" }}
-          transition={{ duration: drip.speed, delay: drip.delay, ease: "linear", repeat: Infinity }}
-          className="fixed top-0 w-0.5 h-16 bg-gradient-to-b from-red-600 to-red-800/50"
-          style={{ left: `${drip.left}%`, opacity: 0.6 + Math.random() * 0.2 }}
-        />
-      ))}
+          <motion.div
+            key={drip.id}
+            initial={{ y: -100 }}
+            animate={{ y: "100vh" }}
+            transition={{ duration: drip.speed, delay: drip.delay, ease: "linear", repeat: Infinity }}
+            className="fixed top-0 w-0.5 h-16 bg-gradient-to-b from-red-600 to-red-800/50"
+            style={{ left: `${drip.left}%`, opacity: 0.6 + Math.random() * 0.2 }}
+          />
+        ))}
 
       {isClient && (
         <div className="absolute inset-0 pointer-events-none">
@@ -281,7 +281,11 @@ export default function QuizSelectPage() {
                 {t("title")}
               </h1>
             </Link>
-            <Image src={`/logo/Gemini_Generated_Image_90360u90360u9036-removebg-preview.png`} alt="" width={254} height={0} />
+            <img
+              src={`/logo/Gemini_Generated_Image_90360u90360u9036-removebg-preview.png`}
+              alt="Game for Smart Logo"
+              className="w-40 md:w-52 lg:w-64 h-auto"
+            />
           </div>
 
           <motion.div
@@ -351,10 +355,10 @@ export default function QuizSelectPage() {
           {isLoading ? (
             <div className="flex items-center justify-center w-full mx-auto mt-10 pt-10">
               <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-          className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full"
-        />
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full"
+              />
             </div>
           ) : isSearching ? (
             filteredQuizzes.length > 0 ? (

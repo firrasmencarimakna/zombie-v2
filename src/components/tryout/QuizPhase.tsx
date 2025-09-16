@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CircleQuestionMark, CheckCircle, XCircle } from "lucide-react";
+import { CircleQuestionMark, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
@@ -32,7 +32,6 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
   const router = useRouter();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -40,10 +39,60 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
   const [isProcessingAnswer, setIsProcessingAnswer] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState(durationInSeconds);
+  const [answers, setAnswers] = useState<Array<{ questionId: string; selected: string; correct: boolean }>>([]);
   const FEEDBACK_DURATION = 1000;
+  const [timeReady, setTimeReady] = useState(false);
+  const [indexReady, setIndexReady] = useState(false);
 
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
+  
+  const CORRECT_KEY = `tryout_correct_${quizId}_${nickname}`;
+  const saveCorrect = (n: number) => localStorage.setItem(CORRECT_KEY, String(n));
+  const loadCorrect = () => Number(localStorage.getItem(CORRECT_KEY) || 0);
+  const [correctAnswers, setCorrectAnswers] = useState(loadCorrect());
+  
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      finishQuiz();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  useEffect(() => {
+    const endTimeKey = `tryout_endTime_${quizId}_${nickname}`;
+    const existingEndTime = localStorage.getItem(endTimeKey);
+
+    let endTime: number;
+    if (existingEndTime) {
+      endTime = Number(existingEndTime);
+    } else {
+      endTime = Date.now() + durationInSeconds * 1000;
+      localStorage.setItem(endTimeKey, String(endTime));
+    }
+
+    const calcRemaining = () => Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+    setTimeLeft(calcRemaining());
+    setTimeReady(true);
+
+    const interval = setInterval(() => {
+      const remaining = calcRemaining();
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        finishQuiz();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const shuffleQuestions = (questions: any[]) => {
     return questions
@@ -54,35 +103,68 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
   };
 
   useEffect(() => {
+    const QUIZ_KEY = `tryout_questions_${quizId}_${nickname}`;
+    const INDEX_KEY = `tryout_index_${quizId}_${nickname}`;
+
+    const loadQuestions = (): Question[] | null => {
+      const raw = localStorage.getItem(QUIZ_KEY);
+      return raw ? JSON.parse(raw) : null;
+    };
+    const saveQuestions = (q: Question[]) =>
+      localStorage.setItem(QUIZ_KEY, JSON.stringify(q));
+
+    const loadIndex = () => {
+      const raw = localStorage.getItem(INDEX_KEY);
+      return raw ? Number(raw) : 0;
+    };
+
     const fetchQuestions = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("quiz_questions")
-          .select("id, quiz_id, question_text, question_type, image_url, options, correct_answer")
-          .eq("quiz_id", quizId);
+        let qs = loadQuestions();
+        if (!qs) {
+          // player pertama kali main → ambil & acak
+          const { data, error } = await supabase
+            .from("quiz_questions")
+            .select("id, quiz_id, question_text, question_type, image_url, options, correct_answer")
+            .eq("quiz_id", quizId);
 
-        if (error) {
-          console.error("Supabase error fetching quiz_questions:", error.message);
-          throw new Error(error.message);
-        }
-        if (!data || data.length === 0) {
-          setError(t("errorMessages.noQuestionsFound", { defaultValue: "No questions found for this quiz" }));
-          return;
+          if (error || !data?.length) {
+            setError(t("errorMessages.noQuestionsFound"));
+            return;
+          }
+
+          // acak sekali saja
+          qs = data
+            .map((q) => ({ ...q, sort: Math.random() }))
+            .sort((a, b) => a.sort - b.sort)
+            .map(({ sort, ...rest }) => rest)
+            .slice(0, questionsCount);
+
+          saveQuestions(qs);
         }
 
-        // Shuffle questions using separate function
-        const shuffledQuestions = shuffleQuestions(data);
-        setQuestions(shuffledQuestions);
+        setQuestions(qs);
+        const idx = loadIndex();
+        setCurrentQuestionIndex(idx);
+        setIndexReady(true);
         setIsLoading(false);
-      } catch (err: any) {
-        console.error("Failed to fetch quiz_questions:", err.message);
-        setError(t("errorMessages.fetchQuestionsFailed", { defaultValue: "Failed to fetch questions" }));
+      } catch {
+        setError(t("errorMessages.fetchQuestionsFailed"));
       }
     };
 
     fetchQuestions();
-  }, [quizId, questionsCount, t]);
+  }, [quizId, questionsCount, nickname, t]);
+
+
+  /* 2. Effect simpan nomor soal saat user berpindang */
+  useEffect(() => {
+    if (!indexReady) return;
+    const INDEX_KEY = `tryout_index_${quizId}_${nickname}`;
+    localStorage.setItem(INDEX_KEY, String(currentQuestionIndex));
+  }, [currentQuestionIndex, indexReady, quizId, nickname]);
+
 
   const handleAnswerSelect = async (answer: string) => {
     if (isAnswered || !currentQuestion || isProcessingAnswer) return;
@@ -95,30 +177,49 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
     setIsCorrect(isCorrectAnswer);
     setShowFeedback(true);
 
+    const newAnswer = {
+      questionId: currentQuestion.id,
+      selected: answer,
+      correct: isCorrectAnswer,
+    };
+
+    const updatedAnswers = [...answers, newAnswer];
+    setAnswers(updatedAnswers);
+
     if (isCorrectAnswer) {
-      setCorrectAnswers((prev) => prev + 1);
+      setCorrectAnswers((prev) => {
+        const next = prev + 1;
+        saveCorrect(next);
+        return next;
+      });
     }
 
     setTimeout(() => {
       setShowFeedback(false);
       if (currentQuestionIndex + 1 >= totalQuestions) {
-        const result = {
-          quizId,
-          nickname,
-          correctAnswers: isCorrectAnswer ? correctAnswers + 1 : correctAnswers,
-          totalQuestions,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem(`tryoutResult_${quizId}_${nickname}`, JSON.stringify(result));
-        router.push(`/tryout/${quizId}/results`);
+        finishQuiz(updatedAnswers);
       } else {
         setCurrentQuestionIndex((prev) => prev + 1);
         setSelectedAnswer(null);
         setIsAnswered(false);
         setIsCorrect(null);
+        setIsProcessingAnswer(false);
       }
-      setIsProcessingAnswer(false);
     }, FEEDBACK_DURATION);
+  };
+
+  const finishQuiz = (finalAnswers = answers) => {
+    const result = {
+      quizId,
+      nickname,
+      correctAnswers: loadCorrect(),
+      totalQuestions,
+      answers: finalAnswers,
+      timeSpent: durationInSeconds - timeLeft,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(`tryoutResult_${quizId}_${nickname}`, JSON.stringify(result));
+    router.push(`/tryout/${quizId}/results`);
   };
 
   const getAnswerButtonClass = (option: string) => {
@@ -134,7 +235,7 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
     return "bg-gray-700 border-gray-600 text-gray-400";
   };
 
-  if (isLoading) {
+  if (!timeReady || !indexReady || isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <motion.div
@@ -173,7 +274,7 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-red-950/15 via-black to-purple-950/15" style={{ opacity: 0.3 }} />
-      <div className="relative z-10 container mx-auto px-4 pt-8">
+      <div className="relative z-10 container mx-auto p-4 md:p-7">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-6">
             <motion.div
@@ -187,7 +288,6 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
                 style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
               >
                 {t("title")}
-                {/* {t("title", { defaultValue: "Quiz Game" })} - {nickname} */}
               </h1>
             </motion.div>
           </div>
@@ -198,12 +298,20 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
                 {currentQuestionIndex + 1}/{totalQuestions}
               </span>
             </div>
+            <div className="flex items-center gap-x-1">
+              <Clock
+                className={`w-4 h-4 ${timeLeft <= 30 ? "text-red-500 animate-pulse" : "text-yellow-500"}`}
+              />
+              <span className={`${timeLeft <= 30 ? "text-red-500 animate-pulse" : "text-white"}`}>
+                {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+              </span>
+            </div>
           </div>
           <Card className="max-w-4xl mx-auto bg-gray-900/90 border-red-900/50 backdrop-blur-sm p-0">
             <div className="p-8 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-purple-500/5" />
               <motion.div
-                key={currentQuestionIndex} // Use key to trigger animation on question change
+                key={currentQuestion?.id} // Use key to trigger animation on question change
                 initial={{ opacity: 0, y: 0 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 0 }}
