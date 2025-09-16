@@ -1,19 +1,18 @@
 "use client";
 
 import { useState, useEffect, useMemo, Dispatch, SetStateAction } from "react";
-import { Users, Skull, Zap, Play, Ghost, Bone, HeartPulse, LogOut } from "lucide-react";
+import { Users, Skull, Zap, Ghost, Bone, HeartPulse, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import SoulStatus from "./SoulStatus";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { syncServerTime, calculateCountdown } from "@/lib/server-time"
 
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
-import Link from "next/link";
 
 // Mendefinisikan tipe data untuk Player
 interface Player {
@@ -453,7 +452,7 @@ export default function LobbyPhase({
               size="icon"
               className="bg-red-600/80 hover:bg-red-700 text-white rounded-lg p-2 shadow-lg"
             >
-              <LogOut className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" />
             </Button>
           </div>
 

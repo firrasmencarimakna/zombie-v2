@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { CircleQuestionMark, CheckCircle, XCircle, Clock } from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import ZombieFeedback from "../game/ZombieFeedback";
@@ -197,7 +197,7 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
     setTimeout(() => {
       setShowFeedback(false);
       if (currentQuestionIndex + 1 >= totalQuestions) {
-        finishQuiz(updatedAnswers);
+        finishQuiz();
       } else {
         setCurrentQuestionIndex((prev) => prev + 1);
         setSelectedAnswer(null);
@@ -208,13 +208,12 @@ export default function QuizPhase({ quizId, nickname, questionsCount, durationIn
     }, FEEDBACK_DURATION);
   };
 
-  const finishQuiz = (finalAnswers = answers) => {
+  const finishQuiz = () => {
     const result = {
       quizId,
       nickname,
       correctAnswers: loadCorrect(),
       totalQuestions,
-      answers: finalAnswers,
       timeSpent: durationInSeconds - timeLeft,
       timestamp: Date.now(),
     };
