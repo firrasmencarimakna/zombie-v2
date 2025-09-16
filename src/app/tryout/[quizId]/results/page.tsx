@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 import { Target, Clock, Zap, Skull, Home } from "lucide-react";
 import Link from "next/link";
@@ -17,7 +15,6 @@ interface Result {
   totalQuestions: number;
   timeSpent: number;
   timestamp: number;
-  answers?: Array<{ questionId: string; selected: string; correct: boolean }>;
 }
 
 export default function TryoutResultsPage() {
@@ -165,7 +162,7 @@ export default function TryoutResultsPage() {
             whileHover={{ scale: 1.05, boxShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
             whileTap={{ scale: 0.95 }}
             // Ganti padding & tambahkan aria-label
-            className="bg-red-800 text-white p-2 border-2 border-red-600 rounded-md mx-auto"
+            className="bg-red-800 text-white p-2 px-3 border-2 font-mont font-semibold border-red-600 rounded-md mx-auto"
             aria-label={t("homeButton")} // Penting untuk aksesibilitas
           >
             {t("homeButton")}

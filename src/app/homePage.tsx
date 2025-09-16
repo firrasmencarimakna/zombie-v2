@@ -188,12 +188,12 @@ export default function HomePage() {
 
   //   setMassJoinInProgress(true);
   //   setJoinCount(0);
-    
+
   //   for (let i = 0; i < 20; i++) {
   //     try {
   //       // Generate nickname unik untuk setiap join
   //       const uniqueNickname = `${nickname}_${i + 1}`;
-        
+
   //       // Proses join game (sama seperti handleJoinGame)
   //       const { data: room, error: roomError } = await supabase
   //         .from("game_rooms")
@@ -240,16 +240,16 @@ export default function HomePage() {
 
   //       setJoinCount(prev => prev + 1);
   //       setMassJoinStatus(`Berhasil join ke-${i+1} dengan nickname: ${uniqueNickname}`);
-        
+
   //       // Delay antar request untuk menghindari rate limiting
   //       await new Promise(resolve => setTimeout(resolve, 500));
-        
+
   //     } catch (error) {
   //       console.error(`Error pada join ke-${i+1}:`, error);
   //       setMassJoinStatus(`Error pada join ke-${i+1}`);
   //     }
   //   }
-    
+
   //   setMassJoinInProgress(false);
   //   toast.success(`Proses selesai! Berhasil join ${joinCount} dari 70 kali.`);
   // }, [gameCode, nickname, joinCount]);
@@ -435,27 +435,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none">
-      {/* Background gradient with fog effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-red-900/5 via-black to-purple-900/5">
-        {isClient && (
-          <div className="absolute inset-0 opacity-20">
-            {bloodSpots.map((spot) => (
-              <div
-                key={spot.id}
-                className="absolute w-32 h-32 sm:w-64 sm:h-64 bg-red-900 rounded-full mix-blend-multiply blur-xl"
-                style={{
-                  left: `${spot.left}%`,
-                  top: `${spot.top}%`,
-                  opacity: spot.opacity,
-                }}
-              />
-            ))}
-          </div>
-        )}
-        {/* Fog overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/30 backdrop-blur-sm sm:backdrop-blur-md" />
-      </div>
-
       {isClient &&
         bloodDrips.map((drip) => (
           <motion.div
@@ -467,27 +446,6 @@ export default function HomePage() {
             style={{ left: `${drip.left}%`, opacity: 0.6 + Math.random() * 0.2 }}
           />
         ))}
-
-      {isClient && (
-        <div className="absolute inset-0 pointer-events-none">
-          {floatingIcons.map((icon) => (
-            <div
-              key={icon.id}
-              className="absolute text-red-900/20 animate-float sm:animate-float"
-              style={{
-                left: `${icon.left}%`,
-                top: `${icon.top}%`,
-                fontSize: `${icon.fontSize}rem`,
-                animationDelay: `${icon.animationDelay}s`,
-                animationDuration: `${icon.animationDuration}s`,
-                willChange: "transform",
-              }}
-            >
-              {icon.isSkull ? <Skull aria-hidden="true" /> : <Bone aria-hidden="true" />}
-            </div>
-          ))}
-        </div>
-      )}
 
       <div className="relative z-10 flex items-center justify-center min-h-screen p-2 sm:p-4">
         {/* Help Circle Button */}
@@ -665,7 +623,7 @@ export default function HomePage() {
               className="group"
             >
               <Card className="bg-black/40 border-red-900/50 hover:border-red-500 transition-all duration-300 h-full shadow-[0_0_15px_rgba(239,68,68,0.3)]">
-                <CardHeader className="text-center pb-4 sm:pb-6">
+                <CardHeader className="text-center pb-3">
                   <motion.div
                     className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-red-900 to-black border-2 border-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 group-hover:shadow-[0_0_15px_rgba(239,68,68,0.7)] transition-all duration-300"
                     whileHover={{ rotate: -3 }}
@@ -691,7 +649,7 @@ export default function HomePage() {
                         value="join"
                         className="text-red-400 data-[state=active]:bg-red-500/20 data-[state=active]:text-red-300 font-mono text-sm sm:text-base transition-all duration-200 w-full"
                       >
-                        <Hash className="w-4 h-4 mr-2" />
+                        <Play className="w-4 h-4 mr-2" />
                         {t("joinGame")}
                       </TabsTrigger>
                       <TabsTrigger
@@ -742,17 +700,17 @@ export default function HomePage() {
                         aria-label={isJoining ? t("joining") : t("joinButton")}
                         aria-disabled={!gameCode || !nickname || isJoining}
                       >
-                        <span className="relative z-10 flex items-center">
+                        <span className="relative z-10 flex items-center gap-2">
                           {isJoining ? (
                             <motion.div
                               animate={{ rotate: 360 }}
                               transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                              className="w-5 h-5 mr-2"
+                              className="w-5 h-5 flex items-center justify-center"
                             >
-                              <Zap className="w-5 h-5" aria-hidden="true" />
+                              <RotateCw className="w-5 h-5" aria-hidden="true" />
                             </motion.div>
                           ) : (
-                            <Hash className="w-5 h-5 mr-2" aria-hidden="true" />
+                            <Play className="w-5 h-5" aria-hidden="true" />
                           )}
                           {isJoining ? t("joining") : t("joinButton")}
                         </span>
@@ -789,17 +747,17 @@ export default function HomePage() {
                         aria-label={isStartingTryout ? t("starting") : t("start")}
                         aria-disabled={!nickname || isStartingTryout}
                       >
-                        <span className="relative z-10 flex items-center">
+                        <span className="relative z-10 flex items-center gap-2">
                           {isStartingTryout ? (
                             <motion.div
                               animate={{ rotate: 360 }}
                               transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                              className="w-5 h-5 mr-2"
+                              className="w-5 h-5 flex items-center justify-center"
                             >
-                              <Zap className="w-5 h-5" aria-hidden="true" />
+                              <RotateCw className="w-5 h-5" aria-hidden="true" />
                             </motion.div>
                           ) : (
-                            <Gamepad2 className="w-5 h-5 mr-2" aria-hidden="true" />
+                            <Gamepad2 className="w-5 h-5" aria-hidden="true" />
                           )}
                           {isStartingTryout ? t("starting") : t("start")}
                         </span>
@@ -841,17 +799,17 @@ export default function HomePage() {
                     aria-label={isCreating ? t("creatingRoom") : t("createRoomButton")}
                     aria-disabled={isCreating}
                   >
-                    <span className="relative z-10 flex items-center">
+                    <span className="relative z-10 flex items-center gap-2">
                       {isCreating ? (
                         <motion.div
                           animate={{ rotate: 360 }}
                           transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                          className="w-5 h-5 mr-2"
+                          className="w-5 h-5 flex items-center justify-center"
                         >
-                          <Zap className="w-5 h-5" aria-hidden="true" />
+                          <RotateCw className="w-5 h-5" aria-hidden="true" />
                         </motion.div>
                       ) : (
-                        <Play className="w-5 h-5 mr-2" aria-hidden="true" />
+                        <Play className="w-5 h-5" aria-hidden="true" />
                       )}
                       {isCreating ? t("creatingRoom") : t("createRoomButton")}
                     </span>

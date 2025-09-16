@@ -158,34 +158,47 @@ export default function QuizSelectTryoutPage() {
   }, []);
 
   // Fetch total questions when selectedQuiz changes
-  useEffect(() => {
-    if (!selectedQuiz) return;
+  // Fetch total questions when selectedQuiz changes
+useEffect(() => {
+  if (!selectedQuiz) return;
 
-    const fetchTotalQuestions = async () => {
-      try {
-        const { count: questionsCount, error: questionsError } = await supabase
-          .from("quiz_questions")
-          .select("*", { count: "exact", head: true })
-          .eq("quiz_id", selectedQuiz.id);
+  const fetchTotalQuestions = async () => {
+    try {
+      const { count: questionsCount, error: questionsError } = await supabase
+        .from("quiz_questions")
+        .select("*", { count: "exact", head: true })
+        .eq("quiz_id", selectedQuiz.id);
 
-        if (questionsError) {
-          console.error("Error fetching questions count:", questionsError);
-          setTotalQuestions(25); // Fallback
-        } else {
-          const total = questionsCount || 25;
-          setTotalQuestions(total);
-          // Adjust numQuestions if current value exceeds total
-          if (numQuestions > total) {
-            setNumQuestions(total);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch total questions:", error);
+      if (questionsError) {
+        console.error("Error fetching questions count:", questionsError);
+        setTotalQuestions(25); 
+        setNumQuestions(10);   // fallback default
+        return;
       }
-    };
 
-    fetchTotalQuestions();
-  }, [selectedQuiz]);
+      const total = questionsCount || 25;
+      setTotalQuestions(total);
+
+      // reset / adjust numQuestions sekali aja di sini
+      setNumQuestions((prev) => {
+        if (!prev || prev === 10) {
+          return Math.min(10, total);  // default awal
+        }
+        if (prev > total) {
+          return total;                // sesuaikan kalau kebanyakan
+        }
+        return prev;                   // biarin kalau masih valid
+      });
+    } catch (error) {
+      console.error("Failed to fetch total questions:", error);
+      setTotalQuestions(25);
+      setNumQuestions(10);
+    }
+  };
+
+  fetchTotalQuestions();
+}, [selectedQuiz]);
+
 
   // Handler for duration slider
   const handleDurationChange = (value: number[]) => {
@@ -213,10 +226,19 @@ export default function QuizSelectTryoutPage() {
   const handleStartQuiz = useCallback(() => {
     if (!selectedQuiz) return;
     setIsSelectingQuiz(true);
+
+    const keys = Object.keys(localStorage);
+    keys.forEach((k) => {
+      if (k.startsWith("tryout_")) {
+        localStorage.removeItem(k);
+      }
+    });
+
     localStorage.setItem("quizConfig", JSON.stringify({
       questions: numQuestions,
       duration: duration, // Already in seconds
     }));
+
     setTimeout(() => {
       router.push(`/tryout/${selectedQuiz.id}`);
     }, 500);
@@ -263,17 +285,23 @@ export default function QuizSelectTryoutPage() {
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none flex flex-col">
       {isSelectingQuiz && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
-        >
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 text-red-500 animate-spin" />
-            <p className="text-red-400 font-mono text-lg mt-4">{t("loading")}</p>
-          </div>
-        </motion.div>
+        <div className="min-h-screen bg-black flex items-center justify-center relative overflow-hidden z-20">
+          <div className="absolute inset-0 bg-[url('/images/static-noise.gif')] opacity-20 pointer-events-none" />
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+            className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full relative z-10"
+          >
+            <div className="absolute inset-0 rounded-full border-4 border-red-900 border-l-transparent border-r-transparent animate-ping" />
+          </motion.div>
+          <motion.p
+            className="absolute bottom-1/3 text-red-400 font-mono text-sm"
+            animate={{ opacity: [0.3, 1, 0.3] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            {t("loading")}
+          </motion.p>
+        </div>
       )}
 
       {isClient &&
@@ -287,26 +315,6 @@ export default function QuizSelectTryoutPage() {
             style={{ left: `${drip.left}%`, opacity: 0.6 + Math.random() * 0.2 }}
           />
         ))}
-
-      {isClient && (
-        <div className="absolute inset-0 pointer-events-none">
-          {floatingIcons.map((icon) => (
-            <div
-              key={icon.id}
-              className="absolute text-red-900/20 animate-float"
-              style={{
-                left: `${icon.left}%`,
-                top: `${icon.top}%`,
-                fontSize: `${icon.fontSize}rem`,
-                animationDelay: `${icon.animationDelay}s`,
-                animationDuration: `${icon.animationDuration}s`,
-              }}
-            >
-              {icon.isSkull ? <Skull /> : <Bone />}
-            </div>
-          ))}
-        </div>
-      )}
 
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJzY3JhdGNoZXMiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48cGF0aCBkPSJNMCAwTDUwMCA1MDAiIHN0cm9rZT0icmdiYSgyNTUsMCwwLDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNMCAxMDBMNTAwIDYwMCIgc3Ryb2tlPSJyZ2JhKDI1NSwwLDAsMC4wMykiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0wIDIwMEw1MDAgNzAwIiBzdHJva2U9InJnYmEoMjU1LDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3NjcmF0Y2hlcykiIG9wYWNpdHk9IjAuMyIvPjwvc3ZnPg==')] opacity-20" />
 
@@ -404,10 +412,12 @@ export default function QuizSelectTryoutPage() {
           </motion.div>
 
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full mx-auto min-h-[50vh]">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i} className="bg-black/40 border-red-500/20 h-[150px] animate-pulse" />
-              ))}
+            <div className="flex items-center justify-center w-full mx-auto mt-10 pt-10">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full"
+              />
             </div>
           ) : isSearching ? (
             filteredQuizzes.length > 0 ? (
