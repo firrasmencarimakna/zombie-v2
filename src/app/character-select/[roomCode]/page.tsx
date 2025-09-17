@@ -238,39 +238,6 @@ export default function CharacterSelectPage() {
   }, [roomCode, router, t]);
 
   useEffect(() => {
-    const whisper = new Audio("/sounds/whisper.mp3");
-    const heartbeat = new Audio("/sounds/heartbeat.mp3");
-    setSounds({ whisper, heartbeat });
-
-    return () => {
-      whisper.pause();
-      whisper.src = "";
-      heartbeat.pause();
-      heartbeat.src = "";
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleUserInteraction = () => {
-      setIsAudioInitialized(true);
-      window.removeEventListener("click", handleUserInteraction);
-    };
-    window.addEventListener("click", handleUserInteraction);
-    return () => window.removeEventListener("click", handleUserInteraction);
-  }, []);
-
-  useEffect(() => {
-    if (isAudioInitialized && selectedChaser) {
-      sounds.whisper?.play().catch((e) => console.log("Autoplay prevented:", e));
-      sounds.heartbeat?.play().catch((e) => console.log("Autoplay prevented:", e));
-    }
-    return () => {
-      sounds.whisper?.pause();
-      sounds.heartbeat?.pause();
-    };
-  }, [selectedChaser, sounds, isAudioInitialized]);
-
-  useEffect(() => {
     const generateBlood = () => {
       const newBlood = Array.from({ length: 5 }, (_, i) => ({
         id: i,
@@ -425,7 +392,7 @@ export default function CharacterSelectPage() {
               </h1>
             </Link>
             <img
-                src={`/logo/Gemini_Generated_Image_90360u90360u9036-removebg-preview.png`}
+                src={`/logo/gameforsmartlogo-horror.png`}
                 alt="Game for Smart Logo"
                 className="w-36 md:w-52 lg:w-64 h-auto mr-3"
               />
