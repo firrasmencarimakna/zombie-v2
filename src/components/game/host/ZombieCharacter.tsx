@@ -1,5 +1,6 @@
 "use client";
 
+import { EmbeddedPlayer } from "@/lib/supabase";
 import Image from "next/image";
 import { useMemo } from "react";
 import React from "react";
@@ -18,7 +19,7 @@ interface ZombieCharacterProps {
   gameMode: "normal" | "panic";
   centerX: number;
   chaserType: string;
-  players: Array<{ id: string; nickname: string }>;
+  players: EmbeddedPlayer[];
 }
 
 const chaserImages = {

@@ -196,7 +196,6 @@ export default function ResultsHostPage() {
       await Promise.all([
         supabase.from("game_completions").delete().eq("room_id", gameRoom.id),
         supabase.from("player_health_states").delete().eq("room_id", gameRoom.id),
-        supabase.from("game_states").delete().eq("room_id", gameRoom.id),
         supabase.from("players").delete().eq("room_id", gameRoom.id),
         supabase.from("game_rooms").delete().eq("id", gameRoom.id),
       ]);

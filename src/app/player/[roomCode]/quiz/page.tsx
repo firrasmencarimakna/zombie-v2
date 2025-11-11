@@ -5,49 +5,70 @@ import { AlertTriangle, CheckCircle, CircleQuestionMark, Clock, Heart, Skull, XC
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { AnimatePresence, motion } from "framer-motion"
-import { Progress } from "../ui/progress"
-import { Card } from "../ui/card"
-import { Button } from "../ui/button"
-import ZombieFeedback from "./ZombieFeedback"
+import { Progress } from "@/components/ui/progress"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import ZombieFeedback from "@/components/game/ZombieFeedback"
 import { useTranslation } from "react-i18next"
+import { useGameLogic } from "@/hooks/useGameLogic" // Import useGameLogic
+import toast from "react-hot-toast"
 
-interface QuizPhaseProps {
-  room: any
-  gameState: any
-  currentPlayer: any
-  players: any[]
-  gameLogic: any
-  isSoloMode: boolean
-  wrongAnswers: number
-  resumeState?: {
-    health: number
-    correctAnswers: number
-    currentIndex: number
-    speed?: number
-    isResuming: boolean
-  }
-  onGameComplete?: (result: any) => void
-  onProgressUpdate?: (progress: { health: number; correctAnswers: number; currentIndex: number }) => void
+// Define types for GameRoom and EmbeddedPlayer if not already imported from supabase
+interface GameRoom {
+  id: string
+  room_code: string
+  host_id: string | null
+  title: string
+  status: "waiting" | "playing" | "finished"
+  max_players: number
+  duration: number
+  quiz_id: string | null
+  chaser_type: "zombie" | "monster1" | "monster2" | "monster3" | "darknight"
+  difficulty_level: "easy" | "medium" | "hard"
+  created_at: string
+  updated_at: string
+  game_start_time: string | null
+  countdown_start: string | null
+  question_count: number
+  embedded_questions: any[]
+  players: EmbeddedPlayer[]
+  quiz?: { questions: any[] } // Add quiz property for direct access if needed
 }
 
-export default function QuizPhase({
-  room,
-  gameState,
-  currentPlayer,
-  players,
-  gameLogic,
-  isSoloMode,
-  wrongAnswers,
-  resumeState,
-  onGameComplete,
-  onProgressUpdate,
-}: QuizPhaseProps) {
+interface EmbeddedPlayer {
+  player_id: string;
+  nickname: string;
+  character_type: string;
+  score: number;
+  correct_answers: number;
+  is_host: boolean;
+  position_x: number;
+  position_y: number;
+  is_alive: boolean;
+  power_ups: number;
+  joined_at: string;
+  health: {
+    current: number;
+    max: number;
+    is_being_attacked: boolean;
+    last_attack_time: string;
+    speed: number;
+    last_answer_time: string;
+    countdown: number;
+  };
+  answers: any[];
+  attacks: any[];
+}
+
+export default function QuizPage() {
   const { t } = useTranslation()
   const router = useRouter()
   const params = useParams()
   const roomCode = params.roomCode as string
 
-  const [roomInfo, setRoomInfo] = useState<{ game_start_time: string; duration: number; difficulty_level: string } | null>(null)
+  const [room, setRoom] = useState<GameRoom | null>(null)
+  const [currentPlayer, setCurrentPlayer] = useState<EmbeddedPlayer | null>(null)
+  const [roomInfo, setRoomInfo] = useState<{ game_start_time: string; duration: number; difficulty_level: string; embedded_questions: any[]; players: any[] } | null>(null)
   const [gameStartTime, setGameStartTime] = useState<number | null>(null)
   const [playerJoinTime, setPlayerJoinTime] = useState<number | null>(null)
   const [timeLeft, setTimeLeft] = useState(0)
@@ -57,18 +78,27 @@ export default function QuizPhase({
   const [isClient, setIsClient] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [isAnswered, setIsAnswered] = useState(false)
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(
-    Math.min(resumeState?.currentIndex ?? 0, (room?.questions?.length ?? 1) - 1)
-  )
-  const [playerHealth, setPlayerHealth] = useState(resumeState?.health || 3)
-  const [playerSpeed, setPlayerSpeed] = useState(resumeState?.speed || 20)
-  const [correctAnswers, setCorrectAnswers] = useState(resumeState?.correctAnswers || 0)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0) // Initialized safely
+  const [playerHealth, setPlayerHealth] = useState(3)
+  const [playerSpeed, setPlayerSpeed] = useState(20)
+  const [correctAnswers, setCorrectAnswers] = useState(0)
   const [showFeedback, setShowFeedback] = useState(false)
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null)
   const [isProcessingAnswer, setIsProcessingAnswer] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  const questions = room?.questions || []
+  const gameLogicHookResult = useGameLogic({ room, players: room?.players || [], currentPlayer });
+
+  const {
+    isSubmitting,
+    submitAnswer: gameLogicSubmitAnswer,
+    nextQuestion: gameLogicNextQuestion,
+  } = gameLogicHookResult;
+
+  // Ambil questions dari embedded_questions atau quiz.questions
+  const questions = roomInfo?.embedded_questions && roomInfo.embedded_questions.length > 0
+    ? roomInfo.embedded_questions
+    : room?.quiz?.questions || []
   const totalQuestions = questions.length
   const currentQuestion = questions[currentQuestionIndex]
   const pulseIntensity = timeLeft <= 30 ? (31 - timeLeft) / 30 : 0
@@ -84,12 +114,52 @@ export default function QuizPhase({
     ? difficultySettings[roomInfo.difficulty_level as keyof typeof difficultySettings].inactivityPenalty
     : difficultySettings.medium.inactivityPenalty // Default ke medium
 
+  // Initial data fetching for room and current player
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      if (!roomCode) {
+        router.replace("/");
+        return;
+      }
+
+      const { data: roomData, error: roomError } = await supabase
+        .from("game_rooms")
+        .select(`
+          *,
+          quiz:quiz_id (questions)
+        `)
+        .eq("room_code", roomCode)
+        .single();
+
+      if (roomError || !roomData) {
+        console.error("Error fetching room:", roomError);
+        toast.error("Room tidak ditemukan!");
+        router.replace("/");
+        return;
+      }
+      setRoom(roomData);
+      setRoomInfo(roomData); // Also set roomInfo for consistency
+
+      const playerId = localStorage.getItem("playerId");
+      if (playerId) {
+        const player = roomData.players?.find((p: EmbeddedPlayer) => p.player_id === playerId) || null;
+        setCurrentPlayer(player);
+      } else {
+        console.error("Player ID not found in localStorage. Cannot identify current player.");
+        toast.error("Tidak dapat mengidentifikasi pemain. Silakan bergabung kembali.");
+        router.replace("/");
+      }
+    };
+
+    fetchInitialData();
+  }, [roomCode, router]);
+
   useEffect(() => {
     const fetchRoomInfo = async () => {
       const { data, error } = await supabase
         .from("game_rooms")
-        .select("game_start_time, duration, difficulty_level")
-        .eq("id", room.id)
+        .select("game_start_time, duration, difficulty_level, embedded_questions, players")
+        .eq("id", room?.id) // Use optional chaining
         .single()
 
       if (error) {
@@ -101,27 +171,38 @@ export default function QuizPhase({
       if (data.game_start_time) {
         const startTime = new Date(data.game_start_time).getTime()
         setGameStartTime(startTime)
-        const { data: playerData, error: playerError } = await supabase
-          .from("players")
-          .select("joined_at")
-          .eq("id", currentPlayer.id)
-          .single()
-
-        if (playerError) {
-          console.error(t("log.fetchPlayerError", { error: playerError.message }))
-          return
-        }
-
+        
+        // Cari player data dari room.players JSONB
+        const playerData = data.players?.find((p: any) => p.player_id === currentPlayer?.player_id) // Use optional chaining
         if (playerData?.joined_at) {
           setPlayerJoinTime(new Date(playerData.joined_at).getTime())
+        }
+        
+        // Sync health, speed, correctAnswers, currentIndex dari player data jika ada
+        if (playerData) {
+          setPlayerHealth(playerData.health?.current || 3)
+          setPlayerSpeed(playerData.health?.speed || 20)
+          setCorrectAnswers(playerData.correct_answers || 0)
+          setCurrentQuestionIndex(playerData.current_index || 0)
         }
       }
     }
 
-    if (room?.id) {
+    if (room?.id && currentPlayer?.player_id) {
       fetchRoomInfo()
     }
-  }, [room?.id, currentPlayer?.id, t])
+  }, [room?.id, currentPlayer?.player_id, t])
+
+  useEffect(() => {
+    if (room && roomInfo) {
+      const questions = roomInfo.embedded_questions && roomInfo.embedded_questions.length > 0
+        ? roomInfo.embedded_questions
+        : room.quiz?.questions || []
+      const totalQuestions = questions.length
+      const initialIndex = Math.min(0, (totalQuestions > 0 ? totalQuestions : 1) - 1) // resumeState is not available here
+      setCurrentQuestionIndex(initialIndex)
+    }
+  }, [room, roomInfo]) // Removed resumeState from dependencies as it's not a prop anymore
 
   useEffect(() => {
     if (!roomInfo?.game_start_time || !roomInfo.duration) return
@@ -141,55 +222,84 @@ export default function QuizPhase({
   }, [roomInfo])
 
   useEffect(() => {
-    const initializeLastAnswerTime = async () => {
-      if (!room?.id || !currentPlayer?.id) return
+    const initializePlayerState = async () => {
+      if (!room?.id || !currentPlayer?.player_id) return
 
-      const { data, error } = await supabase
-        .from("player_health_states")
-        .select("last_answer_time")
-        .eq("player_id", currentPlayer.id)
-        .eq("room_id", room.id)
+      // Cek apakah player sudah ada di room.players
+      const { data: roomData, error } = await supabase
+        .from("game_rooms")
+        .select("players")
+        .eq("id", room.id)
         .single()
 
-      if (error || !data?.last_answer_time) {
-        await supabase.from("player_health_states").upsert({
-          player_id: currentPlayer.id,
-          room_id: room.id,
-          health: playerHealth,
+      if (error) {
+        console.error("Error fetching room:", error)
+        return
+      }
+
+      const currentPlayers = roomData?.players || []
+      const existingPlayerIndex = currentPlayers.findIndex((p: any) => p.player_id === currentPlayer.player_id)
+      
+      if (existingPlayerIndex === -1) {
+        // Tambah player baru
+        const newPlayer = {
+          player_id: currentPlayer.player_id,
+          nickname: currentPlayer.nickname,
+          character_type: currentPlayer.character_type,
+          joined_at: new Date().toISOString(),
+          health: { current: playerHealth, max: 3, is_being_attacked: false, last_attack_time: new Date().toISOString(), speed: playerSpeed, last_answer_time: new Date().toISOString(), countdown: 0 },
           speed: playerSpeed,
+          correct_answers: 0,
+          current_index: 0,
+          answers: [],
           last_answer_time: new Date().toISOString(),
-        })
+        }
+        const updatedPlayers = [...currentPlayers, newPlayer]
+        await supabase
+          .from("game_rooms")
+          .update({ players: updatedPlayers })
+          .eq("id", room.id)
+      } else {
+        // Update last_answer_time jika belum ada
+        const updatedPlayers = [...currentPlayers]
+        if (!updatedPlayers[existingPlayerIndex].health.last_answer_time) {
+          updatedPlayers[existingPlayerIndex].health.last_answer_time = new Date().toISOString()
+          await supabase
+            .from("game_rooms")
+            .update({ players: updatedPlayers })
+            .eq("id", room.id)
+        }
       }
     }
 
-    initializeLastAnswerTime()
-  }, [room?.id, currentPlayer?.id, playerHealth, playerSpeed])
+    initializePlayerState()
+  }, [room?.id, currentPlayer?.player_id, playerHealth, playerSpeed])
 
   useEffect(() => {
     const fetchAnsweredProgress = async () => {
-      if (!room?.id || !currentPlayer?.id) return
+      if (!room?.id || !currentPlayer?.player_id) return
 
-      const { data, error } = await supabase
-        .from("player_answers")
-        .select("question_index, answer, is_correct")
-        .eq("player_id", currentPlayer.id)
-        .eq("room_id", room.id)
-        .order("question_index", { ascending: true })
+      const { data: roomData, error } = await supabase
+        .from("game_rooms")
+        .select("players")
+        .eq("id", room.id)
+        .single()
 
       if (error) {
         console.error(t("log.fetchAnsweredProgressError", { error: error.message }))
         return
       }
 
-      if (data && data.length > 0) {
-        const lastIndex = data[data.length - 1].question_index
+      const playerData = roomData?.players?.find((p: any) => p.player_id === currentPlayer.player_id)
+      if (playerData && playerData.answers && playerData.answers.length > 0) {
+        const lastIndex = playerData.answers[playerData.answers.length - 1].question_index
         setCurrentQuestionIndex(lastIndex + 1)
-        setCorrectAnswers(data.filter((d) => d.is_correct).length)
+        setCorrectAnswers(playerData.correct_answers || 0)
       }
     }
 
     fetchAnsweredProgress()
-  }, [room?.id, currentPlayer?.id, t])
+  }, [room?.id, currentPlayer?.player_id, t])
 
   const getDangerLevel = () => {
     if (playerHealth <= 1) return 3
@@ -211,6 +321,10 @@ export default function QuizPhase({
     totalAnswered: number,
     isEliminated = false,
   ) => {
+    if (!room || !currentPlayer) {
+      console.error("Room or currentPlayer is null, cannot save game completion.");
+      return;
+    }
     try {
       const actuallyEliminated = isEliminated || finalHealth <= 0
       const survivalDuration = calculateSurvivalDuration()
@@ -225,7 +339,7 @@ export default function QuizPhase({
       }))
 
       const { data, error } = await supabase.from("game_completions").upsert({
-        player_id: currentPlayer.id,
+        player_id: currentPlayer.player_id,
         room_id: room.id,
         final_health: Math.max(0, finalHealth),
         correct_answers: finalCorrect,
@@ -246,7 +360,14 @@ export default function QuizPhase({
     }
   }
 
-  const saveAnswerAndUpdateHealth = async (answer: string, isCorrectAnswer: boolean) => {
+  const saveAnswerAndUpdatePlayerState = async (answer: string, isCorrectAnswer: boolean, newHealth?: number) => {
+    if (!room || !currentPlayer) {
+      console.error("Room or currentPlayer is null, cannot save answer and update player state.");
+      return false;
+    }
+    const currentRoom = room; // Type: GameRoom
+    const player = currentPlayer; // Type: EmbeddedPlayer
+
     try {
       setIsProcessingAnswer(true)
 
@@ -257,25 +378,58 @@ export default function QuizPhase({
         newSpeed = Math.max(20, playerSpeed - 5)
       }
 
-      const { error: answerError } = await supabase.from("player_answers").insert({
-        player_id: currentPlayer.id,
-        room_id: room.id,
+      const { data: roomData, error: roomError } = await supabase
+        .from("game_rooms")
+        .select("players")
+        .eq("id", currentRoom.id)
+        .single()
+
+      if (roomError) {
+        console.error("Error fetching room for answer save:", roomError)
+        return false
+      }
+
+      const currentPlayers = roomData?.players || []
+      const playerIndex = currentPlayers.findIndex((p: any) => p.player_id === player.player_id)
+      if (playerIndex === -1) {
+        console.error("Player not found in room")
+        return false
+      }
+
+      const newAnswer = {
         question_index: currentQuestionIndex,
         answer: answer,
         is_correct: isCorrectAnswer,
         speed: newSpeed,
-      })
-
-      if (answerError) {
-        console.error(t("log.saveAnswerError", { error: answerError.message }))
-        return false
+        answered_at: new Date().toISOString(),
       }
 
-      await supabase
-        .from("player_health_states")
-        .update({ speed: newSpeed, health: playerHealth, last_answer_time: new Date().toISOString() })
-        .eq("player_id", currentPlayer.id)
-        .eq("room_id", room.id)
+      const updatedPlayer = {
+        ...currentPlayers[playerIndex],
+        health: {
+          ...currentPlayers[playerIndex].health,
+          current: newHealth !== undefined ? newHealth : currentPlayers[playerIndex].health.current, // Update health.current
+          speed: newSpeed
+        },
+        answers: [...(currentPlayers[playerIndex].answers || []), newAnswer],
+        correct_answers: isCorrectAnswer
+          ? (currentPlayers[playerIndex].correct_answers || 0) + 1
+          : (currentPlayers[playerIndex].correct_answers || 0),
+        last_answer_time: new Date().toISOString(),
+      }
+
+      const updatedPlayers = [...currentPlayers]
+      updatedPlayers[playerIndex] = updatedPlayer
+
+      const { error: updateError } = await supabase
+        .from("game_rooms")
+        .update({ players: updatedPlayers })
+        .eq("id", currentRoom.id)
+
+      if (updateError) {
+        console.error(t("log.saveAnswerError", { error: updateError.message }))
+        return false
+      }
 
       setPlayerSpeed(newSpeed)
       console.log(t("log.playerSpeedAfterAnswer", { newSpeed }))
@@ -289,42 +443,42 @@ export default function QuizPhase({
     }
   }
 
-  const syncHealthAndSpeedFromDatabase = async () => {
-    if (!room?.id || !currentPlayer?.id) {
+  const syncPlayerStateFromDatabase = async () => {
+    if (!room?.id || !currentPlayer?.player_id) {
       console.log(t("log.skipSync"))
       return
     }
     try {
-      const { data, error } = await supabase.rpc("get_player_health", {
-        p_player_id: currentPlayer.id,
-        p_room_id: room.id,
-      })
-
-      if (error) {
-        console.error(t("log.getPlayerHealthError", { error: error.message }))
-        return
-      }
-
-      if (data !== null && data !== playerHealth) {
-        console.log(t("log.syncHealth", { oldHealth: playerHealth, newHealth: data }))
-        setPlayerHealth(data)
-      }
-
-      const { data: speedData, error: speedError } = await supabase
-        .from("player_health_states")
-        .select("speed, last_answer_time")
-        .eq("player_id", currentPlayer.id)
-        .eq("room_id", room.id)
+      const { data: roomData, error } = await supabase
+        .from("game_rooms")
+        .select("players")
+        .eq("id", room.id)
         .single()
 
-      if (speedError) {
-        console.error(t("log.getPlayerSpeedError", { error: speedError.message }))
+      if (error) {
+        console.error("Error syncing player state:", error)
         return
       }
 
-      if (speedData && speedData.speed !== playerSpeed) {
-        console.log(t("log.syncSpeed", { oldSpeed: playerSpeed, newSpeed: speedData.speed }))
-        setPlayerSpeed(speedData.speed)
+      const playerData = roomData?.players?.find((p: any) => p.player_id === currentPlayer.player_id)
+      if (!playerData) return
+
+      if (playerData.health?.current !== undefined && playerData.health.current !== playerHealth) {
+        console.log(t("log.syncHealth", { oldHealth: playerHealth, newHealth: playerData.health.current }))
+        setPlayerHealth(playerData.health.current)
+      }
+
+      if (playerData.health?.speed !== undefined && playerData.health.speed !== playerSpeed) {
+        console.log(t("log.syncSpeed", { oldSpeed: playerSpeed, newSpeed: playerData.health.speed }))
+        setPlayerSpeed(playerData.health.speed)
+      }
+
+      if (playerData.correct_answers !== undefined && playerData.correct_answers !== correctAnswers) {
+        setCorrectAnswers(playerData.correct_answers)
+      }
+
+      if (playerData.current_index !== undefined && playerData.current_index !== currentQuestionIndex) {
+        setCurrentQuestionIndex(playerData.current_index)
       }
     } catch (error) {
       console.error(t("log.syncHealthAndSpeedError", { error }))
@@ -332,18 +486,17 @@ export default function QuizPhase({
   }
 
   const checkInactivityPenalty = async () => {
-    if (!room?.id || !currentPlayer?.id || playerHealth <= 0 || isProcessingAnswer || isAnswered) {
+    if (!room?.id || !currentPlayer?.player_id || playerHealth <= 0 || isProcessingAnswer || isAnswered) {
       console.log(t("log.skipInactivityCheck"))
       setInactivityCountdown(null)
       setPenaltyCountdown(null)
       return
     }
     try {
-      const { data, error } = await supabase
-        .from("player_health_states")
-        .select("last_answer_time, speed")
-        .eq("player_id", currentPlayer.id)
-        .eq("room_id", room.id)
+      const { data: roomData, error } = await supabase
+        .from("game_rooms")
+        .select("players")
+        .eq("id", room.id)
         .single()
 
       if (error) {
@@ -353,38 +506,49 @@ export default function QuizPhase({
         return
       }
 
-      if (!data.last_answer_time) {
+      const currentPlayers = roomData?.players || []
+      const playerData = currentPlayers.find((p: any) => p.player_id === currentPlayer.player_id)
+      if (!playerData?.health?.last_answer_time) {
         console.log(t("log.noLastAnswerTime"))
-        await supabase
-          .from("player_health_states")
-          .update({ last_answer_time: new Date().toISOString() })
-          .eq("player_id", currentPlayer.id)
-          .eq("room_id", room.id)
+        // Update last_answer_time
+        const playerIndex = currentPlayers.findIndex((p: any) => p.player_id === currentPlayer.player_id)
+        if (playerIndex !== -1) {
+          currentPlayers[playerIndex].health.last_answer_time = new Date().toISOString()
+          await supabase
+            .from("game_rooms")
+            .update({ players: currentPlayers })
+            .eq("id", room.id)
+        }
         setInactivityCountdown(null)
         setPenaltyCountdown(null)
         return
       }
 
-      const lastAnswerTime = new Date(data.last_answer_time).getTime()
+      const lastAnswerTime = new Date(playerData.health.last_answer_time).getTime()
       const currentTime = Date.now()
       const timeSinceLastAnswer = (currentTime - lastAnswerTime) / 1000
 
-      console.log(t("log.inactivityCheck", { timeSinceLastAnswer, speed: data.speed }))
+      console.log(t("log.inactivityCheck", { timeSinceLastAnswer, speed: playerData.health.speed }))
 
       const warningThreshold = inactivityPenalty - 10 // Peringatan 10 detik sebelum penalti
-      if (timeSinceLastAnswer >= warningThreshold && timeSinceLastAnswer < inactivityPenalty && data.speed > 20) {
+      if (timeSinceLastAnswer >= warningThreshold && timeSinceLastAnswer < inactivityPenalty && playerData.health.speed > 20) {
         const countdown = Math.ceil(inactivityPenalty - timeSinceLastAnswer)
         console.log(t("log.startPenaltyCountdown", { countdown }))
         setInactivityCountdown(null)
-        setPenaltyCountdown(countdown)
-      } else if (timeSinceLastAnswer >= inactivityPenalty && data.speed > 20) {
-        const newSpeed = Math.max(20, data.speed - 10)
-        console.log(t("log.applyInactivityPenalty", { timeSinceLastAnswer, oldSpeed: data.speed, newSpeed }))
-        await supabase
-          .from("player_health_states")
-          .update({ speed: newSpeed, last_answer_time: new Date().toISOString() })
-          .eq("player_id", currentPlayer.id)
-          .eq("room_id", room.id)
+        setPenaltyCountdown(null)
+      } else if (timeSinceLastAnswer >= inactivityPenalty && playerData.health.speed > 20) {
+        const newSpeed = Math.max(20, playerData.health.speed - 10)
+        console.log(t("log.applyInactivityPenalty", { timeSinceLastAnswer, oldSpeed: playerData.health.speed, newSpeed }))
+        // Update speed dan last_answer_time
+        const playerIndex = currentPlayers.findIndex((p: any) => p.player_id === currentPlayer.player_id)
+        if (playerIndex !== -1) {
+          currentPlayers[playerIndex].health.speed = newSpeed
+          currentPlayers[playerIndex].health.last_answer_time = new Date().toISOString()
+          await supabase
+            .from("game_rooms")
+            .update({ players: currentPlayers })
+            .eq("id", room.id)
+        }
         setPlayerSpeed(newSpeed)
         setInactivityCountdown(null)
         setPenaltyCountdown(null)
@@ -409,9 +573,14 @@ export default function QuizPhase({
     isEliminated = false,
     isPerfect = false,
   ) => {
+    if (!currentPlayer) {
+      console.error("currentPlayer is null, cannot redirect to results.");
+      return;
+    }
     const actuallyEliminated = isEliminated || health <= 0
 
     console.log(t("log.redirectToResults", {
+      nickname: currentPlayer.nickname,
       health,
       correct,
       total,
@@ -432,7 +601,7 @@ export default function QuizPhase({
     }
 
     const lastResult = {
-      playerId: currentPlayer.id,
+      playerId: currentPlayer.player_id, // Changed from currentPlayer.id to currentPlayer.player_id
       roomCode: roomCode,
       nickname: currentPlayer.nickname,
       health: Math.max(0, health),
@@ -443,9 +612,10 @@ export default function QuizPhase({
     }
 
     localStorage.setItem("lastGameResult", JSON.stringify(lastResult))
-    localStorage.setItem(`gameResult_${roomCode}_${currentPlayer.id}`, JSON.stringify(lastResult))
+    localStorage.setItem(`gameResult_${roomCode}_${currentPlayer.player_id}`, JSON.stringify(lastResult)) // Changed from currentPlayer.id to currentPlayer.player_id
 
-    if (onGameComplete) onGameComplete(lastResult)
+    // onGameComplete is not a prop anymore
+    // if (onGameComplete) onGameComplete(lastResult)
 
     router.push(`/game/${roomCode}/results`)
   }
@@ -459,25 +629,26 @@ export default function QuizPhase({
   }, [timeLeft, isProcessingAnswer, playerHealth, correctAnswers, currentQuestionIndex, timeLoaded])
 
   useEffect(() => {
-    if (onProgressUpdate) {
-      onProgressUpdate({
-        health: playerHealth,
-        correctAnswers,
-        currentIndex: currentQuestionIndex,
-      })
-    }
-  }, [playerHealth, correctAnswers, currentQuestionIndex, onProgressUpdate])
+    // onProgressUpdate is not a prop anymore, so this can be removed or adapted
+    // if (onProgressUpdate) {
+    //   onProgressUpdate({
+    //     health: playerHealth,
+    //     correctAnswers,
+    //     currentIndex: currentQuestionIndex,
+    //   })
+    // }
+  }, [playerHealth, correctAnswers, currentQuestionIndex])
 
   useEffect(() => {
-    syncHealthAndSpeedFromDatabase()
-    const syncInterval = setInterval(syncHealthAndSpeedFromDatabase, 2000)
+    syncPlayerStateFromDatabase()
+    const syncInterval = setInterval(syncPlayerStateFromDatabase, 2000)
     return () => clearInterval(syncInterval)
-  }, [currentPlayer.id, room.id])
+  }, [currentPlayer?.player_id, room?.id])
 
   useEffect(() => {
     const penaltyInterval = setInterval(checkInactivityPenalty, 1000)
     return () => clearInterval(penaltyInterval)
-  }, [currentPlayer.id, room.id, playerHealth, isProcessingAnswer, isAnswered])
+  }, [currentPlayer?.player_id, room?.id, playerHealth, isProcessingAnswer, isAnswered])
 
   useEffect(() => {
     setIsClient(true)
@@ -497,7 +668,7 @@ export default function QuizPhase({
 
   useEffect(() => {
     if (showFeedback) {
-      const feedbackTimer = setTimeout(() => {
+      const feedbackTimer = setTimeout(async () => {
         setShowFeedback(false)
         if (playerHealth <= 0) {
           console.log(t("log.eliminatedDuringFeedback"))
@@ -506,32 +677,78 @@ export default function QuizPhase({
           console.log(t("log.allQuestionsAnswered"))
           redirectToResults(playerHealth, correctAnswers, totalQuestions, false, correctAnswers === totalQuestions)
         } else {
-          nextQuestion()
+          await nextQuestion()
         }
       }, FEEDBACK_DURATION)
       return () => clearTimeout(feedbackTimer)
     }
   }, [showFeedback, playerHealth, correctAnswers, currentQuestionIndex, isCorrect, totalQuestions])
 
-  const nextQuestion = () => {
+  const nextQuestion = async () => {
+    if (!room || !currentPlayer) {
+      console.error("Room or currentPlayer is null, cannot advance to next question.");
+      return false;
+    }
+    // Update current_index di player state
+    const { data: roomData, error } = await supabase
+      .from("game_rooms")
+      .select("players")
+      .eq("id", room.id)
+      .single()
+
+    if (error) {
+      console.error("Error updating next question index:", error)
+      return false
+    }
+
+    const currentPlayers = roomData?.players || []
+    const playerIndex = currentPlayers.findIndex((p: any) => p.player_id === currentPlayer.player_id)
+    if (playerIndex !== -1) {
+      currentPlayers[playerIndex].current_index = currentQuestionIndex + 1
+      await supabase
+        .from("game_rooms")
+        .update({ players: currentPlayers })
+        .eq("id", room.id)
+    }
+
+    // onNextQuestion is not a prop anymore
+    // if (onNextQuestion) {
+    //   const success = await onNextQuestion(currentQuestionIndex);
+    //   if (!success) {
+    //     console.error("Failed to advance to next question");
+    //     return false;
+    //   }
+    // }
+
     setCurrentQuestionIndex(prevIndex => prevIndex + 1)
     setSelectedAnswer(null)
     setIsAnswered(false)
     setIsCorrect(null)
+    return true;
   }
 
   const handleAnswerSelect = async (answer: string) => {
     if (isAnswered || !currentQuestion || isProcessingAnswer) return
+    if (!room || !currentPlayer) {
+      console.error("Room or currentPlayer is null, cannot handle answer selection.");
+      return;
+    }
 
-    const { data: existing, error } = await supabase
-      .from("player_answers")
-      .select("id")
-      .eq("player_id", currentPlayer.id)
-      .eq("room_id", room.id)
-      .eq("question_index", currentQuestionIndex)
-      .maybeSingle()
+    // Cek apakah sudah dijawab sebelumnya
+    const { data: roomData, error } = await supabase
+      .from("game_rooms")
+      .select("players")
+      .eq("id", room.id)
+      .single()
 
-    if (existing) {
+    if (error) {
+      console.error("Error checking existing answer:", error)
+      return
+    }
+
+    const playerData = roomData?.players?.find((p: any) => p.player_id === currentPlayer.player_id)
+    const existingAnswer = playerData?.answers?.find((a: any) => a.question_index === currentQuestionIndex)
+    if (existingAnswer) {
       console.log(t("log.alreadyAnswered"))
       return
     }
@@ -541,7 +758,24 @@ export default function QuizPhase({
     setInactivityCountdown(null)
     setPenaltyCountdown(null)
 
-    if (answer === currentQuestion.correct_answer) {
+    const playerSelectedLetter = answer.trim().toUpperCase().charAt(0);
+    const normalizedPlayerAnswer = playerSelectedLetter.toLowerCase();
+    const normalizedCorrectAnswer = currentQuestion?.correct_answer ? currentQuestion.correct_answer.trim().toLowerCase() : '';
+    const isCorrectAnswer = normalizedPlayerAnswer === normalizedCorrectAnswer;
+
+    // onSubmitAnswer is not a prop anymore
+    // let submitSuccess = true;
+    // if (onSubmitAnswer) {
+    //   submitSuccess = await onSubmitAnswer(answer, isCorrectAnswer, currentQuestionIndex);
+    // }
+
+    // if (!submitSuccess) {
+    //   console.error("Failed to submit answer via hook");
+    //   return;
+    // }
+
+    // Lanjutkan logic lokal (save ke DB, update state, dll.)
+    if (isCorrectAnswer) {
       await handleCorrectAnswer()
     } else {
       await handleWrongAnswer()
@@ -555,7 +789,7 @@ export default function QuizPhase({
     setIsCorrect(true)
     setShowFeedback(true)
 
-    await saveAnswerAndUpdateHealth(selectedAnswer || "", true)
+    await saveAnswerAndUpdatePlayerState(selectedAnswer || "", true)
   }
 
   const handleWrongAnswer = async () => {
@@ -564,7 +798,7 @@ export default function QuizPhase({
     setIsCorrect(false)
     setShowFeedback(true)
 
-    await saveAnswerAndUpdateHealth(selectedAnswer || "TIME_UP", false)
+    await saveAnswerAndUpdatePlayerState(selectedAnswer || "TIME_UP", false)
   }
 
   const formatTime = (seconds: number) => {
@@ -589,12 +823,12 @@ export default function QuizPhase({
     return "bg-gray-700 border-gray-600 text-gray-400"
   }
 
-  if (!currentQuestion) {
+  if (!room || !currentPlayer) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <Skull className="w-16 h-16 text-red-500 mx-auto mb-4 animate-pulse" />
-          <p className="text-white font-mono text-xl">{t("loadingQuestion")}</p>
+          <p className="text-white font-mono text-xl">{t("loadingGame")}</p>
         </div>
       </div>
     )
@@ -726,7 +960,7 @@ export default function QuizPhase({
                         )}
                         {isAnswered &&
                           option === selectedAnswer &&
-                          option !== currentQuestion.correct_answer && (
+                          option !== currentQuestion?.correct_answer && (
                             <XCircle className="w-5 h-5 ml-auto animate-pulse" />
                           )}
                       </div>

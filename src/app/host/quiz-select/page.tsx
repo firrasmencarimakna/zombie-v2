@@ -171,7 +171,7 @@ export default function QuizSelectPage() {
 
         if (error) throw error;
 
-        await router.push(`/character-select/${roomCode}`);
+        await router.push(`/host/${roomCode}/character-select`);
       } catch (error) {
         console.error("Error creating game:", error);
         toast.error(t("errorMessages.createGameFailed"));

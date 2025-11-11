@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -36,6 +35,7 @@ interface GameRoom {
   chaser_type: ChaserType;
   difficulty_level: DifficultyLevel;
   quiz_id: string | null;
+  embedded_questions: any[]; // JSONB array of questions from schema
 }
 
 const validateChaserType = (type: string): ChaserType =>
@@ -178,9 +178,13 @@ export default function CharacterSelectPage() {
     const fetchRoom = async () => {
       try {
         setIsLoading(true);
+        // Adjusted: Fetch room with embedded_questions JSONB directly (no join to quizzes)
         const { data, error } = await supabase
           .from("game_rooms")
-          .select("*, chaser_type, quiz_id, difficulty_level")
+          .select(`
+            *,
+            embedded_questions
+          `)
           .eq("room_code", roomCode)
           .single();
 
@@ -200,29 +204,39 @@ export default function CharacterSelectPage() {
 
         const fetchedChaserType = validateChaserType(data.chaser_type);
         const fetchedDifficultyLevel = validateDifficultyLevel(data.difficulty_level);
-        setRoom({ ...data, chaser_type: fetchedChaserType, difficulty_level: fetchedDifficultyLevel });
+        setRoom({ 
+          ...data, 
+          chaser_type: fetchedChaserType, 
+          difficulty_level: fetchedDifficultyLevel,
+          embedded_questions: data.embedded_questions || [] // Embedded questions from schema
+        });
         setGameDuration(data.duration ? data.duration / 60 : 10);
         setQuestionCount(data.question_count ?? 10);
         setChaserType(fetchedChaserType);
         setDifficultyLevel(fetchedDifficultyLevel);
 
-        const { count: questionsCount, error: questionsError } = await supabase
-          .from("quiz_questions")
-          .select("*", { count: "exact", head: true })
-          .eq("quiz_id", data.quiz_id);
-
-        if (questionsError) {
-          console.error("Error fetching questions count:", questionsError);
-          setTotalQuestions(10);
-        } else {
-          const total = questionsCount || 10;
-          setTotalQuestions(total);
-          if (!userSetQuestionCount) {
-            if (data.question_count) {
-              setQuestionCount(data.question_count);
-            } else {
-              setQuestionCount(total <= 10 ? total : 10);
-            }
+        // Fixed: Get totalQuestions from embedded_questions if available, else fetch from quizzes.questions
+        let total = data.embedded_questions ? data.embedded_questions.length : 0;
+        if (total === 0) {
+          // Fallback: Fetch questions length from quizzes
+          const { data: quizData, error: quizError } = await supabase
+            .from("quizzes")
+            .select("questions")
+            .eq("id", data.quiz_id)
+            .single();
+          if (!quizError && quizData && quizData.questions) {
+            total = quizData.questions.length;
+          } else {
+            total = 10; // Ultimate fallback
+            console.warn("Could not fetch quiz questions, using default 10");
+          }
+        }
+        setTotalQuestions(total);
+        if (!userSetQuestionCount) {
+          if (data.question_count) {
+            setQuestionCount(data.question_count);
+          } else {
+            setQuestionCount(total <= 10 ? total : 10);
           }
         }
       } catch (error) {
@@ -235,7 +249,7 @@ export default function CharacterSelectPage() {
     };
 
     fetchRoom();
-  }, [roomCode, router, t]);
+  }, [roomCode, router, t, userSetQuestionCount]); // Added userSetQuestionCount to deps if needed
 
   useEffect(() => {
     const generateBlood = () => {
@@ -283,7 +297,7 @@ export default function CharacterSelectPage() {
 
       if (error) throw error;
 
-      router.push(`/host/${roomCode}`);
+      router.push(`/host/${roomCode}/lobby`);
     } catch (error) {
       console.error(t("errorMessages.saveSettingsFailedLog"), error);
       toast.error(t("errorMessages.saveSettingsFailed"));
@@ -373,7 +387,7 @@ export default function CharacterSelectPage() {
         ))}
       </div>
 
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJzY3JhdGNoZXMiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48cGF0aCBkPSJNMCAwTDUwMCA1MDAiIHN0cm9rZT0icmdiYSgyNTUsMCwwLDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNMCAxMDBMNTAwIDYwMCIgc3Ryb2tlPSJyZ2JhKDI1NSwwLDAsMC4wMykiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0wIDIwMEw1MDAgNzAwIiBzdHJva2U9InJnYmEoMjU1LDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3NjcmF0Y2hlcykiIG9wYWNpdHk9IjAuMyIvPjwvc3ZnPg==')] opacity-20" />
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJzY3JhdGNoZXMiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48cGF0aCBkPSJNMCAwTDUwMCA1MDAiIHN0cm9rZT0icmdiYSgyNTUsMCwwLDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNMCAxMDBLNTAwIDYwMCIgc3Ryb2tlPSJyZ2JhKDI1NSwwLDAsMC4wMykiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0wIDIwMEw1MDAgNzAwIiBzdHJva2U9InJnYmEoMjU1LDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3NjcmF0Y2hlcykiIG9wYWNpdHk9IjAuMyIvPjwvc3ZnPg==')] opacity-20" />
 
       <div className="relative z-10 mx-auto p-7">
         <motion.header

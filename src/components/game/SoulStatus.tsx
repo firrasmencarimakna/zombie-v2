@@ -4,19 +4,30 @@ import { Heart, Skull, Zap, Shield, Crown, Eye } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "react-i18next"
+import type { EmbeddedPlayer } from "@/lib/supabase"  // Import EmbeddedPlayer untuk kompatibilitas
 
+// Interface Player yang kompatibel dengan TransformedPlayer (flat) dan EmbeddedPlayer (nested)
 interface Player {
-  id: string
+  id?: string;  // Fallback dari player_id di EmbeddedPlayer
+  player_id?: string;  // Dari EmbeddedPlayer
   nickname: string
-  health: number
-  maxHealth: number
+  health: number  // Flat health (dari TransformedPlayer) atau fallback dari nested
+  maxHealth: number  // Sama
   score: number
   isHost?: boolean
   isReady?: boolean
   hasAnswered?: boolean
   status?: "alive" | "dead" | "spectating"
   powerUps?: string[]
-  character_type: string | undefined
+  character_type?: string | undefined
+  // Nested fields dari EmbeddedPlayer (optional untuk kompatibilitas)
+  health_nested?: {
+    current: number;
+    max: number;
+  };
+  is_host?: boolean;  // Alias untuk isHost
+  correct_answers?: number;
+  is_alive?: boolean;
 }
 
 interface SoulStatusProps {
@@ -35,20 +46,27 @@ export default function SoulStatus({
   className,
 }: SoulStatusProps) {
   const { t } = useTranslation()
-  const isDead = player.health <= 0 || player.status === "dead"
-  const isLowHealth = player.health <= 1 && player.health > 0
-  const healthPercentage = (player.health / player.maxHealth) * 100
+  
+  // Flatten health untuk kompatibilitas (prioritas flat > nested)
+  const health = player.health || player.health_nested?.current || 3
+  const maxHealth = player.maxHealth || player.health_nested?.max || 3
+  const isHost = player.isHost || player.is_host || false
+  const isAlive = player.is_alive !== false  // Default alive
+
+  const isDead = health <= 0 || player.status === "dead" || !isAlive
+  const isLowHealth = health <= 1 && health > 0
+  const healthPercentage = (health / maxHealth) * 100
 
   const getHealthColor = () => {
     if (isDead) return "text-gray-400"
     if (isLowHealth) return "text-red-600 animate-pulse"
-    if (player.health <= 2) return "text-yellow-600"
+    if (health <= 2) return "text-yellow-600"
     return "text-green-600"
   }
 
   const getStatusIcon = () => {
     if (isDead) return <Skull className="w-5 h-5 text-gray-400" />
-    if (player.isHost) return <Crown className="w-5 h-5 text-yellow-600 animate-pulse" />
+    if (isHost) return <Crown className="w-5 h-5 text-yellow-600 animate-pulse" />
     if (isLowHealth) return <Heart className={`w-5 h-5 ${getHealthColor()} animate-throb`} />
     return <Eye className="w-5 h-5 text-red-500 animate-pulse" />
   }
@@ -120,15 +138,15 @@ export default function SoulStatus({
           {player.nickname}
         </span>
         <div className="flex space-x-1">
-          {[...Array(player.maxHealth)].map((_, i) => (
+          {[...Array(maxHealth)].map((_, i) => (
             <Heart
               key={i}
               className={cn(
                 "w-3 h-3 transition-all duration-300",
-                i < player.health ? getHealthColor() : "text-gray-700",
-                isLowHealth && i < player.health ? "animate-throb" : ""
+                i < health ? getHealthColor() : "text-gray-700",
+                isLowHealth && i < health ? "animate-throb" : ""
               )}
-              fill={i < player.health ? "currentColor" : "none"}
+              fill={i < health ? "currentColor" : "none"}
             />
           ))}
         </div>
@@ -181,15 +199,15 @@ export default function SoulStatus({
             {/* Health display */}
             <div className="flex items-center space-x-2">
               <div className="flex space-x-1">
-                {[...Array(player.maxHealth)].map((_, i) => (
+                {[...Array(maxHealth)].map((_, i) => (
                   <Heart
                     key={i}
                     className={cn(
                       "w-4 h-4 transition-all duration-300",
-                      i < player.health ? getHealthColor() : "text-gray-700",
-                      isLowHealth && i < player.health ? "animate-throb" : ""
+                      i < health ? getHealthColor() : "text-gray-700",
+                      isLowHealth && i < health ? "animate-throb" : ""
                     )}
-                    fill={i < player.health ? "currentColor" : "none"}
+                    fill={i < health ? "currentColor" : "none"}
                   />
                 ))}
               </div>
@@ -198,7 +216,7 @@ export default function SoulStatus({
               <div className="flex space-x-1">
                 {player.hasAnswered ? (
                   <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
-                ) : player.status !== "dead" ? (
+                ) : !isDead ? (
                   <div className="w-2 h-2 bg-yellow-600 rounded-full animate-pulse" />
                 ) : (
                   <div className="w-2 h-2 bg-gray-700 rounded-full" />
@@ -255,7 +273,7 @@ export default function SoulStatus({
 
             {/* Status badges */}
             <div className="flex space-x-2">
-              {player.isHost && (
+              {isHost && (
                 <span className="text-xs bg-yellow-800 text-yellow-200 px-2 py-1 rounded font-mono font-bold">
                   DEMON LORD
                 </span>
@@ -278,7 +296,7 @@ export default function SoulStatus({
                 "text-sm font-mono font-bold tracking-wider",
                 getHealthColor()
               )}>
-                {player.health}/{player.maxHealth}
+                {health}/{maxHealth}
               </span>
             </div> */}
 
@@ -290,7 +308,7 @@ export default function SoulStatus({
                     ? "bg-gray-600"
                     : isLowHealth
                       ? "bg-red-700 animate-pulse"
-                      : player.health <= 2
+                      : health <= 2
                         ? "bg-yellow-600"
                         : "bg-green-700"
                 )}
@@ -300,15 +318,15 @@ export default function SoulStatus({
 
             {/* Individual hearts */}
             <div className="flex justify-center space-x-1 pt-1">
-              {[...Array(player.maxHealth)].map((_, i) => (
+              {[...Array(maxHealth)].map((_, i) => (
                 <Heart
                   key={i}
                   className={cn(
                     "w-5 h-5 transition-all duration-300",
-                    i < player.health ? getHealthColor() : "text-gray-700",
-                    isLowHealth && i < player.health ? "animate-throb" : ""
+                    i < health ? getHealthColor() : "text-gray-700",
+                    isLowHealth && i < health ? "animate-throb" : ""
                   )}
-                  fill={i < player.health ? "currentColor" : "none"}
+                  fill={i < health ? "currentColor" : "none"}
                 />
               ))}
             </div>
@@ -338,7 +356,7 @@ export default function SoulStatus({
               <div className="flex justify-center">
                 {player.hasAnswered ? (
                   <Zap className="w-5 h-5 text-green-600 animate-pulse" />
-                ) : player.status !== "dead" ? (
+                ) : !isDead ? (
                   <Zap className="w-5 h-5 text-yellow-600 animate-pulse" />
                 ) : (
                   <Skull className="w-5 h-5 text-gray-500" />

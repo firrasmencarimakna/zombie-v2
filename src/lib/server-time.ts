@@ -1,95 +1,67 @@
-import { supabase } from "./supabase"
-
-// Cache untuk offset waktu server-client
-let serverTimeOffset: number | null = null
+// Cache untuk offset waktu (sekarang estimasi client-only)
+let timeOffset: number | null = null
 let lastSyncTime = 0
-const SYNC_INTERVAL = 30000 // Re-sync setiap 30 detik
+const SYNC_INTERVAL = 30000 // Re-sync estimasi setiap 30 detik
 
-/**
- * Mendapatkan waktu server yang akurat
- */
+// Mendapatkan waktu "server" estimasi (tanpa RPC, pakai client time + latency estimasi)
 export async function getServerTime(): Promise<number> {
   try {
-    const startTime = Date.now()
+    const startTime = performance.now() // Gunakan high-res timer untuk estimasi latency internal
 
-    // Gunakan fungsi now() dari Supabase untuk mendapatkan server time
-    const { data, error } = await supabase.rpc("get_server_time")
+    // Simulasi "server time" dengan delay kecil untuk estimasi (bukan query real)
+    await new Promise(resolve => setTimeout(resolve, 10)) // Delay 10ms untuk simulasi network
 
-    if (error) {
-      console.error("❌ Error getting server time:", error)
-      return Date.now() // Fallback ke client time
-    }
+    const endTime = performance.now()
+    const internalLatency = (endTime - startTime) / 2 // Estimasi half-latency
 
-    const endTime = Date.now()
-    const networkLatency = (endTime - startTime) / 2
-    const serverTime = new Date(data).getTime()
-
-    // Kompensasi network latency
-    return serverTime + networkLatency
+    const clientTime = Date.now()
+    return clientTime + internalLatency // Return client time + estimasi
   } catch (error) {
-    console.error("❌ Error getting server time:", error)
+    console.error("❌ Error estimating time:", error)
     return Date.now() // Fallback ke client time
   }
 }
 
-/**
- * Sinkronisasi waktu server-client dan cache offset
- */
+// Sinkronisasi waktu (sekarang estimasi client-only)
 export async function syncServerTime(): Promise<void> {
   const now = Date.now()
 
   // Skip jika baru saja sync
-  if (serverTimeOffset !== null && now - lastSyncTime < SYNC_INTERVAL) {
+  if (timeOffset !== null && now - lastSyncTime < SYNC_INTERVAL) {
     return
   }
 
   try {
-    const serverTime = await getServerTime()
+    const estimatedServerTime = await getServerTime()
     const clientTime = Date.now()
 
-    serverTimeOffset = serverTime - clientTime
+    timeOffset = estimatedServerTime - clientTime
     lastSyncTime = now
 
-    console.log("⏰ Server time synced. Offset:", serverTimeOffset, "ms")
+    console.log("⏰ Client time estimated. Offset:", timeOffset, "ms")
   } catch (error) {
-    console.error("❌ Failed to sync server time:", error)
+    console.error("❌ Failed to estimate time:", error)
   }
 }
 
-/**
- * Mendapatkan waktu server yang sudah disinkronisasi (lebih cepat)
- */
+// Mendapatkan waktu yang sudah "disinkronisasi" (client-based)
 export function getSyncedServerTime(): number {
-  if (serverTimeOffset === null) {
-    // Jika belum sync, gunakan client time
+  if (timeOffset === null) {
     return Date.now()
   }
-
-  return Date.now() + serverTimeOffset
+  return Date.now() + timeOffset
 }
 
-/**
- * Menghitung countdown yang akurat menggunakan server time
- */
-// export function calculateCountdown(countdownStartTime: string | number, durationMs = 10000): number {
-//   const startTime = typeof countdownStartTime === "string" ? new Date(countdownStartTime).getTime() : countdownStartTime
-
-//   const currentServerTime = getSyncedServerTime()
-//   const elapsed = currentServerTime - startTime
-//   const remaining = Math.max(0, durationMs - elapsed)
-
-//   return Math.ceil(remaining / 1000)
-// }
+// Menghitung countdown akurat menggunakan estimasi waktu
 export function calculateCountdown(countdownStartTime: string | number | null, durationMs = 10000): number {
   if (countdownStartTime === null) {
-    return 0; // Kembalikan 0 jika countdownStartTime adalah null
+    return 0
   }
 
-  const startTime = typeof countdownStartTime === "string" ? new Date(countdownStartTime).getTime() : countdownStartTime;
+  const startTime = typeof countdownStartTime === "string" ? new Date(countdownStartTime).getTime() : countdownStartTime
+  const currentTime = getSyncedServerTime()
+  const elapsed = currentTime - startTime
+  const remaining = Math.max(0, durationMs - elapsed)
 
-  const currentServerTime = getSyncedServerTime();
-  const elapsed = currentServerTime - startTime;
-  const remaining = Math.max(0, durationMs - elapsed);
-
-  return Math.ceil(remaining / 1000);
+  return Math.ceil(remaining / 1000)
 }

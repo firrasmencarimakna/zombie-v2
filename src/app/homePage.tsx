@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
@@ -10,7 +9,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+  } from "@/components/ui/card";
 import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle, RotateCw, LogOut } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -158,94 +157,6 @@ export default function HomePage() {
     []
   );
 
-  // // Fungsi untuk melakukan join massal (70x)
-  // const handleMassJoin = useCallback(async () => {
-  //   if (!gameCode || !nickname) {
-  //     toast.error("Game code dan nickname harus diisi!");
-  //     return;
-  //   }
-
-  //   setMassJoinInProgress(true);
-  //   setJoinCount(0);
-
-  //   for (let i = 0; i < 20; i++) {
-  //     try {
-  //       // Generate nickname unik untuk setiap join
-  //       const uniqueNickname = `${nickname}_${i + 1}`;
-
-  //       // Proses join game (sama seperti handleJoinGame)
-  //       const { data: room, error: roomError } = await supabase
-  //         .from("game_rooms")
-  //         .select("*")
-  //         .eq("room_code", gameCode.toUpperCase())
-  //         .single();
-
-  //       if (roomError || !room) {
-  //         setMassJoinStatus(`Gagal ${i+1}: Room tidak ditemukan`);
-  //         continue;
-  //       }
-
-  //       // Check if nickname is already taken
-  //       const { data: existingPlayers, error: checkError } = await supabase
-  //         .from("players")
-  //         .select("nickname")
-  //         .eq("room_id", room.id)
-  //         .eq("nickname", uniqueNickname)
-  //         .maybeSingle();
-
-  //       if (checkError) {
-  //         setMassJoinStatus(`Gagal ${i+1}: Error cek nickname`);
-  //         continue;
-  //       }
-
-  //       if (existingPlayers) {
-  //         setMassJoinStatus(`Gagal ${i+1}: Nickname sudah digunakan`);
-  //         continue;
-  //       }
-
-  //       // Insert player
-  //       const { error: playerError } = await supabase
-  //         .from("players")
-  //         .insert({
-  //           room_id: room.id,
-  //           nickname: uniqueNickname,
-  //           character_type: `robot${Math.floor(Math.random() * 10) + 1}`,
-  //         });
-
-  //       if (playerError) {
-  //         setMassJoinStatus(`Gagal ${i+1}: ${playerError.message}`);
-  //         continue;
-  //       }
-
-  //       setJoinCount(prev => prev + 1);
-  //       setMassJoinStatus(`Berhasil join ke-${i+1} dengan nickname: ${uniqueNickname}`);
-
-  //       // Delay antar request untuk menghindari rate limiting
-  //       await new Promise(resolve => setTimeout(resolve, 500));
-
-  //     } catch (error) {
-  //       console.error(`Error pada join ke-${i+1}:`, error);
-  //       setMassJoinStatus(`Error pada join ke-${i+1}`);
-  //     }
-  //   }
-
-  //   setMassJoinInProgress(false);
-  //   toast.success(`Proses selesai! Berhasil join ${joinCount} dari 70 kali.`);
-  // }, [gameCode, nickname, joinCount]);
-
-  //  // Kombinasi keyboard untuk mengaktifkan debug mode (Ctrl+Shift+D)
-  // useEffect(() => {
-  //   const handleKeyDown = (e: KeyboardEvent) => {
-  //     if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-  //       setDebugMode(prev => !prev);
-  //       toast.success(`Debug mode ${!debugMode ? 'diaktifkan' : 'dinonaktifkan'}`);
-  //     }
-  //   };
-
-  //   window.addEventListener('keydown', handleKeyDown);
-  //   return () => window.removeEventListener('keydown', handleKeyDown);
-  // }, [debugMode]);
-
   // Language change handler
   const handleLanguageChange = (value: string) => {
     i18n.changeLanguage(value);
@@ -298,10 +209,11 @@ export default function HomePage() {
   const handleHostGame = useCallback(() => {
     setIsCreating(true);
     if (navigator.vibrate) navigator.vibrate(50);
-    router.push("/quiz-select");
+    router.push("/host/quiz-select");
   }, [router]);
 
-  // Join game
+  // Join game - Diubah untuk sinkron dengan schema terbaru: Gunakan query langsung tanpa RPC
+  // Fetch room dengan players JSONB, cek nickname manual, append player ke array players, lalu update
   const handleJoinGame = useCallback(async () => {
     if (isJoining) return;
     if (!gameCode || !nickname) {
@@ -313,6 +225,7 @@ export default function HomePage() {
     setErrorMessage(null);
 
     try {
+      // Step 1: Check if room exists dan fetch players
       const { data: room, error: roomError } = await supabase
         .from("game_rooms")
         .select("*")
@@ -325,51 +238,83 @@ export default function HomePage() {
         return;
       }
 
-      const { data: existingPlayers, error: checkError } = await supabase
-        .from("players")
-        .select("nickname")
-        .eq("room_id", room.id)
-        .eq("nickname", nickname)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error("Error checking nickname:", checkError);
-        toast.error(t("errorMessages.checkNicknameFailed"));
+      // Step 2: Cek status room (hanya bisa join jika 'waiting')
+      if (room.status !== 'waiting') {
+        toast.error(t("errorMessages.roomNotActive"));
         setIsJoining(false);
         return;
       }
 
-      if (existingPlayers) {
+      // Step 3: Cek apakah room penuh
+      const currentPlayersCount = (room.players || []).length;
+      if (currentPlayersCount >= (room.max_players || 100)) {
+        toast.error(t("errorMessages.roomFull"));
+        setIsJoining(false);
+        return;
+      }
+
+      // Step 4: Cek nickname duplikat manual dari JSONB players
+      const players = room.players || [] as any[];
+      const existingPlayer = players.find((p: any) => p.nickname?.toLowerCase() === nickname.toLowerCase());
+      if (existingPlayer) {
         toast.error(t("errorMessages.nicknameTaken"));
         setIsJoining(false);
         return;
       }
 
-      const { error: playerError } = await supabase
-        .from("players")
-        .insert({
-          room_id: room.id,
-          nickname,
-          character_type: `robot${Math.floor(Math.random() * 10) + 1}`,
-        })
-        .select()
-        .single();
+      // Step 5: Buat player baru dan append ke array players
+      const playerId = crypto.randomUUID(); // Client-side UUID for player_id
+      const newPlayer = {
+        player_id: playerId,
+        nickname,
+        character_type: `robot${Math.floor(Math.random() * 10) + 1}`,
+        score: 0,
+        correct_answers: 0,
+        is_host: false,
+        position_x: 0,
+        position_y: 0,
+        is_alive: true,
+        power_ups: 0,
+        joined_at: new Date().toISOString(),
+        health: {
+          current: 3,
+          max: 3,
+          is_being_attacked: false,
+          last_attack_time: new Date().toISOString(),
+          speed: 20,
+          last_answer_time: new Date().toISOString(),
+          countdown: 0
+        },
+        answers: [],
+        attacks: []
+      };
 
-      if (playerError) {
-        if (playerError.code === "23505") {
-          toast.error(t("errorMessages.nicknameTaken"));
-        } else {
-          toast.error(t("errorMessages.joinFailed"));
-        }
+      const newPlayers = [...players, newPlayer];
+
+      // Step 6: Update room dengan players baru (langsung via UPDATE)
+      const { error: updateError } = await supabase
+        .from("game_rooms")
+        .update({ 
+          players: newPlayers,
+          updated_at: new Date().toISOString()  // Update timestamp sesuai schema
+        })
+        .eq("id", room.id);
+
+      if (updateError) {
+        console.error("Error updating room players:", updateError);
+        toast.error(t("errorMessages.joinFailed"));
         setIsJoining(false);
         return;
       }
 
+      // Verifikasi opsional: Fetch ulang room untuk konfirmasi (tidak wajib, tapi bagus untuk debug)
+      console.log("Player joined successfully. New players count:", newPlayers.length);
+
       localStorage.setItem("nickname", nickname);
       localStorage.setItem("roomCode", gameCode.toUpperCase());
+      localStorage.setItem("playerId", playerId); // Store for later use
       if (navigator.vibrate) navigator.vibrate(50);
-      await router.push(`/game/${gameCode.toUpperCase()}`);
-    } catch (error) {
+              await router.push(`/player/${gameCode.toUpperCase()}/lobby`);    } catch (error) {
       console.error("Error bergabung ke permainan:", error);
       toast.error(t("errorMessages.joinFailed"));
       setIsJoining(false);
@@ -799,28 +744,6 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-
-      {/* Tombol Debug Mode (hanya muncul jika debugMode true) */}
-      {/*
-      {debugMode && (
-        <div className="fixed bottom-4 right-4 z-50 bg-black/80 p-4 rounded-lg border border-red-500">
-          <h3 className="text-red-500 font-bold mb-2">Debug Mode</h3>
-          <Button 
-            onClick={handleMassJoin} 
-            disabled={massJoinInProgress}
-            className="w-full mb-2 bg-red-700 hover:bg-red-600"
-          >
-            {massJoinInProgress ? `Joining... (${joinCount}/70)` : 'Join 70x'}
-          </Button>
-          {massJoinStatus && (
-            <p className="text-red-400 text-xs mt-2">{massJoinStatus}</p>
-          )}
-          <p className="text-red-400 text-xs mt-2">
-            Tekan Ctrl+Shift+D untuk menyembunyikan
-          </p>
-        </div>
-      )}
-      */}
 
       <Dialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirmOpen}>
         <AnimatePresence>

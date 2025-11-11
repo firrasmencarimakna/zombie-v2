@@ -3,21 +3,14 @@
 import { Heart } from "lucide-react";
 import { useEffect, useMemo, memo, useRef } from "react"; // ✅ Tambahkan useRef
 import { useParams, useRouter } from "next/navigation";
+import type { EmbeddedPlayer } from "@/lib/supabase";
 import Image from "next/image";
 
-interface Player {
-  id: string;
-  nickname: string;
-  character_type: string;
-  score: number;
-  is_alive: boolean;
-  joined_at: string;
-}
+
 
 interface PlayerState {
   health: number;
   speed: number;
-  isBeingAttacked: boolean;
   attackIntensity: number;
 }
 
@@ -26,25 +19,25 @@ interface ZombieState {
 }
 
 interface RunningCharactersProps {
-  players: Player[];
+  players: EmbeddedPlayer[];
   playerStates: { [playerId: string]: PlayerState };
   zombieState: ZombieState;
   animationTime: number;
   gameMode: "normal" | "panic";
   centerX: number;
-  completedPlayers: Player[];
+  completedPlayers: EmbeddedPlayer[];
 }
 
 const characterConfigs = [
   { src: "/character/player/character.webp", alt: "Hijau", type: "robot1", width: 20, height: 48, verticalOffset: 85, horizontalOffset: 10 },
   { src: "/character/player/character1-crop.webp", alt: "Biru", type: "robot2", width: 20, height: 50, verticalOffset: 58, horizontalOffset: 10 },
   { src: "/character/player/character2-crop.webp", alt: "Merah", type: "robot3", width: 20, height: 46, verticalOffset: 32, horizontalOffset: -10 },
-  { src: "/character/player/character3-crop.webp", alt: "Ungu", type: "robot4", width: 20, height: 48, verticalOffset: 10, horizontalOffset: 5 },
-  { src: "/character/player/character4-crop.webp", alt: "Oranye", type: "robot5", width: 20, height: 50, verticalOffset: -4, horizontalOffset: -5 },
-  { src: "/character/player/character5.webp", alt: "Kuning", type: "robot6", width: 20, height: 48, verticalOffset: 24, horizontalOffset: 15 },
-  { src: "/character/player/character6.webp", alt: "Abu-abu", type: "robot7", width: 20, height: 46, verticalOffset: 62, horizontalOffset: -15 },
-  { src: "/character/player/character7-crop.webp", alt: "Pink", type: "robot8", width: 20, height: 50, verticalOffset: 82, horizontalOffset: 20 },
-  { src: "/character/player/character8-crop.webp", alt: "Cokelat", type: "robot9", width: 20, height: 48, verticalOffset: 10, horizontalOffset: -20 },
+  { src: "/character/player/character4-crop.webp", alt: "Ungu", type: "robot4", width: 20, height: 48, verticalOffset: 10, horizontalOffset: 5 },
+  { src: "/character/player/character5.webp", alt: "Oranye", type: "robot5", width: 20, height: 50, verticalOffset: -4, horizontalOffset: -5 },
+  { src: "/character/player/character6.webp", alt: "Kuning", type: "robot6", width: 20, height: 48, verticalOffset: 24, horizontalOffset: 15 },
+  { src: "/character/player/character7-crop.webp", alt: "Abu-abu", type: "robot7", width: 20, height: 46, verticalOffset: 62, horizontalOffset: -15 },
+  { src: "/character/player/character8-crop.webp", alt: "Pink", type: "robot8", width: 20, height: 50, verticalOffset: 82, horizontalOffset: 20 },
+  { src: "/character/player/character9-crop.webp", alt: "Cokelat", type: "robot9", width: 20, height: 48, verticalOffset: 10, horizontalOffset: -20 },
   { src: "/character/player/character9-crop.webp", alt: "Emas", type: "robot10", width: 20, height: 52, verticalOffset: 70, horizontalOffset: 25 },
 ];
 
@@ -57,7 +50,7 @@ const CharacterItem = memo(function CharacterItem({
   animationTime,
   centerX,
 }: {
-  player: Player;
+  player: EmbeddedPlayer;
   state: PlayerState;
   isZombieTarget: boolean;
   gameMode: "normal" | "panic";
@@ -71,7 +64,6 @@ const CharacterItem = memo(function CharacterItem({
 
   const health = state.health;
   const speed = state.speed;
-  const isBeingAttacked = state.isBeingAttacked;
   const attackIntensity = state.attackIntensity;
 
   // ✅ Simpan baseOffset per karakter
@@ -92,8 +84,8 @@ const CharacterItem = memo(function CharacterItem({
   const charX = baseOffsetRef.current + speedOffset + character.horizontalOffset;
   const charY = character.verticalOffset;
 
-  const attackShakeX = isBeingAttacked ? Math.sin(animationTime * 10) * attackIntensity * 4 : 0;
-  const attackShakeY = isBeingAttacked ? Math.sin(animationTime * 8) * attackIntensity * 4 : 0;
+  const attackShakeX = isZombieTarget ? Math.sin(animationTime * 10) * attackIntensity * 4 : 0;
+  const attackShakeY = isZombieTarget ? Math.sin(animationTime * 8) * attackIntensity * 4 : 0;
 
   const finalX = charX + attackShakeX;
   const finalY = charY + attackShakeY;
@@ -102,11 +94,11 @@ const CharacterItem = memo(function CharacterItem({
   const isVisible = Math.abs(finalX - (centerX - window.innerWidth / 2)) < 1500;
   if (!isVisible) return null;
 
-  const scale = isBeingAttacked ? 1.2 : gameMode === "panic" ? 1.3 : 1.1;
+  const scale = isZombieTarget ? 1.2 : gameMode === "panic" ? 1.3 : 1.1;
 
   return (
     <div
-      key={`character-${player.id}`}
+      key={`character-${player.player_id}`}
       className="absolute"
       style={{
         transform: `translate(${finalX}px, ${finalY}px) scale(${scale})`,
@@ -176,9 +168,9 @@ function RunningCharacters({
   // ✅ Memoisasi activePlayers
   const activePlayers = useMemo(() => {
     return players.filter((player) => {
-      const state = playerStates[player.id];
+      const state = playerStates[player.player_id];
       if (!state) return false;
-      const isCompleted = completedPlayers.some((cp) => cp.id === player.id);
+      const isCompleted = completedPlayers.some((cp) => cp.player_id === player.player_id);
       const isEliminated = !player.is_alive || state.health <= 0;
       return !isCompleted && !isEliminated;
     });
@@ -196,15 +188,15 @@ function RunningCharacters({
   return (
     <div className="absolute bottom-50 z-30 w-full">
       {activePlayers.map((player) => {
-        const state = playerStates[player.id];
+        const state = playerStates[player.player_id];
         if (!state) return null;
 
         return (
           <CharacterItem
-            key={player.id}
+            key={player.player_id}
             player={player}
             state={state}
-            isZombieTarget={zombieState.targetPlayerId === player.id}
+            isZombieTarget={zombieState.targetPlayerId === player.player_id}
             gameMode={gameMode}
             animationTime={animationTime}
             centerX={centerX}
