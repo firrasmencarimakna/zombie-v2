@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
   } from "@/components/ui/card";
-import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle, RotateCw, LogOut } from "lucide-react";
+import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle, RotateCw, LogOut, Menu } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@radix-ui/react-select"; // Tambahkan import Separator untuk divider
 import { preloadGlobalAssets } from "@/lib/preloadAssets";
 
 // Types for TypeScript
@@ -72,6 +73,7 @@ export default function HomePage() {
   const [showTooltipOnce, setShowTooltipOnce] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
   const [tab, setTab] = useState<"join" | "play">("join");
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // State baru untuk hamburger menu
 
   // State untuk debug mode
   const [debugMode, setDebugMode] = useState(false);
@@ -161,6 +163,7 @@ export default function HomePage() {
   const handleLanguageChange = (value: string) => {
     i18n.changeLanguage(value);
     if (typeof window !== "undefined") localStorage.setItem("language", value);
+    setIsMenuOpen(false); // Tutup menu setelah pilih bahasa
   };
 
   // Handle URL parameters
@@ -357,6 +360,17 @@ export default function HomePage() {
     }
   };
 
+  // Handler untuk hamburger menu
+  const handleMenuToggle = () => {
+    setIsMenuOpen(!isMenuOpen);
+    if (navigator.vibrate) navigator.vibrate(50);
+  };
+
+  const handleHowToPlayFromMenu = () => {
+    setOpenHowToPlay(true);
+    setIsMenuOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none">
       {isClient &&
@@ -372,7 +386,7 @@ export default function HomePage() {
         ))}
 
       <div className="relative z-10 flex items-center justify-center min-h-screen p-2 sm:p-4">
-        {/* Help Circle Button */}
+        {/* Hamburger Menu Button */}
         <div className="absolute top-4 left-4 z-20">
           <TooltipProvider>
             <Tooltip open={showTooltipOnce}>
@@ -380,18 +394,18 @@ export default function HomePage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setOpenHowToPlay(true)}
+                  onClick={handleMenuToggle}
                   className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                  aria-label="How to Play"
+                  aria-label="Menu"
                 >
-                  <HelpCircle className="h-6 w-6" />
+                  <Menu className="h-6 w-6" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent
                 side="right"
                 className="bg-black text-red-400 border border-red-500/50 font-mono"
               >
-                {t("howToPlay")}
+                {t("menu")}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -474,36 +488,128 @@ export default function HomePage() {
           </AnimatePresence>
         </Dialog>
 
-        {/* Language selector */}
-        <div className="absolute top-4 right-4 z-20">
-          <Select value={i18n.language} onValueChange={handleLanguageChange}>
-            <SelectTrigger
-              className="bg-black/50 border-red-500/50 text-red-400 h-10 sm:h-12 text-sm sm:text-base focus:ring-0 focus:outline-none data-[state=open]:bg-black/80 data-[state=open]:border-red-500"
-            >
-              <SelectValue placeholder={t("selectLanguage")} />
-            </SelectTrigger>
-            <SelectContent className="bg-black/90 border border-red-500/50 text-red-400">
-              <SelectItem value="en" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
-                English
-              </SelectItem>
-              <SelectItem value="id" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
-                Indonesia
-              </SelectItem>
-              <SelectItem value="de" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
-                Deutsch
-              </SelectItem>
-              <SelectItem value="fr" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
-                Français
-              </SelectItem>
-              <SelectItem value="ja" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
-                日本語
-              </SelectItem>
-              <SelectItem value="es" className="focus:bg-red-500/20 focus:text-red-300 text-sm sm:text-base">
-                Español
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Hamburger Menu Dialog - Diperbaiki untuk tampilan lebih terstruktur dan rapi */}
+        <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+          <AnimatePresence>
+            {isMenuOpen && (
+              <DialogContent 
+                forceMount 
+                className="bg-black/95 border-red-500/80 text-red-400 max-w-sm sm:max-w-md max-h-[80vh] flex flex-col shadow-2xl shadow-red-500/20"
+              >
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="flex-1 overflow-y-auto custom-scrollbar" // Tambahkan custom-scrollbar untuk styling scrollbar
+                >
+                  <DialogHeader className="mb-6 border-b border-red-500/30 pb-4">
+                    <DialogTitle className="text-red-500 text-xl font-mono flex items-center gap-2">
+                      <Menu className="h-5 w-5" />
+                      {t("menu")}
+                    </DialogTitle>
+                  </DialogHeader>
+
+                  {/* Section: Menu Utama */}
+                  <div className="space-y-1 mb-6">
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1, duration: 0.2 }}
+                    >
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-red-400 hover:bg-red-500/20 hover:text-red-300 font-mono text-left py-3 px-4 rounded-lg transition-all duration-200"
+                        onClick={handleHowToPlayFromMenu}
+                      >
+                        <HelpCircle className="h-5 w-5 mr-3 flex-shrink-0" />
+                        <span className="text-sm">{t("howToPlay")}</span>
+                      </Button>
+                    </motion.div>
+                  </div>
+
+                  <Separator className="my-4 bg-red-500/30" /> {/* Divider untuk pemisah section */}
+
+                  {/* Section: Pengaturan Bahasa */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.2 }}
+                  >
+                    <div className="space-y-3 mb-6">
+                      <h4 className="text-sm font-semibold text-red-300 font-mono uppercase tracking-wider px-2">
+                        {t("selectLanguage")}
+                      </h4>
+                      <Select value={i18n.language} onValueChange={handleLanguageChange}>
+                        <SelectTrigger className="bg-black/30 border-red-500/50 text-red-400 focus:ring-0 focus:outline-none data-[state=open]:bg-black/50 data-[state=open]:border-red-500 w-full">
+                          <SelectValue placeholder={t("selectLanguage")} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-black/90 border border-red-500/50 text-red-400 w-full">
+                          <SelectItem value="en" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
+                            <span className="flex items-center gap-2">
+                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">EN</span>
+                              English
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="id" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
+                            <span className="flex items-center gap-2">
+                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">ID</span>
+                              Indonesia
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="de" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
+                            <span className="flex items-center gap-2">
+                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">DE</span>
+                              Deutsch
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="fr" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
+                            <span className="flex items-center gap-2">
+                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">FR</span>
+                              Français
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="ja" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
+                            <span className="flex items-center gap-2">
+                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">JA</span>
+                              日本語
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="es" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
+                            <span className="flex items-center gap-2">
+                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">ES</span>
+                              Español
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </motion.div>
+
+                  <Separator className="my-4 bg-red-500/30" /> {/* Divider lagi untuk pemisah */}
+
+                  {/* Section: Akun & Logout */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.2 }}
+                  >
+                    <div className="space-y-1">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-red-400 hover:bg-red-500/20 hover:text-red-300 font-mono text-left py-3 px-4 rounded-lg transition-all duration-200"
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="h-5 w-5 mr-3 flex-shrink-0" />
+                        <span className="text-sm">{t("logout")}</span>
+                      </Button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              </DialogContent>
+            )}
+          </AnimatePresence>
+        </Dialog>
 
         <div className="w-full max-w-4xl">
           <motion.div

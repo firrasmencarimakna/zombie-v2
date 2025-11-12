@@ -3,11 +3,11 @@
 import React from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
-import type { Player } from "@/lib/supabase"
+import type { EmbeddedPlayer } from "@/lib/supabase"
 
 interface PlayerStatusProps {
-  currentPlayer: Player
-  players: Player[]
+  currentPlayer: EmbeddedPlayer
+  players: EmbeddedPlayer[]
   hasAnswered?: boolean
   selectedAnswer?: number | null
   currentQuestion?: any
@@ -72,7 +72,7 @@ const PlayerStatus = React.memo(function PlayerStatus({
               <div className="text-gray-400 text-sm flex items-center gap-4">
                 <span>{currentPlayer.correct_answers} jiwa diselamatkan</span>
                 <span>•</span>
-                <span>Rank #{players.findIndex((p) => p.id === currentPlayer.id) + 1}</span>
+                <span>Rank #{players.findIndex((p) => p.player_id === currentPlayer.player_id) + 1}</span>
                 {currentPlayer.power_ups > 0 && (
                   <>
                     <span>•</span>

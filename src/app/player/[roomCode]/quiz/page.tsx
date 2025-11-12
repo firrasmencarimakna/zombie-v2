@@ -763,6 +763,13 @@ export default function QuizPage() {
     const normalizedCorrectAnswer = currentQuestion?.correct_answer ? currentQuestion.correct_answer.trim().toLowerCase() : '';
     const isCorrectAnswer = normalizedPlayerAnswer === normalizedCorrectAnswer;
 
+    console.log("handleAnswerSelect Debug:");
+    console.log("  Selected Answer (raw):", answer);
+    console.log("  Correct Answer (raw):", currentQuestion?.correct_answer);
+    console.log("  Normalized Player Answer:", normalizedPlayerAnswer);
+    console.log("  Normalized Correct Answer:", normalizedCorrectAnswer);
+    console.log("  Is Correct Answer:", isCorrectAnswer);
+
     // onSubmitAnswer is not a prop anymore
     // let submitSuccess = true;
     // if (onSubmitAnswer) {
@@ -808,18 +815,34 @@ export default function QuizPage() {
   }
 
   const getAnswerButtonClass = (option: string) => {
+    const normalizedOption = option.trim().toLowerCase();
+    const normalizedCorrectAnswer = currentQuestion?.correct_answer ? currentQuestion.correct_answer.trim().toLowerCase() : '';
+    const normalizedSelectedAnswer = selectedAnswer ? selectedAnswer.trim().toLowerCase() : null;
+
+    // console.log("getAnswerButtonClass Debug for option:", option);
+    // console.log("  normalizedOption:", normalizedOption);
+    // console.log("  normalizedCorrectAnswer:", normalizedCorrectAnswer);
+    // console.log("  normalizedSelectedAnswer:", normalizedSelectedAnswer);
+    // console.log("  isAnswered:", isAnswered);
+
     if (!isAnswered) {
+      console.log("  Returning: bg-gray-800 (not answered)");
       return "bg-gray-800 border-gray-600 text-white"
     }
 
-    if (option === currentQuestion?.correct_answer) {
+    // If the option is the correct answer
+    if (normalizedOption === normalizedCorrectAnswer) {
+      console.log("  Returning: bg-green-600 (correct answer)");
       return "bg-green-600 border-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)]"
     }
 
-    if (option === selectedAnswer && option !== currentQuestion?.correct_answer) {
+    // If the option is the selected answer AND it's not the correct answer
+    if (normalizedOption === normalizedSelectedAnswer && normalizedOption !== normalizedCorrectAnswer) {
+      console.log("  Returning: bg-red-600 (selected incorrect answer)");
       return "bg-red-600 border-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)]"
     }
 
+    console.log("  Returning: bg-gray-700 (unselected incorrect answer)");
     return "bg-gray-700 border-gray-600 text-gray-400"
   }
 
@@ -928,7 +951,7 @@ export default function QuizPage() {
               <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-purple-500/5" />
               <div className="relative z-10">
                 {currentQuestion.question_type === "IMAGE" && currentQuestion.image_url && (
-                  <div className="mb-4 text-center">
+                  <div className="mb-4 text-center">  
                     <img
                       src={currentQuestion.image_url || "/placeholder.svg"}
                       alt={currentQuestion.question_text}

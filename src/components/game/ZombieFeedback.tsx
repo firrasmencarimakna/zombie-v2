@@ -73,13 +73,11 @@ const playerOptions = [
           {/* Karakter pelari (yang dikejar) */}
           <div
             key={`character-${animationKey}`}
-            className={`absolute bottom-4 transition-all ${isCorrect ? "animate-run-fast" : "animate-run-slow"}`}
+            className={`absolute bottom-4 transition-all animate-run-slow`}
             style={{
               width: "70px",
               height: "70px",
-              animation: isCorrect
-                ? "runFast 1.8s cubic-bezier(0.2, 0.8, 0.4, 1) forwards"
-                : "runSlow 2.2s ease-out forwards",
+              animation: "runSlow 2.2s ease-out forwards",
             }}
           >
             <Image

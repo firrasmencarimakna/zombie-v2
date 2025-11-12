@@ -57,7 +57,7 @@ export function useGameLogic({ room, players, currentPlayer }: GameLogicProps) {
   }, [currentPlayer])
 
   const submitAnswer = useCallback(
-    async (answer: string, isCorrect: boolean, currentQuestionIndex: number) => {
+    async (answer: string, isCorrect: boolean, currentQuestionIndex: number, currentPlayerHealth: number, currentPlayerSpeed: number): Promise<ExtendedEmbeddedPlayer | null> => {
       // Enhanced validation
       if (!currentPlayer?.player_id || !room?.id || isSubmitting) {
         console.log("submitAnswer: validation failed", {
@@ -65,15 +65,16 @@ export function useGameLogic({ room, players, currentPlayer }: GameLogicProps) {
           hasRoom: !!room?.id,
           isSubmitting,
         })
-        return false
+        return null
       }
 
       try {
         setIsSubmitting(true)
         console.log(`🎯 Submitting answer: "${answer}", correct: ${isCorrect}`)
+        console.log(`DEBUG: submitAnswer - Initial currentPlayerSpeed: ${currentPlayerSpeed}, currentPlayerHealth: ${currentPlayerHealth}`);
 
         // 1. Update player answers array (push ke EmbeddedPlayer.answers)
-        const updatedPlayer = updateCurrentPlayer({
+        const updatedPlayerDraft = updateCurrentPlayer({
           answers: [...(currentPlayer.answers || []), {
             question_index: currentQuestionIndex,
             answer,
@@ -82,42 +83,34 @@ export function useGameLogic({ room, players, currentPlayer }: GameLogicProps) {
           }],
         })
 
-        if (!updatedPlayer) return false
+        if (!updatedPlayerDraft) return null
 
-        let updates: Partial<ExtendedEmbeddedPlayer> = { answers: updatedPlayer.answers }
+        let updates: Partial<ExtendedEmbeddedPlayer> = { answers: updatedPlayerDraft.answers }
+
+        let newHealth = currentPlayerHealth;
+        let newSpeed = currentPlayerSpeed;
 
         if (isCorrect) {
+          newSpeed = Math.min(currentPlayerSpeed + 5, 100);
           updates = {
             ...updates,
             correct_answers: (currentPlayer.correct_answers || 0) + 1,
             score: (currentPlayer.score || 0) + 10,
+            health: { ...currentPlayer.health, speed: newSpeed } // Update speed
           }
           console.log("🎉 Correct answer - updating stats:", updates)
+          console.log(`DEBUG: submitAnswer - Correct answer, calculated newSpeed: ${newSpeed}`);
         } else {
+          newHealth = Math.max(0, currentPlayerHealth - 1);
+          newSpeed = Math.max(20, currentPlayerSpeed - 5);
           updates = {
             ...updates,
             wrong_answers: (currentPlayer.wrong_answers || 0) + 1, // Asumsi tambah field ini di type
+            score: Math.max(0, (currentPlayer.score || 0) - 10),
+            health: { ...currentPlayer.health, current: newHealth, speed: newSpeed } // Update health and speed
           }
           console.log("💀 Wrong answer - updating stats:", updates)
-
-          // Update local state for wrong answers
-          if (isMountedRef.current) {
-            setWrongAnswers((prev) => prev + 1)
-          }
-
-          // 2. Handle health system for wrong answers (update player.health.current)
-          const currentHealth = currentPlayer.health.current ?? 3 // Handle undefined dengan default
-          const newHealth = Math.max(0, currentHealth - 1)
-          console.log(`🩺 Updating health: ${currentHealth} -> ${newHealth}`)
-
-          updates = {
-            ...updates,
-            health: {
-              ...currentPlayer.health,
-              current: newHealth,
-            
-            },
-          }
+          console.log(`DEBUG: submitAnswer - Wrong answer, calculated newSpeed: ${newSpeed}, newHealth: ${newHealth}`);
 
           // Update player alive status if health reaches 0
           if (newHealth <= 0) {
@@ -150,7 +143,9 @@ export function useGameLogic({ room, players, currentPlayer }: GameLogicProps) {
 
         // 4. Apply updates to player
         const finalUpdatedPlayer = updateCurrentPlayer(updates)
-        if (!finalUpdatedPlayer) return false
+        if (!finalUpdatedPlayer) return null
+        console.log("DEBUG: submitAnswer - finalUpdatedPlayer before DB update:", finalUpdatedPlayer);
+
 
         const updatedPlayers = players.map(p => p.player_id === currentPlayer.player_id ? finalUpdatedPlayer : p)
 
@@ -158,16 +153,15 @@ export function useGameLogic({ room, players, currentPlayer }: GameLogicProps) {
 
         if (playerError) {
           console.error("❌ Error updating player stats:", playerError)
-          // Don't return false, answer was "submitted" via local update
+          return null // Indicate failure to QuizPage
         } else {
           console.log("✅ Player stats updated successfully")
+          console.log("DEBUG: submitAnswer - Returned finalUpdatedPlayer:", finalUpdatedPlayer);
+          return finalUpdatedPlayer // Return the updated player
         }
-
-        console.log("🎯 Answer submission completed successfully")
-        return true
       } catch (error) {
         console.error("❌ Critical error in submitAnswer:", error)
-        return false
+        return null
       } finally {
         if (isMountedRef.current) {
           setIsSubmitting(false)
@@ -176,7 +170,6 @@ export function useGameLogic({ room, players, currentPlayer }: GameLogicProps) {
     },
     [currentPlayer, room, isSubmitting, players, updateCurrentPlayer, updatePlayersInRoom],
   )
-
   const nextQuestion = useCallback(
     async (currentIndex: number) => {
       if (!room?.id || isSubmitting) {

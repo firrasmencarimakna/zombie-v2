@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Dispatch, SetStateAction } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Users, Skull, Zap, Ghost, Bone, HeartPulse, ArrowLeft, Play, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase, GameRoom, EmbeddedPlayer } from "@/lib/supabase";
@@ -13,6 +13,7 @@ import { syncServerTime, calculateCountdown } from "@/lib/server-time";
 import { useGameLogic } from "@/hooks/useGameLogic";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
+import { useDetectBackAction } from "@/hooks/useDetectBackAction";
 
 // Extended EmbeddedPlayer type to include optional fields from useGameLogic
 interface ExtendedEmbeddedPlayer extends EmbeddedPlayer {
@@ -33,21 +34,6 @@ const characterOptions = [
   { value: "robot9", name: "Cokelat", gif: "/character/player/character8-crop.webp", alt: "Karakter Cokelat" },
   { value: "robot10", name: "Emas", gif: "/character/player/character9-crop.webp", alt: "Karakter Emas" },
 ];
-
-export function useDetectBackAction(
-  setIsExitDialogOpen: Dispatch<SetStateAction<boolean>>
-) {
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.history.pushState(null, "", window.location.href);
-    const handlePopState = () => {
-      setIsExitDialogOpen(true);
-      window.history.pushState(null, "", window.location.href);
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [setIsExitDialogOpen]);
-}
 
 export default function LobbyPage() {
   const router = useRouter();

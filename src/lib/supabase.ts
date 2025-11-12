@@ -21,9 +21,12 @@ export type EmbeddedPlayer = {
   position_y: number;
   is_alive: boolean;
   joined_at: string;
+  power_ups: number;
   health: {
     current: number;
     max: number;
+    is_being_attacked: boolean;
+    last_attack_time: string;
     speed: number;
     last_answer_time: string;
     countdown: number;
