@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import ZombieFeedback from "@/components/game/ZombieFeedback"
 import { useTranslation } from "react-i18next"
-import { useGameLogic } from "@/hooks/useGameLogic" // Import useGameLogic
+
 import toast from "react-hot-toast"
 
 // Define types for GameRoom and EmbeddedPlayer if not already imported from supabase
@@ -87,13 +87,7 @@ export default function QuizPage() {
   const [isProcessingAnswer, setIsProcessingAnswer] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  const gameLogicHookResult = useGameLogic({ room, players: room?.players || [], currentPlayer });
-
-  const {
-    isSubmitting,
-    submitAnswer: gameLogicSubmitAnswer,
-    nextQuestion: gameLogicNextQuestion,
-  } = gameLogicHookResult;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Ambil questions dari embedded_questions atau quiz.questions
   const questions = roomInfo?.embedded_questions && roomInfo.embedded_questions.length > 0
@@ -180,10 +174,7 @@ export default function QuizPage() {
         
         // Sync health, speed, correctAnswers, currentIndex dari player data jika ada
         if (playerData) {
-          setPlayerHealth(playerData.health?.current || 3)
-          setPlayerSpeed(playerData.health?.speed || 20)
-          setCorrectAnswers(playerData.correct_answers || 0)
-          setCurrentQuestionIndex(playerData.current_index || 0)
+          // Data is now synced via handleAnswerSelect's response
         }
       }
     }
@@ -360,88 +351,86 @@ export default function QuizPage() {
     }
   }
 
-  const saveAnswerAndUpdatePlayerState = async (answer: string, isCorrectAnswer: boolean, newHealth?: number) => {
+  const submitAnswer = async (answer: string, isCorrectAnswer: boolean) => {
     if (!room || !currentPlayer) {
-      console.error("Room or currentPlayer is null, cannot save answer and update player state.");
-      return false;
+      console.error("Room or currentPlayer is null, cannot submit answer.");
+      return;
     }
-    const currentRoom = room; // Type: GameRoom
-    const player = currentPlayer; // Type: EmbeddedPlayer
 
-    try {
-      setIsProcessingAnswer(true)
+    setIsProcessingAnswer(true);
 
-      let newSpeed = playerSpeed
-      if (isCorrectAnswer) {
-        newSpeed = Math.min(playerSpeed + 5, 100)
-      } else {
-        newSpeed = Math.max(20, playerSpeed - 5)
-      }
+    let newHealth = playerHealth;
+    let newSpeed = playerSpeed;
 
-      const { data: roomData, error: roomError } = await supabase
-        .from("game_rooms")
-        .select("players")
-        .eq("id", currentRoom.id)
-        .single()
+    if (isCorrectAnswer) {
+      newSpeed = Math.min(playerSpeed + 5, 100);
+    } else {
+      newHealth = Math.max(0, playerHealth - 1);
+      newSpeed = Math.max(20, playerSpeed - 5);
+    }
 
-      if (roomError) {
-        console.error("Error fetching room for answer save:", roomError)
-        return false
-      }
+    const { data: roomData, error: roomError } = await supabase
+      .from("game_rooms")
+      .select("players")
+      .eq("id", room.id)
+      .single();
 
-      const currentPlayers = roomData?.players || []
-      const playerIndex = currentPlayers.findIndex((p: any) => p.player_id === player.player_id)
-      if (playerIndex === -1) {
-        console.error("Player not found in room")
-        return false
-      }
+    if (roomError) {
+      console.error("Error fetching room for answer save:", roomError);
+      setIsProcessingAnswer(false);
+      return;
+    }
 
-      const newAnswer = {
-        question_index: currentQuestionIndex,
-        answer: answer,
-        is_correct: isCorrectAnswer,
+    const currentPlayers = roomData?.players || [];
+    const playerIndex = currentPlayers.findIndex((p: any) => p.player_id === currentPlayer.player_id);
+
+    if (playerIndex === -1) {
+      console.error("Player not found in room");
+      setIsProcessingAnswer(false);
+      return;
+    }
+
+    const newAnswer = {
+      question_index: currentQuestionIndex,
+      answer: answer,
+      is_correct: isCorrectAnswer,
+      answered_at: new Date().toISOString(),
+    };
+
+    const updatedPlayer = {
+      ...currentPlayers[playerIndex],
+      health: {
+        ...currentPlayers[playerIndex].health,
+        current: newHealth,
         speed: newSpeed,
-        answered_at: new Date().toISOString(),
-      }
-
-      const updatedPlayer = {
-        ...currentPlayers[playerIndex],
-        health: {
-          ...currentPlayers[playerIndex].health,
-          current: newHealth !== undefined ? newHealth : currentPlayers[playerIndex].health.current, // Update health.current
-          speed: newSpeed
-        },
-        answers: [...(currentPlayers[playerIndex].answers || []), newAnswer],
-        correct_answers: isCorrectAnswer
-          ? (currentPlayers[playerIndex].correct_answers || 0) + 1
-          : (currentPlayers[playerIndex].correct_answers || 0),
         last_answer_time: new Date().toISOString(),
+      },
+      answers: [...(currentPlayers[playerIndex].answers || []), newAnswer],
+      correct_answers: isCorrectAnswer
+        ? (currentPlayers[playerIndex].correct_answers || 0) + 1
+        : (currentPlayers[playerIndex].correct_answers || 0),
+    };
+
+    const updatedPlayers = [...currentPlayers];
+    updatedPlayers[playerIndex] = updatedPlayer;
+
+    const { error: updateError } = await supabase
+      .from("game_rooms")
+      .update({ players: updatedPlayers })
+      .eq("id", room.id);
+
+    if (updateError) {
+      console.error(t("log.saveAnswerError", { error: updateError.message }));
+    } else {
+      setPlayerHealth(newHealth);
+      setPlayerSpeed(newSpeed);
+      if (isCorrectAnswer) {
+        setCorrectAnswers((prev) => prev + 1);
       }
-
-      const updatedPlayers = [...currentPlayers]
-      updatedPlayers[playerIndex] = updatedPlayer
-
-      const { error: updateError } = await supabase
-        .from("game_rooms")
-        .update({ players: updatedPlayers })
-        .eq("id", currentRoom.id)
-
-      if (updateError) {
-        console.error(t("log.saveAnswerError", { error: updateError.message }))
-        return false
-      }
-
-      setPlayerSpeed(newSpeed)
-      console.log(t("log.playerSpeedAfterAnswer", { newSpeed }))
-
-      return true
-    } catch (error) {
-      console.error(t("log.saveAnswerAndUpdateHealthError", { error }))
-      return false
-    } finally {
-      setIsProcessingAnswer(false)
     }
-  }
+
+    setIsProcessingAnswer(false);
+  };
 
   const syncPlayerStateFromDatabase = async () => {
     if (!room?.id || !currentPlayer?.player_id) {
@@ -617,7 +606,7 @@ export default function QuizPage() {
     // onGameComplete is not a prop anymore
     // if (onGameComplete) onGameComplete(lastResult)
 
-    router.push(`/game/${roomCode}/results`)
+    router.push(`/player/${roomCode}/result`)
   }
 
   useEffect(() => {
@@ -682,7 +671,7 @@ export default function QuizPage() {
       }, FEEDBACK_DURATION)
       return () => clearTimeout(feedbackTimer)
     }
-  }, [showFeedback, playerHealth, correctAnswers, currentQuestionIndex, isCorrect, totalQuestions])
+  }, [showFeedback, playerHealth, correctAnswers, currentQuestionIndex, totalQuestions])
 
   const nextQuestion = async () => {
     if (!room || !currentPlayer) {
@@ -763,25 +752,6 @@ export default function QuizPage() {
     const normalizedCorrectAnswer = currentQuestion?.correct_answer ? currentQuestion.correct_answer.trim().toLowerCase() : '';
     const isCorrectAnswer = normalizedPlayerAnswer === normalizedCorrectAnswer;
 
-    console.log("handleAnswerSelect Debug:");
-    console.log("  Selected Answer (raw):", answer);
-    console.log("  Correct Answer (raw):", currentQuestion?.correct_answer);
-    console.log("  Normalized Player Answer:", normalizedPlayerAnswer);
-    console.log("  Normalized Correct Answer:", normalizedCorrectAnswer);
-    console.log("  Is Correct Answer:", isCorrectAnswer);
-
-    // onSubmitAnswer is not a prop anymore
-    // let submitSuccess = true;
-    // if (onSubmitAnswer) {
-    //   submitSuccess = await onSubmitAnswer(answer, isCorrectAnswer, currentQuestionIndex);
-    // }
-
-    // if (!submitSuccess) {
-    //   console.error("Failed to submit answer via hook");
-    //   return;
-    // }
-
-    // Lanjutkan logic lokal (save ke DB, update state, dll.)
     if (isCorrectAnswer) {
       await handleCorrectAnswer()
     } else {
@@ -792,11 +762,10 @@ export default function QuizPage() {
   const handleCorrectAnswer = async () => {
     if (isProcessingAnswer) return
 
-    setCorrectAnswers(prevCorrectAnswers => prevCorrectAnswers + 1)
     setIsCorrect(true)
     setShowFeedback(true)
 
-    await saveAnswerAndUpdatePlayerState(selectedAnswer || "", true)
+    await submitAnswer(selectedAnswer || "", true)
   }
 
   const handleWrongAnswer = async () => {
@@ -805,7 +774,7 @@ export default function QuizPage() {
     setIsCorrect(false)
     setShowFeedback(true)
 
-    await saveAnswerAndUpdatePlayerState(selectedAnswer || "TIME_UP", false)
+    await submitAnswer(selectedAnswer || "TIME_UP", false)
   }
 
   const formatTime = (seconds: number) => {

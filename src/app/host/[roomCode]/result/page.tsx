@@ -14,6 +14,7 @@ const validChaserTypes = ["zombie", "monster1", "monster2", "monster3", "darknig
 type ChaserType = typeof validChaserTypes[number];
 
 interface Player {
+  player_id: string;
   id: string;
   nickname: string;
   character_type: string;
@@ -254,7 +255,7 @@ export default function ResultsHostPage() {
       setIsLoading(true);
       const { data: room, error: roomError } = await supabase
         .from("game_rooms")
-        .select("*, questions, host_id") // Added host_id to the select query
+        .select("*") // Corrected select statement
         .eq("room_code", roomCode.toUpperCase())
         .single();
 
@@ -262,89 +263,60 @@ export default function ResultsHostPage() {
 
       setGameRoom(room);
 
-      const { data: playersData, error: playersError } = await supabase
-        .from("players")
-        .select("*")
-        .eq("room_id", room.id);
+      // The `players` array is now part of the `room` object.
+      const playersInRoom = (room.players || []) as Player[];
 
-      if (playersError) throw new Error(t("errorMessages.fetchPlayersFailed"));
-
-      const { data: completionData, error: completionError } = await supabase
+      // Fetch all game completions for the room
+      const { data: completions, error: completionsError } = await supabase
         .from("game_completions")
-        .select("*")
+        .select(`*`) // Removed the incorrect players!inner join
         .eq("room_id", room.id)
         .order("completed_at", { ascending: false });
 
-      if (completionError) console.error("Error fetching completions:", completionError);
+      if (completionsError) {
+        console.error("Error fetching game completions:", completionsError);
+        throw new Error(t("errorMessages.fetchCompletionsFailed"));
+      }
 
-      const uniqueCompletions = completionData?.reduce((acc: GameCompletion[], current: GameCompletion) => {
-        if (!acc.some((c) => c.player_id === current.player_id)) acc.push(current);
-        return acc;
-      }, []) || [];
+      const totalQuestions = room.question_count || 0; // Corrected to use question_count
 
-      const { data: healthData, error: healthError } = await supabase
-        .from("player_health_states")
-        .select("*")
-        .eq("room_id", room.id);
+      const processedResults: PlayerResult[] = (completions || []).map((completion: GameCompletion) => {
+        // Find the corresponding player from the room's players array
+        const playerInfo = playersInRoom.find(p => p.player_id === completion.player_id);
 
-      if (healthError) console.error("Error fetching health states:", healthError);
+        const survivalSeconds = completion.survival_duration || calculateAccurateDuration(
+          room.game_start_time,
+          completion.completed_at,
+          playerInfo?.joined_at || new Date(0).toISOString(),
+        );
 
-      const totalQuestions = room.questions?.length || 0;
-      const gameEndTime = new Date().toISOString();
-
-      const processedResults: PlayerResult[] = (playersData || []).map((player: Player) => {
-        const completion = uniqueCompletions.find((c: { player_id: string; }) => c.player_id === player.id);
-        const healthState = healthData?.find((h) => h.player_id === player.id);
-
-        let finalHealth = 3;
-        let survivalSeconds = 0;
-        let isEliminated = false;
-
-        if (completion) {
-          finalHealth = completion.final_health;
-          isEliminated = completion.is_eliminated;
-          survivalSeconds = calculateAccurateDuration(
-            room.game_start_time,
-            completion.completed_at,
-            player.joined_at,
-            completion.survival_duration,
-          );
-        } else if (healthState) {
-          finalHealth = healthState.health;
-          isEliminated = finalHealth <= 0;
-          survivalSeconds = calculateAccurateDuration(room.game_start_time, gameEndTime, player.joined_at);
-        } else {
-          survivalSeconds = 0;
-          isEliminated = true;
-          finalHealth = 0;
-        }
-
-        const isLolos = !isEliminated && finalHealth > 0;
-        const completionTime = completion ? completion.completed_at : gameEndTime;
+        const isLolos = !completion.is_eliminated && completion.final_health > 0;
         const duration = formatDuration(survivalSeconds);
-        const correctAnswers = completion ? completion.correct_answers : 0;
-        const finalScore = correctAnswers * 100 + finalHealth * 50;
+        const finalScore = completion.correct_answers * 100 + completion.final_health * 50;
 
         return {
-          id: player.id,
-          nickname: player.nickname,
-          character_type: player.character_type,
-          rank: 0,
+          id: completion.player_id,
+          nickname: playerInfo?.nickname || "Unknown Player",
+          character_type: playerInfo?.character_type || "robot1",
+          rank: 0, // Will be set after sorting
           duration,
           isLolos,
-          correctAnswers,
+          correctAnswers: completion.correct_answers,
           totalQuestions,
           finalScore,
-          finalHealth,
-          completionTime,
+          finalHealth: completion.final_health,
+          completionTime: completion.completed_at,
           survivalSeconds,
         };
       });
 
       const rankedResults = processedResults
         .sort((a, b) => {
+          // Prioritize 'lolos' (survived) players
           if (a.isLolos !== b.isLolos) return a.isLolos ? -1 : 1;
+          // Then by final score (higher is better)
           if (a.finalScore !== b.finalScore) return b.finalScore - a.finalScore;
+          // If scores are tied, shorter survival duration is better for 'lolos' players, longer for 'fail'
           return a.isLolos ? a.survivalSeconds - b.survivalSeconds : b.survivalSeconds - a.survivalSeconds;
         })
         .map((result, index) => ({

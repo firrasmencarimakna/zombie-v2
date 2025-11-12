@@ -301,9 +301,8 @@ export default function HostGamePage() {
     const player = gameRoom?.players.find(p => p.player_id === playerId);
     if (!player) return;
 
-    const newSpeed = Math.min(player.health.speed + 5, 90);
     updatePlayerState(playerId, {
-        health: { ...player.health, speed: newSpeed, last_answer_time: new Date().toISOString() }
+        health: { ...player.health, last_answer_time: new Date().toISOString() }
     });
 
     if (zombieState.targetPlayerId === playerId && zombieState.isAttacking) {
@@ -342,9 +341,30 @@ export default function HostGamePage() {
     const activePlayersList = gameRoom.players.filter((p) => p.is_alive && !completedPlayers.some((c) => c.player_id === p.player_id));
 
     if (activePlayersList.length === 0 && gameRoom.players.length > 0) {
-      supabase.from("game_rooms").update({ status: "finished" }).eq("id", gameRoom.id);
-      // The subscription will handle the redirect
+      supabase.from("game_rooms").update({ status: "finished" }).eq("id", gameRoom.id).then(({ error }) => {
+        if (error) {
+          console.error("Error finishing game:", error);
+        }
+      });
       return;
+    }
+
+    const newCompletedPlayers = [...completedPlayers];
+    let aPlayerCompleted = false;
+
+    gameRoom.players.forEach(player => {
+      const hasFinished = (player.answers?.length || 0) >= gameRoom.question_count;
+      const isDead = !player.is_alive || player.health.current <= 0;
+      const isAlreadyCompleted = completedPlayers.some(p => p.player_id === player.player_id);
+
+      if ((hasFinished || isDead) && !isAlreadyCompleted) {
+        newCompletedPlayers.push(player);
+        aPlayerCompleted = true;
+      }
+    });
+
+    if (aPlayerCompleted) {
+      setCompletedPlayers(newCompletedPlayers);
     }
 
     setPlayerStates((prevStates) => {
@@ -539,6 +559,28 @@ export default function HostGamePage() {
     const interval = setInterval(() => setAnimationTime((prev) => prev + 1), gameMode === "panic" ? 30 : 100);
     return () => clearInterval(interval);
   }, [gameMode]);
+
+  useEffect(() => {
+    if (!gameRoom?.game_start_time || !gameRoom.duration) return;
+
+    const startTime = new Date(gameRoom.game_start_time).getTime();
+    const durationInMs = gameRoom.duration * 1000;
+
+    const checkGameEnd = () => {
+      const now = Date.now();
+      const elapsed = now - startTime;
+      if (elapsed >= durationInMs) {
+        supabase.from("game_rooms").update({ status: "finished" }).eq("id", gameRoom.id).then(({ error }) => {
+          if (error) {
+            console.error("Error finishing game due to time out:", error);
+          }
+        });
+      }
+    };
+
+    const interval = setInterval(checkGameEnd, 1000);
+    return () => clearInterval(interval);
+  }, [gameRoom?.game_start_time, gameRoom?.duration, gameRoom?.id]);
 
   // Check Supabase connection
   useEffect(() => {

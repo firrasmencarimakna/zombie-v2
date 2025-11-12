@@ -10,7 +10,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
 import { syncServerTime, calculateCountdown } from "@/lib/server-time";
-import { useGameLogic } from "@/hooks/useGameLogic";
+
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useDetectBackAction } from "@/hooks/useDetectBackAction";
@@ -46,7 +46,7 @@ export default function LobbyPage() {
   const [currentPlayer, setCurrentPlayer] = useState<ExtendedEmbeddedPlayer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { startGame, isSubmitting } = useGameLogic({ room, players, currentPlayer });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [atmosphereText, setAtmosphereText] = useState(() => {
     const texts = t("atmosphereTexts", { returnObjects: true }) as string[];
@@ -221,6 +221,35 @@ export default function LobbyPage() {
       console.error("Gagal keluar lobby:", err);
     } finally {
       setIsExitDialogOpen(false);
+    }
+  };
+
+  const startGame = async () => {
+    if (!room?.id || !currentPlayer?.is_host || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { error: roomError } = await supabase
+        .from("game_rooms")
+        .update({
+          status: "playing",
+          game_start_time: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", room.id);
+
+      if (roomError) {
+        console.error("Error starting game:", roomError);
+        toast.error("Gagal memulai permainan: " + roomError.message);
+      }
+    } catch (error) {
+      console.error("Error in startGame:", error);
+      toast.error("Gagal memulai permainan: " + (error instanceof Error ? error.message : "Kesalahan tidak diketahui"));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

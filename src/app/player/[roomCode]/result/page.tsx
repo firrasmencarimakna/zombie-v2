@@ -120,33 +120,26 @@ export default function ResultsPage() {
       let localData = null
 
       try {
-        // Try specific key first
-        const specificKey = `gameResult_${roomCode}_`
-        const allKeys = Object.keys(localStorage).filter((key) => key.startsWith(specificKey))
+        const storedResult = localStorage.getItem("lastGameResult")
+        if (storedResult) {
+          const parsedResult = JSON.parse(storedResult)
+          if (parsedResult.roomCode === roomCode) {
+            localData = parsedResult
+            console.log("Loaded data from lastGameResult:", localData)
+          } else {
+            console.warn("lastGameResult is for a different room. Ignoring.")
+          }
+        }
 
-        if (allKeys.length > 0) {
-          // Get the most recent one
-          const recentKey = allKeys.sort((a, b) => {
-            const dataA = JSON.parse(localStorage.getItem(a) || "{}")
-            const dataB = JSON.parse(localStorage.getItem(b) || "{}")
-            return (dataB.timestamp || 0) - (dataA.timestamp || 0)
-          })[0]
-
-          localData = JSON.parse(localStorage.getItem(recentKey) || "{}")
-          console.log("Found specific game result:", localData)
-        } else {
-          // Fallback to general key
-          const storedResult = localStorage.getItem("lastGameResult")
-          if (storedResult) {
-            localData = JSON.parse(storedResult)
-            if (localData.roomCode !== roomCode) {
-              console.warn("Data LocalStorage berasal dari ruangan yang berbeda. Mengabaikan.")
-              localData = null
-            }
+        if (!localData) {
+          const playerId = localStorage.getItem("playerId");
+          if (playerId) {
+            console.log("lastGameResult not found or invalid, using playerId from localStorage.");
+            localData = { playerId }; // Create a partial object with just the ID
           }
         }
       } catch (err) {
-        console.error("Gagal mem-parsing data dari localStorage:", err)
+        console.error("Failed to get player identity from localStorage:", err)
       }
 
       if (!localData?.playerId) {
@@ -157,9 +150,11 @@ export default function ResultsPage() {
 
       try {
         console.log(`Mencari data penyelesaian untuk playerId: ${localData.playerId} di roomId: ${roomId}`)
+        
+        // 1. Fetch game completion data
         const { data: completionData, error: completionError } = await supabase
           .from("game_completions")
-          .select("*, players!inner(nickname, character_type)")
+          .select("*") // Removed the incorrect players!inner join
           .eq("room_id", roomId)
           .eq("player_id", localData.playerId)
           .order("completed_at", { ascending: false })
@@ -168,9 +163,10 @@ export default function ResultsPage() {
 
         if (completionError || !completionData) {
           console.warn(
-            "Gagal mengambil data dari Supabase, menggunakan fallback localStorage.",
+            "Gagal mengambil data penyelesaian dari Supabase.",
             completionError?.message,
           )
+          // Fallback to localStorage if completion data is not found
           if (localData && localData.health !== undefined && localData.correct !== undefined) {
             const totalQuestions = localData.total || 10
             const data: PlayerData = {
@@ -182,37 +178,55 @@ export default function ResultsPage() {
               nickname: localData.nickname,
             }
             setPlayerData(data)
-            console.log("Data pemain diatur dari localStorage:", data)
+            console.log("Data pemain diatur dari localStorage (fallback):", data)
+          }
+          return; // Stop if we can't get completion data
+        }
+        
+        console.log("Data penyelesaian dari Supabase berhasil ditemukan:", completionData)
+
+        // 2. Fetch room data to get the players array
+        const { data: roomData, error: roomError } = await supabase
+          .from("game_rooms")
+          .select("players")
+          .eq("id", roomId)
+          .single();
+
+        if (roomError || !roomData) {
+          console.error("Gagal mengambil data ruangan untuk info karakter:", roomError?.message);
+          // Proceed without character info if room data fails
+        }
+
+        // 3. Find the player in the room's players array
+        const playerInfo = roomData?.players?.find((p: any) => p.player_id === localData.playerId);
+
+        const totalQuestions = completionData.total_questions_answered || 10
+        const data: PlayerData = {
+          health: completionData.final_health,
+          correct: completionData.correct_answers,
+          total: totalQuestions,
+          eliminated: completionData.is_eliminated,
+          perfect: completionData.correct_answers === totalQuestions && totalQuestions > 0,
+          nickname: playerInfo?.nickname || localData.nickname || "Player", // Use nickname from room if available
+        }
+        setPlayerData(data)
+        console.log("Data pemain diatur dari Supabase:", data)
+
+        // 4. Set the character GIF
+        if (playerInfo?.character_type) {
+          const selectedCharacter = characterGifs.find(char => char.value === playerInfo.character_type);
+          if (selectedCharacter) {
+            setCharacterGif(selectedCharacter.gif);
+            console.log("Character GIF diatur:", selectedCharacter.gif);
+          } else {
+            console.log("Karakter tidak ditemukan dalam daftar opsi, menggunakan default.");
+            setCharacterGif(characterGifs[0].gif); // Fallback to default
           }
         } else {
-          console.log("Data penyelesaian dari Supabase berhasil ditemukan:", completionData)
-          const totalQuestions = completionData.total_questions_answered || 10
-          const data: PlayerData = {
-            health: completionData.final_health,
-            correct: completionData.correct_answers,
-            total: totalQuestions,
-            eliminated: completionData.is_eliminated,
-            perfect: completionData.correct_answers === totalQuestions && totalQuestions > 0,
-            nickname: completionData.players.nickname,
-          }
-          setPlayerData(data)
-          console.log("Data pemain diatur dari Supabase:", data)
-
-          if (completionData.players?.character_type) {
-            // Cari karakter dalam daftar characterOptions
-            const selectedCharacter = characterGifs.find(char => char.value === completionData.players.character_type);
-
-            if (selectedCharacter) {
-              setCharacterGif(selectedCharacter.gif);
-              console.log("Character GIF diatur:", selectedCharacter.gif);
-            } else {
-              console.log("Karakter tidak ditemukan dalam daftar opsi");
-              // Atur default characterGif jika karakter tidak ditemukan
-              setCharacterGif(characterGifs[0].gif);
-            }
-          }
-
+            console.log("Tipe karakter tidak ditemukan di info pemain, menggunakan default.");
+            setCharacterGif(characterGifs[0].gif); // Fallback if no character_type
         }
+
       } catch (err: any) {
         console.error("Terjadi kesalahan saat initializePlayerData:", err.message)
         if (localData && localData.health !== undefined && localData.correct !== undefined) {

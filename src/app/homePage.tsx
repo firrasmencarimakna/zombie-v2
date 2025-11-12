@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
   } from "@/components/ui/card";
-import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle, RotateCw, LogOut, Menu } from "lucide-react";
+import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle, RotateCw, LogOut, Menu, Globe, User } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
@@ -386,8 +386,8 @@ export default function HomePage() {
         ))}
 
       <div className="relative z-10 flex items-center justify-center min-h-screen p-2 sm:p-4">
-        {/* Hamburger Menu Button */}
-        <div className="absolute top-4 left-4 z-20">
+        {/* Hamburger Menu Button - Dipindah ke kanan, lebih simple dan jelas */}
+        <div className="absolute top-4 right-4 z-20">
           <TooltipProvider>
             <Tooltip open={showTooltipOnce}>
               <TooltipTrigger asChild>
@@ -395,14 +395,14 @@ export default function HomePage() {
                   variant="ghost"
                   size="icon"
                   onClick={handleMenuToggle}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                  className="w-12 h-12 bg-red-500/10 border-2 border-red-500/30 text-red-300 hover:bg-red-500/20 hover:border-red-400 hover:text-red-200 rounded-xl transition-all duration-200 shadow-md shadow-red-500/20"
                   aria-label="Menu"
                 >
-                  <Menu className="h-6 w-6" />
+                  <Menu className="h-5 w-5" strokeWidth={2.5} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent
-                side="right"
+                side="left"
                 className="bg-black text-red-400 border border-red-500/50 font-mono"
               >
                 {t("menu")}
@@ -488,122 +488,130 @@ export default function HomePage() {
           </AnimatePresence>
         </Dialog>
 
-        {/* Hamburger Menu Dialog - Diperbaiki untuk tampilan lebih terstruktur dan rapi */}
+        {/* Hamburger Menu Dialog - Diperbaiki untuk tampilan lebih terstruktur, jelas, dan menarik */}
         <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
           <AnimatePresence>
             {isMenuOpen && (
               <DialogContent 
                 forceMount 
-                className="bg-black/95 border-red-500/80 text-red-400 max-w-sm sm:max-w-md max-h-[80vh] flex flex-col shadow-2xl shadow-red-500/20"
+                className="bg-gradient-to-b from-black/95 to-black/80 border-red-500/80 text-red-400 max-w-sm sm:max-w-md max-h-[85vh] flex flex-col shadow-2xl shadow-red-500/30 p-0"
               >
+                <DialogTitle className="sr-only">Menu</DialogTitle>
                 <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
-                  className="flex-1 overflow-y-auto custom-scrollbar" // Tambahkan custom-scrollbar untuk styling scrollbar
+                  initial={{ opacity: 0, x: -30, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -30, scale: 0.95 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="flex-1 overflow-y-auto custom-scrollbar p-0"
                 >
-                  <DialogHeader className="mb-6 border-b border-red-500/30 pb-4">
-                    <DialogTitle className="text-red-500 text-xl font-mono flex items-center gap-2">
-                      <Menu className="h-5 w-5" />
-                      {t("menu")}
-                    </DialogTitle>
-                  </DialogHeader>
+                  {/* Header dengan gradient dan shadow untuk hierarki visual */}
+                  <div className="bg-gradient-to-r from-red-900/20 to-red-800/10 border-b border-red-500/30 px-6 py-4 sticky top-0 z-10 backdrop-blur-sm">
+                    <div className="flex items-center gap-3">
 
-                  {/* Section: Menu Utama */}
-                  <div className="space-y-1 mb-6">
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1, duration: 0.2 }}
-                    >
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start text-red-400 hover:bg-red-500/20 hover:text-red-300 font-mono text-left py-3 px-4 rounded-lg transition-all duration-200"
-                        onClick={handleHowToPlayFromMenu}
-                      >
-                        <HelpCircle className="h-5 w-5 mr-3 flex-shrink-0" />
-                        <span className="text-sm">{t("howToPlay")}</span>
-                      </Button>
-                    </motion.div>
+                    </div>
+                    <p className="text-red-500/70 text-xs font-mono mt-1 opacity-0 animate-pulse">Profile</p>
                   </div>
 
-                  <Separator className="my-4 bg-red-500/30" /> {/* Divider untuk pemisah section */}
-
-                  {/* Section: Pengaturan Bahasa */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
+                  {/* Section 1: Bantuan & Panduan - Dengan ikon dan deskripsi singkat */}
+                  <motion.section
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.2 }}
+                    transition={{ delay: 0.1, duration: 0.3 }}
+                    className="px-6 py-4 border-b border-red-500/20"
                   >
-                    <div className="space-y-3 mb-6">
-                      <h4 className="text-sm font-semibold text-red-300 font-mono uppercase tracking-wider px-2">
-                        {t("selectLanguage")}
-                      </h4>
-                      <Select value={i18n.language} onValueChange={handleLanguageChange}>
-                        <SelectTrigger className="bg-black/30 border-red-500/50 text-red-400 focus:ring-0 focus:outline-none data-[state=open]:bg-black/50 data-[state=open]:border-red-500 w-full">
-                          <SelectValue placeholder={t("selectLanguage")} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-black/90 border border-red-500/50 text-red-400 w-full">
-                          <SelectItem value="en" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
-                            <span className="flex items-center gap-2">
-                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">EN</span>
-                              English
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="id" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
-                            <span className="flex items-center gap-2">
-                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">ID</span>
-                              Indonesia
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="de" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
-                            <span className="flex items-center gap-2">
-                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">DE</span>
-                              Deutsch
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="fr" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
-                            <span className="flex items-center gap-2">
-                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">FR</span>
-                              Français
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="ja" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
-                            <span className="flex items-center gap-2">
-                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">JA</span>
-                              日本語
-                            </span>
-                          </SelectItem>
-                          <SelectItem value="es" className="focus:bg-red-500/20 focus:text-red-300 text-sm py-2">
-                            <span className="flex items-center gap-2">
-                              <span className="w-4 h-4 bg-red-400/20 rounded flex items-center justify-center text-xs font-bold">ES</span>
-                              Español
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </motion.div>
 
-                  <Separator className="my-4 bg-red-500/30" /> {/* Divider lagi untuk pemisah */}
-
-                  {/* Section: Akun & Logout */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3, duration: 0.2 }}
-                  >
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <Button
                         variant="ghost"
-                        className="w-full justify-start text-red-400 hover:bg-red-500/20 hover:text-red-300 font-mono text-left py-3 px-4 rounded-lg transition-all duration-200"
-                        onClick={handleLogout}
+                        className="w-full justify-start text-red-400 hover:bg-red-500/15 hover:text-red-300 font-mono text-left py-3 px-0 rounded-none border-0 transition-all duration-200 hover:pl-2"
+                        onClick={handleHowToPlayFromMenu}
                       >
-                        <LogOut className="h-5 w-5 mr-3 flex-shrink-0" />
-                        <span className="text-sm">{t("logout")}</span>
+                        <HelpCircle className="h-5 w-5 mr-4 flex-shrink-0 text-red-500" />
+                        <div className="flex-1 text-left">
+                          <span className="block text-sm font-medium">{t("howToPlay")}</span>
+                          <span className="block text-xs text-red-500/60 font-mono">Cara bermain game</span>
+                        </div>
                       </Button>
                     </div>
+                  </motion.section>
+
+                  <Separator className="bg-red-500/20 mx-6" /> {/* Divider yang lebih tipis dan themed */}
+
+                  {/* Section 2: Pengaturan - Lebih terstruktur dengan subheader */}
+                  <motion.section
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.3 }}
+                    className="px-6 py-4 border-b border-red-500/20"
+                  >
+       
+                    <div className="space-y-3">
+                      <div className="bg-red-500/5 rounded-lg p-3 border border-red-500/10">
+                        <label className="block text-xs font-mono text-red-400 mb-2 uppercase tracking-wide flex items-center gap-2">
+                          <Globe className="h-3 w-3" />
+                          {t("selectLanguage")}
+                        </label>
+                        <Select value={i18n.language} onValueChange={handleLanguageChange}>
+                          <SelectTrigger className="bg-black/40 border-red-500/30 text-red-400 focus:ring-1 focus:ring-red-500/30 focus:outline-none data-[state=open]:bg-black/60 data-[state=open]:border-red-500 w-full h-10 text-sm">
+                            <SelectValue placeholder={t("selectLanguage")} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-black/90 border border-red-500/40 text-red-400 w-full mt-1 shadow-lg shadow-red-500/10">
+                            {[
+                              { value: "en", label: "English", code: "EN" },
+                              { value: "id", label: "Indonesia", code: "ID" },
+                              { value: "de", label: "Deutsch", code: "DE" },
+                              { value: "fr", label: "Français", code: "FR" },
+                              { value: "ja", label: "日本語", code: "JA" },
+                              { value: "es", label: "Español", code: "ES" },
+                            ].map((lang) => (
+                              <SelectItem key={lang.value} value={lang.value} className="focus:bg-red-500/15 focus:text-red-300 text-sm py-2.5 hover:bg-red-500/10 transition-colors">
+                                <div className="flex items-center gap-3">
+                                  <span className="w-6 h-6 bg-red-500/10 border border-red-500/30 rounded flex items-center justify-center text-xs font-bold text-red-400">
+                                    {lang.code}
+                                  </span>
+                                  <span className="flex-1">{lang.label}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </motion.section>
+
+                  <Separator className="bg-red-500/20 mx-6" /> {/* Divider lagi */}
+
+                  {/* Section 3: Akun - Dengan ikon user dan animasi hover */}
+                  <motion.section
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.3 }}
+                    className="px-6 py-4"
+                  >
+
+                    <div className="space-y-2">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-red-400 hover:bg-red-500/15 hover:text-red-300 font-mono text-left py-3 px-0 rounded-none border-0 transition-all duration-200 hover:pl-2 group"
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="h-5 w-5 mr-4 flex-shrink-0 text-red-500 group-hover:text-red-400 transition-colors" />
+                        <div className="flex-1 text-left">
+                          <span className="block text-sm font-medium">{t("logout")}</span>
+                          <span className="block text-xs text-red-500/60 font-mono">Keluar dari akun</span>
+                        </div>
+                      </Button>
+                    </div>
+                  </motion.section>
+
+                  {/* Footer dengan credit atau info tambahan untuk nuansa lengkap */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4, duration: 0.3 }}
+                    className="px-6 py-4 mt-auto border-t border-red-500/10 text-center text-xs text-red-500/40 font-mono"
+                  >
+                    <p>© 2025 Horror Quiz. Dibuat dengan ❤️ dan darah.</p>
                   </motion.div>
                 </motion.div>
               </DialogContent>
