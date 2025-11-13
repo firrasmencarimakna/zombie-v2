@@ -212,7 +212,7 @@ export default function HomePage() {
   const handleHostGame = useCallback(() => {
     setIsCreating(true);
     if (navigator.vibrate) navigator.vibrate(50);
-    router.push("/host/quiz-select");
+    router.push("/host");
   }, [router]);
 
   // Join game - Diubah untuk sinkron dengan schema terbaru: Gunakan query langsung tanpa RPC
