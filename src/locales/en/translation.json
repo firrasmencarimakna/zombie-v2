@@ -7,8 +7,8 @@
   "atmosphereText1": "You don't know who is behind you",
   "atmosphereText2": "Screams of fear were heard everywhere",
   "atmosphereText3": "You have to be right or you'll be caught",
-  "joinGame": "Join Game",
-  "joinDescription": "Enter the room code below to play.",
+  "joinGame": "Join",
+  "joinDescription": "Enter the room code.",
   "hostGame": "Host Game",
   "hostDescription": "Create a new room to play",
   "gameCodePlaceholder": "Enter the room code",
@@ -18,7 +18,7 @@
   "joining": "Joining...",
   "creatingRoom": "Creating Room...",
   "selectQuizTitle": "Select Quiz",
-  "searchButton": "Search quiz",
+  "searchButton": "Search Quiz",
   "searchPlaceholder": "Search",
   "closeSearch": "Close search",
   "defaultQuizDescription": "Fun quiz to play!",
@@ -27,15 +27,15 @@
   "noQuizzesAvailable": "No quizzes found.",
   "previousButton": "Previous",
   "nextButton": "Next",
-  "pageInfo": "Page {{current}} of {{total}}",
+  "pageInfo": "{{current}} of {{total}}",
   "backButton": "Back to home",
   "settingsTitle": "Settings",
   "settingsDescription": "Choose your chaser and set up your game!",
   "gameSettingsTitle": "Game Settings",
-  "gameDurationLabel": "Game Duration",
+  "gameDurationLabel": "Duration",
   "gameDurationPlaceholder": "Enter duration",
   "gameDurationValue": "{{minutes}} Minutes",
-  "questionCountLabel": "Number of Questions",
+  "questionCountLabel": "Questions",
   "selectQuestionCount": "Select number of questions",
   "allLabel": "All",
   "questionCountValue": "{{count}} Questions",
@@ -106,7 +106,8 @@
   "shareCode": "Share game code to invite friends!",
   "startGame": {
     "start?": "START...",
-    "start": "START GAME"
+    "start": "START GAME",
+    "starting":"Starting..."
   },
   "atmosphereTexts": [
     "The walls whisper your sins...",
@@ -183,7 +184,9 @@
   },
   "common": {
     "home": "Home",
-    "retry": "Try Again"
+    "retry": "Try Again",
+    "roomInfoTitle": "Room Information",
+    "playersCount": "Players"
   },
   "playAgain": "Play Again",
   "creatingSession": "Creating Session...",
@@ -191,7 +194,7 @@
   "inviteMessage": "Join the thrilling QuizRush game! Use code: {{roomCode}} or click here: {{joinLink}}",
   "inviteToPlay": "Invite to Play",
   "joinLink": "Join Link",
-  "kickPlayerConfirm": "Are you sure you want to kick {{nickname}}?",
+  "kickPlayerConfirm": "kick {{nickname}}?",
   "kickPlayerSuccess": "{{nickname}} has been kicked",
   "kickPlayerError": "Failed to kick player",
   "notHost": "Not a host. Redirected home.",
@@ -228,10 +231,15 @@
   "waitingRoomTitle": "WAITING ROOM",
 
 
-  "difficultyLevelLabel": "Difficulty Level",
+  "difficultyLevelLabel": "Difficulty",
   "difficulty.hard": "Hard",
   "difficulty.medium": "Medium",
   "difficulty.easy": "Easy",
+  "errorMessages.roomNotActive": "Room is not active or has already started!",
+  "user": "User",
+  "fullscreen": "Fullscreen",
+  "selectLanguage": "Language",
+  "exit": "Exit",
 
   "loginTitle": "Login",
   "loginDescription": "Sign in to start your adventure",

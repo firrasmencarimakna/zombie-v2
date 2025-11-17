@@ -231,6 +231,11 @@
   "difficulty.hard": "Susah",
   "difficulty.medium": "Sedang",
   "difficulty.easy": "Mudah",
+  "errorMessages.roomNotActive": "Ruangan tidak aktif atau sudah dimulai!",
+  "user": "Pengguna",
+  "fullscreen": "Layar Penuh",
+  "selectLanguage": "Pilih Bahasa",
+  "exit": "Keluar",
 
   "loginTitle": "Masuk",
   "loginDescription": "Masuk untuk memulai petualanganmu",
