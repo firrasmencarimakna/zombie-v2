@@ -4,9 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Skull, Bone, HeartPulse, Ghost, Zap, Clock, ArrowRight, Settings, List } from "lucide-react";
+import { Skull, Bone, HeartPulse, Ghost, Zap, Clock, ArrowRight, Settings, List, ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -22,6 +21,7 @@ interface DifficultyOption {
   value: "easy" | "medium" | "hard";
   zombieAttackCountdown: number;
   inactivityPenalty: number;
+  icon: React.ReactNode;
 }
 
 interface GameRoom {
@@ -76,7 +76,7 @@ export default function CharacterSelectPage() {
     whisper: null,
     heartbeat: null,
   });
-  const [selectedChaser, setSelectedChaser] = useState<typeof chaserOptions[number] | null>(null);
+  const [currentChaserIndex, setCurrentChaserIndex] = useState(0); // For carousel
 
   useHostGuard(roomCode);
 
@@ -123,13 +123,13 @@ export default function CharacterSelectPage() {
 
   const difficultyOptions: DifficultyOption[] = useMemo(
     () => [
-      { value: "easy", zombieAttackCountdown: 30, inactivityPenalty: 25 },
-      { value: "medium", zombieAttackCountdown: 20, inactivityPenalty: 10 },
-      { value: "hard", zombieAttackCountdown: 10, inactivityPenalty: 5 },
+      { value: "easy", zombieAttackCountdown: 30, inactivityPenalty: 25, icon: null },
+      { value: "medium", zombieAttackCountdown: 20, inactivityPenalty: 10, icon: null },
+      { value: "hard", zombieAttackCountdown: 10, inactivityPenalty: 5, icon: null },
     ],
     []
   );
-
+  
   const isFormValid = gameDuration >= 1 && gameDuration <= 30 && questionCount <= totalQuestions;
 
   const questionOptions = useMemo(() => {
@@ -140,8 +140,8 @@ export default function CharacterSelectPage() {
     return opts;
   }, [totalQuestions]);
 
-  const handleDurationChange = (value: number[]) => {
-    const newValue = value[0];
+  const handleDurationChange = (delta: number) => {
+    const newValue = Math.max(5, Math.min(30, gameDuration + delta));
     if (newValue < 1 || newValue > 30) {
       setDurationError(t("durationError"));
       return;
@@ -150,23 +150,38 @@ export default function CharacterSelectPage() {
     setGameDuration(newValue);
   };
 
-
-  const handleQuestionCountChange = (value: number[]) => {
-    const newValue = value[0];
-    if (newValue >= 5 && newValue <= totalQuestions) {
-      setQuestionCount(newValue);
-      setUserSetQuestionCount(true);
-    }
+  const handleQuestionCountChange = (delta: number) => {
+    const newValue = Math.max(5, Math.min(totalQuestions, questionCount + delta));
+    setQuestionCount(newValue);
+    setUserSetQuestionCount(true);
   };
 
   const handleDifficultyChange = (value: string) => {
     setDifficultyLevel(value as DifficultyLevel);
   };
 
-  const handleChaserSelect = (chaser: typeof chaserOptions[number]) => {
+  const handleChaserSelect = (chaser: typeof chaserOptions[number], index: number) => {
     setChaserType(chaser.value);
-    setSelectedChaser(chaser);
+    setCurrentChaserIndex(index);
   };
+
+  const nextChaser = () => {
+    const newIndex = (currentChaserIndex + 1) % chaserOptions.length;
+    setCurrentChaserIndex(newIndex);
+    setChaserType(chaserOptions[newIndex].value);
+  };
+
+  const prevChaser = () => {
+    const newIndex = (currentChaserIndex - 1 + chaserOptions.length) % chaserOptions.length;
+    setCurrentChaserIndex(newIndex);
+    setChaserType(chaserOptions[newIndex].value);
+  };
+
+  const prevIndex = useMemo(() => (currentChaserIndex - 1 + chaserOptions.length) % chaserOptions.length, [currentChaserIndex]);
+  const nextIndex = useMemo(() => (currentChaserIndex + 1) % chaserOptions.length, [currentChaserIndex]);
+  const prevChaserOpt = useMemo(() => chaserOptions[prevIndex], [prevIndex, chaserOptions]);
+  const nextChaserOpt = useMemo(() => chaserOptions[nextIndex], [nextIndex, chaserOptions]);
+  const currentChaser = chaserOptions[currentChaserIndex];
 
   useEffect(() => {
     if (!roomCode || typeof roomCode !== "string") {
@@ -249,7 +264,7 @@ export default function CharacterSelectPage() {
     };
 
     fetchRoom();
-  }, [roomCode, router, t, userSetQuestionCount]); // Added userSetQuestionCount to deps if needed
+  }, [roomCode, router, t]);
 
   useEffect(() => {
     const generateBlood = () => {
@@ -340,7 +355,25 @@ export default function CharacterSelectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden select-none">
+    <div className="min-h-screen relative overflow-hidden select-none bg-black">
+      <div className="absolute top-4 left-4 z-20 hidden md:block">
+        <Link href={"/"}>
+          <h1
+            className="text-3xl md:text-5xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]"
+            style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
+          >
+            {t("title")} {/* QuizRush */}
+          </h1>
+        </Link>
+      </div>
+      <div className="absolute top-4 right-4 z-20 hidden md:block">
+        <img
+          src={`/logo/gameforsmartlogo-horror.png`}
+          alt="Game for Smart Logo"
+          className="w-40 md:w-48 lg:w-56 h-auto"
+        />
+      </div>
+      <div className="absolute inset-0 z-0" style={{ backgroundImage: "url('/background/10.gif')", backgroundSize: "cover", backgroundPosition: "center", transform: "rotate(180deg) scaleX(-1)" }}></div>
       <audio src="/musics/background-music-room.mp3" autoPlay loop />
       <div className="absolute inset-0 bg-gradient-to-br from-red-900/5 via-black to-purple-900/5">
         <div className="absolute inset-0 opacity-20">
@@ -389,229 +422,242 @@ export default function CharacterSelectPage() {
 
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJzY3JhdGNoZXMiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48cGF0aCBkPSJNMCAwTDUwMCA1MDAiIHN0cm9rZT0icmdiYSgyNTUsMCwwLDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNMCAxMDBLNTAwIDYwMCIgc3Ryb2tlPSJyZ2JhKDI1NSwwLDAsMC4wMykiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0wIDIwMEw1MDAgNzAwIiBzdHJva2U9InJnYmEoMjU1LDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3NjcmF0Y2hlcykiIG9wYWNpdHk9IjAuMyIvPjwvc3ZnPg==')] opacity-20" />
 
-      <div className="relative z-10 mx-auto p-7">
-        <motion.header
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
-          className="flex flex-col gap-1 mb-10"
+      <div className="relative z-10 mx-auto p-4 max-w-4xl">
+      <motion.header
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
+        className="flex flex-col gap-1 mb-6"
+      >
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.5, type: "spring", stiffness: 100 }}
+          className="flex justify-center items-center text-center mb-3 mt-10"
         >
-          <div className="flex items-center justify-between mb-5 md:mb-0">
-            <Link href={"/"}>
-              <h1
-                className="text-2xl md:text-4xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]"
-                style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
-              >
-                {t("title")}
-              </h1>
-            </Link>
-            <img
-                src={`/logo/gameforsmartlogo-horror.png`}
-                alt="Game for Smart Logo"
-                className="w-36 md:w-52 lg:w-64 h-auto mr-3"
+          <h1
+            className={`text-4xl md:text-6xl font-bold font-mono tracking-wider transition-all duration-150 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse ${
+              flickerText ? "opacity-70" : "opacity-100"
+            }`}
+            style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
+          >
+            {t("settingsTitle")}
+          </h1>
+        </motion.div>
+      </motion.header>
+
+        {/* Chaser Selection */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4 }}
+          className="flex flex-col items-center mb-8"
+        >
+          <div className="flex items-center justify-center gap-4 md:gap-6">
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={prevChaser}
+              className="hidden md:flex w-12 h-12 md:w-16 md:h-16 p-3 md:p-4 text-red-300 transition-colors flex-shrink-0 border-2 border-red-500/50 rounded-lg bg-black/40 flex items-center justify-center"
+            >
+              <ChevronLeft className="w-8 h-8 md:w-10 md:h-10" />
+            </motion.button>
+
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => handleChaserSelect(prevChaserOpt, prevIndex)}
+              onKeyDown={(e) => e.key === "Enter" && handleChaserSelect(prevChaserOpt, prevIndex)}
+              className="relative w-20 h-20 md:w-32 md:h-32 rounded-full cursor-pointer transition-all duration-300 overflow-hidden bg-black/40"
+            >
+              <Image
+                src={prevChaserOpt.gif}
+                alt={prevChaserOpt.alt || `Chaser ${prevChaserOpt.name}`}
+                fill
+                className="object-cover"
+                unoptimized
+                style={{ imageRendering: "pixelated" }}
               />
+            </div>
+
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => handleChaserSelect(currentChaser, currentChaserIndex)}
+              onKeyDown={(e) => e.key === "Enter" && handleChaserSelect(currentChaser, currentChaserIndex)}
+              className="relative w-40 h-40 md:w-64 md:h-64 rounded-full cursor-pointer transition-all duration-300 overflow-hidden bg-black/40"
+            >
+              <Image
+                src={currentChaser.gif}
+                alt={currentChaser.alt || `Chaser ${currentChaser.name}`}
+                fill
+                className="object-cover"
+                unoptimized
+                style={{ imageRendering: "pixelated" }}
+              />
+            </div>
+
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => handleChaserSelect(nextChaserOpt, nextIndex)}
+              onKeyDown={(e) => e.key === "Enter" && handleChaserSelect(nextChaserOpt, nextIndex)}
+              className="relative w-20 h-20 md:w-32 md:h-32 rounded-full cursor-pointer transition-all duration-300 overflow-hidden bg-black/40 hover:bg-red-900/20 hover:shadow-[0_0_15px_rgba(255,0,0,0.6)]"
+            >
+              <Image
+                src={nextChaserOpt.gif}
+                alt={nextChaserOpt.alt || `Chaser ${nextChaserOpt.name}`}
+                fill
+                className="object-cover"
+                unoptimized
+                style={{ imageRendering: "pixelated" }}
+              />
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={nextChaser}
+              className="hidden md:flex w-12 h-12 md:w-16 md:h-16 p-3 md:p-4 text-red-300 transition-colors flex-shrink-0 border-2 border-red-500/50 rounded-lg bg-black/40 flex items-center justify-center"
+            >
+              <ChevronRight className="w-8 h-8 md:w-10 md:h-10" />
+            </motion.button>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.5, type: "spring", stiffness: 100 }}
-            className="flex justify-center items-center text-center mb-5"
-          >
-            <HeartPulse className="w-12 h-12 text-red-500 mr-4 animate-pulse" />
-            <h1
-              className={`text-4xl md:text-6xl font-bold font-mono tracking-wider transition-all duration-150 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse`}
-              style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
-            >
-              {t("settingsTitle")}
-            </h1>
-            <HeartPulse className="w-12 h-12 text-red-500 ml-4 animate-pulse" />
-          </motion.div>
-          <p className="text-red-300 font-mono max-w-2xl mx-auto text-sm md:text-base">
-            {t("settingsDescription")}
-          </p>
-        </motion.header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-6 lg:col-span-1"
-          >
-            <div className="bg-black/40 border border-red-900/50 p-6 rounded-lg backdrop-blur-sm">
-              <div className="flex items-center mb-4">
-                <Settings className="w-5 h-5 text-red-500 mr-2" />
-                <h2 className="text-xl font-mono font-semibold text-red-400">{t("gameSettingsTitle")}</h2>
-              </div>
-
-              <div className="mb-6">
-                <Label htmlFor="duration" className="text-red-300 mb-2 block font-medium text-sm font-mono flex items-center">
-                  {t("gameDurationLabel")}
-                  <Clock className="w-4 h-4 ml-2 text-red-500" />
-                </Label>
-                <Slider
-                  id="duration"
-                  min={5}
-                  max={30}
-                  step={5}
-                  value={[gameDuration]}
-                  onValueChange={handleDurationChange}
-                  className="w-full mb-4"
-                  aria-label={t("gameDurationLabel")}
-                />
-                <p className="text-red-400 font-mono text-sm">
-                  {gameDuration} {t("minutes")}
-                </p>
-                {durationError && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-red-500 text-xs mt-1 animate-pulse"
-                  >
-                    {durationError}
-                  </motion.p>
-                )}
-              </div>
-
-              <div className="mb-6">
-                <Label htmlFor="questionCount" className="text-red-300 mb-2 block font-medium text-sm font-mono flex items-center">
-                  {t("questionCountLabel")}
-                  <List className="w-4 h-4 ml-2 text-red-500" />
-                </Label>
-                <Slider
-                  id="questionCount"
-                  min={5}
-                  max={totalQuestions}
-                  step={5}
-                  value={[questionCount]}
-                  onValueChange={handleQuestionCountChange}
-                  className="w-full"
-                  aria-label={t("questionCountLabel")}
-                />
-                <p className="text-red-400 font-mono text-sm mt-2">
-                  {questionCount} {t("questions")} {questionCount === totalQuestions ? `(${t("allLabel")})` : ""}
-                </p>
-                {questionCount > totalQuestions && (
-                  <p className="text-red-500 text-xs mt-1 animate-pulse">{t("questionError")}</p>
-                )}
-              </div>
-
-              <div>
-                <Label className="text-red-300 mb-3 block font-medium text-sm font-mono flex items-center">
-                  {t("difficultyLevelLabel")}
-                  <Skull className="w-4 h-4 ml-2 text-red-500" />
-                </Label>
-
-                <div className="flex space-x-4">
-                  {difficultyOptions.map((option) => (
-                    <motion.label
-                      key={option.value}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`flex-1 text-center p-3 rounded-lg cursor-pointer transition-all duration-200 border font-mono text-sm ${difficultyLevel === option.value
-                        ? "bg-red-900/50 border-red-500 shadow-[0_0_10px_rgba(255,0,0,0.5)] text-red-300"
-                        : "bg-black/60 border-red-900/50 text-red-400 hover:bg-red-900/30"
-                        }`}
-                    >
-                      <input
-                        type="radio"
-                        name="difficultyLevel"
-                        value={option.value}
-                        checked={difficultyLevel === option.value}
-                        onChange={() => handleDifficultyChange(option.value)}
-                        className="sr-only"
-                      />
-                      {t(`difficulty.${option.value}`)}
-                    </motion.label>
-                  ))}
-                </div>
-              </div>
+          <div className="flex flex-col items-center mt-4">
+            <div className="flex items-center justify-center gap-4">
+                <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={prevChaser}
+                    className="w-8 h-8 p-2 text-red-300 transition-colors flex-shrink-0 border-2 border-red-500/50 rounded-lg bg-black/40 flex items-center justify-center md:hidden"
+                >
+                    <ChevronLeft className="w-6 h-6" />
+                </motion.button>
+                <motion.p
+                key={currentChaser.name}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-red-400 font-mono text-center font-bold text-sm md:text-base"
+                >
+                {currentChaser.name}
+                </motion.p>
+                <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={nextChaser}
+                    className="w-8 h-8 p-2 text-red-300 transition-colors flex-shrink-0 border-2 border-red-500/50 rounded-lg bg-black/40 flex items-center justify-center md:hidden"
+                >
+                    <ChevronRight className="w-6 h-6" />
+                </motion.button>
             </div>
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="mt-6">
-              <Button
-                onClick={saveSettings}
-                disabled={isSaving || !isFormValid}
-                className={`w-full bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white rounded-lg font-mono text-lg py-6 shadow-lg shadow-red-900/30 transition-all ${!isFormValid || isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                {isSaving ? t("continuing") : t("continue")}
-              </Button>
-            </motion.div>
-          </motion.div>
+            <span className="text-red-400 font-mono text-xs mt-1">{`${currentChaserIndex + 1}/${chaserOptions.length}`}</span>
+          </div>
+        </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="lg:col-span-2"
-          >
-            <div className="bg-black/40 border border-red-900/50 p-6 rounded-lg h-full backdrop-blur-sm">
-              <div className="flex items-center mb-6">
-                <Ghost className="w-5 h-5 text-red-500 mr-2" />
-                <h2 className="text-xl font-mono font-semibold text-red-400">{t("chaserSelectTitle")}</h2>
+        {/* Game Settings Below Chaser - 1 Row 3 Columns */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="max-w-4xl mx-auto space-y-6 mt-10"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Duration Column */}
+            <div className="p-3 bg-red-900/20 rounded border border-red-900/30">
+              <div className="flex items-center justify-center mb-2">
+                <span className="text-red-300 font-mono text-xs flex items-center">
+                  {t("gameDurationLabel")} 
+                </span>
               </div>
+              <div className="flex items-center justify-center space-x-4">
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handleDurationChange(-5)}
+                  className="w-8 h-8 bg-red-800/50 rounded text-red-200 border border-red-600/50 flex items-center justify-center text-sm"
+                >
+                  <Minus className="w-3 h-3" />
+                </motion.button>
+                <span className="text-red-400 font-mono text-xs min-w-[2rem] text-center">{gameDuration} {t("minutes")}</span>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handleDurationChange(5)}
+                  className="w-8 h-8 bg-red-800/50 rounded text-red-200 border border-red-600/50 flex items-center justify-center text-sm"
+                >
+                  <Plus className="w-3 h-3" />
+                </motion.button>
+              </div>
+              {durationError && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-xs mt-1 animate-pulse font-mono text-center">
+                  {durationError}
+                </motion.p>
+              )}
+            </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 overflow-y-auto custom-scrollbar pr-2">
-                {chaserOptions.map((chaser) => (
-                  <motion.div
-                    key={chaser.value}
-                    whileHover={{ scale: 1.05 }}
+            {/* Questions Column */}
+            <div className="p-3 bg-red-900/20 rounded border border-red-900/30">
+              <div className="flex items-center justify-center mb-2">
+                <span className="text-red-300 font-mono text-xs flex items-center">
+                  {t("questionCountLabel")} 
+                </span>
+              </div>
+              <div className="flex items-center justify-center space-x-4">
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handleQuestionCountChange(-5)}
+                  className="w-8 h-8 bg-red-800/50 rounded text-red-200 border border-red-600/50 flex items-center justify-center text-sm"
+                  disabled={questionCount <= 5}
+                >
+                  <Minus className="w-3 h-3" />
+                </motion.button>
+                <span className="text-red-400 font-mono text-xs min-w-[2rem] text-center">
+                  {questionCount} {t("questions")} {questionCount === totalQuestions ? `(${t("allLabel")})` : ""}
+                </span>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handleQuestionCountChange(5)}
+                  className="w-8 h-8 bg-red-800/50 rounded text-red-200 border border-red-600/50 flex items-center justify-center text-sm"
+                  disabled={questionCount >= totalQuestions}
+                >
+                  <Plus className="w-3 h-3" />
+                </motion.button>
+              </div>
+              {questionCount > totalQuestions && (
+                <p className="text-red-500 text-xs mt-1 animate-pulse font-mono text-center">{t("questionError")}</p>
+              )}
+            </div>
+
+            {/* Difficulty Column */}
+            <div className="p-3 bg-red-900/20 rounded border border-red-900/30">
+              <Label className="text-red-300 mb-3 block font-medium text-xs font-mono flex items-center justify-center">
+                {t("difficultyLevelLabel")} 
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {difficultyOptions.map((option) => (
+                  <motion.button
+                    key={option.value}
                     whileTap={{ scale: 0.95 }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="m-3"
+                    onClick={() => handleDifficultyChange(option.value)}
+                    className={`p-2 rounded-lg cursor-pointer transition-all duration-200 border font-mono text-xs flex flex-col items-center ${difficultyLevel === option.value
+                      ? "bg-red-900/60 border-red-500 shadow-[0_0_10px_rgba(255,0,0,0.6)] text-red-200"
+                      : "bg-black/40 border-red-900/50 text-red-400"
+                      }`}
                   >
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleChaserSelect(chaser)}
-                      onKeyDown={(e) => e.key === "Enter" && handleChaserSelect(chaser)}
-                      className={`relative flex flex-col items-center p-4 rounded-lg cursor-pointer transition-all duration-300 border ${chaserType === chaser.value ? "border-red-500 shadow-[0_0_15px_rgba(255,0,0,0.7)] bg-red-900/40" : "border-red-500/30 bg-black/40 hover:bg-red-900/20 hover:shadow-[0_0_10px_rgba(255,0,0,0.5)]"} h-full`}
-                    >
-                      <div className="relative w-24 h-24 mb-3">
-                        <Image
-                          src={chaser.gif}
-                          alt={chaser.alt || `Chaser ${chaser.name}`}
-                          fill
-                          className="object-contain"
-                          unoptimized
-                          style={{ imageRendering: "pixelated" }}
-                        />
-                      </div>
-                      <span className="text-red-400 font-mono text-center font-bold mb-1">{chaser.name}</span>
-                      {chaserType === chaser.value && (
-                        <motion.span
-                          className="absolute top-2 right-2 text-red-400"
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ duration: 1, repeat: Infinity }}
-                        >
-                          ✔
-                        </motion.span>
-                      )}
-                    </div>
-                  </motion.div>
+                    {option.icon}
+                    <span className="mt-1">{t(`difficulty.${option.value}`)}</span>
+                  </motion.button>
                 ))}
               </div>
-
-              {/* {selectedChaser && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-6 p-4 bg-black/50 border border-red-900/50 rounded-lg"
-                >
-                  <div className="flex items-center">
-                    <Skull className="w-5 h-5 text-red-500 mr-2" />
-                    <h3 className="text-lg font-mono text-red-400">
-                      {t("selectedChaser", { name: selectedChaser.name })}
-                    </h3>
-                  </div>
-                  <p className="text-red-300 font-mono text-sm mt-2">{selectedChaser.description}</p>
-                </motion.div>
-              )} */}
             </div>
+          </div>
+
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full">
+            <Button
+              onClick={saveSettings}
+              disabled={isSaving || !isFormValid}
+              className={`w-full bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white rounded-lg font-mono text-sm py-3 shadow-lg shadow-red-900/30 transition-all ${!isFormValid || isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              {isSaving ? t("continuing") : t("continue")}
+            </Button>
           </motion.div>
-        </div>
+        </motion.div>
       </div>
 
       <style jsx global>{`
@@ -630,7 +676,7 @@ export default function CharacterSelectPage() {
           }
         }
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: rgba(10, 0, 0, 0.8);
@@ -638,18 +684,10 @@ export default function CharacterSelectPage() {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: linear-gradient(to bottom, #600000, #ff0000);
-          border-radius: 3px;
+          border-radius: 2px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: linear-gradient(to bottom, #800000, #ff3030);
-        }
-        .slider [role="slider"] {
-          background: linear-gradient(to right, #ff0000, #600000);
-          box-shadow: 0 0 8px rgba(255, 0, 0, 0.5);
-        }
-        input[type="radio"]:focus-visible + span {
-          outline: 2px solid #ff0000;
-          outline-offset: 2px;
         }
       `}</style>
     </div>

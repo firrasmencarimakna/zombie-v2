@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
   } from "@/components/ui/card";
-import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle, RotateCw, LogOut, Menu, Globe, User } from "lucide-react";
+import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle, RotateCw, LogOut, Menu, Globe, User, X, BookOpen, ArrowLeft, ArrowRight, Camera } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
@@ -74,6 +74,8 @@ export default function HomePage() {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
   const [tab, setTab] = useState<"join" | "play">("join");
   const [isMenuOpen, setIsMenuOpen] = useState(false); // State baru untuk hamburger menu
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [showTryoutInput, setShowTryoutInput] = useState(false); // New state for tryout input in menu
 
   // State untuk debug mode
   const [debugMode, setDebugMode] = useState(false);
@@ -164,6 +166,25 @@ export default function HomePage() {
     i18n.changeLanguage(value);
     if (typeof window !== "undefined") localStorage.setItem("language", value);
     setIsMenuOpen(false); // Tutup menu setelah pilih bahasa
+  };
+
+  // Placeholder for fullscreen toggle
+  const handleToggleFullscreen = () => {
+    // Placeholder - implement later
+    console.log("Fullscreen toggle - to be implemented");
+  };
+
+  // Placeholder for solo tryout in menu
+  const handleTryoutFromMenu = () => {
+    if (!nickname) {
+      setErrorMessage(t("errorMessages.missingNickname"));
+      return;
+    }
+    setIsStartingTryout(true);
+    localStorage.setItem("nickname", nickname);
+    if (navigator.vibrate) navigator.vibrate(50);
+    router.push("/quiz-select-tryout");
+    setIsMenuOpen(false);
   };
 
   // Handle URL parameters
@@ -371,6 +392,19 @@ export default function HomePage() {
     setIsMenuOpen(false);
   };
 
+  // Tutup menu dengan ESC key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
+    if (isMenuOpen) {
+      document.addEventListener('keydown', handleEscape);
+    }
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isMenuOpen]);
+
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none">
       {isClient &&
@@ -386,30 +420,17 @@ export default function HomePage() {
         ))}
 
       <div className="relative z-10 flex items-center justify-center min-h-screen p-2 sm:p-4">
-        {/* Hamburger Menu Button - Dipindah ke kanan, lebih simple dan jelas */}
-        <div className="absolute top-4 right-4 z-20">
-          <TooltipProvider>
-            <Tooltip open={showTooltipOnce}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleMenuToggle}
-                  className="w-12 h-12 bg-red-500/10 border-2 border-red-500/30 text-red-300 hover:bg-red-500/20 hover:border-red-400 hover:text-red-200 rounded-xl transition-all duration-200 shadow-md shadow-red-500/20"
-                  aria-label="Menu"
-                >
-                  <Menu className="h-5 w-5" strokeWidth={2.5} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent
-                side="left"
-                className="bg-black text-red-400 border border-red-500/50 font-mono"
-              >
-                {t("menu")}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        {/* Hamburger Menu Button - Adapted from reference */}
+        <motion.button
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          whileHover={{ scale: 1.05 }}
+          onClick={handleMenuToggle}
+          className="absolute top-4 right-4 z-40 p-3 bg-black/60 border-2 border-red-500/50 hover:border-red-500 text-red-300 hover:bg-red-500/20 rounded-lg shadow-lg shadow-red-500/30 min-w-[48px] min-h-[48px] flex items-center justify-center"
+          aria-label="Toggle menu"
+        >
+          {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </motion.button>
 
         <Dialog open={openHowToPlay} onOpenChange={(isOpen) => {
           setOpenHowToPlay(isOpen);
@@ -488,136 +509,113 @@ export default function HomePage() {
           </AnimatePresence>
         </Dialog>
 
-        {/* Hamburger Menu Dialog - Diperbaiki untuk tampilan lebih terstruktur, jelas, dan menarik */}
-        <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-          <AnimatePresence>
-            {isMenuOpen && (
-              <DialogContent 
-                forceMount 
-                className="bg-gradient-to-b from-black/95 to-black/80 border-red-500/80 text-red-400 max-w-sm sm:max-w-md max-h-[85vh] flex flex-col shadow-2xl shadow-red-500/30 p-0"
-              >
-                <DialogTitle className="sr-only">Menu</DialogTitle>
-                <motion.div
-                  initial={{ opacity: 0, x: -30, scale: 0.95 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: -30, scale: 0.95 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                  className="flex-1 overflow-y-auto custom-scrollbar p-0"
-                >
-                  {/* Header dengan gradient dan shadow untuk hierarki visual */}
-                  <div className="bg-gradient-to-r from-red-900/20 to-red-800/10 border-b border-red-500/30 px-6 py-4 sticky top-0 z-10 backdrop-blur-sm">
-                    <div className="flex items-center gap-3">
-
-                    </div>
-                    <p className="text-red-500/70 text-xs font-mono mt-1 opacity-0 animate-pulse">Profile</p>
+        {/* Hamburger Menu Dropdown - Adapted from reference */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: 300 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 300 }}
+              className="absolute top-20 right-4 z-30 w-64 bg-black/60 border-4 border-red-500/50 rounded-lg p-4 shadow-xl shadow-red-500/30 backdrop-blur-sm max-h-[70vh] overflow-y-auto custom-scrollbar"
+            >
+              <div className="space-y-4">
+                {/* Profile Section - Placeholder */}
+                <div className="flex items-center gap-3 p-3 bg-black/80 border border-red-500/30 rounded-lg">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-900 to-black flex items-center justify-center overflow-hidden">
+                    <User className="h-6 w-6 text-red-400" />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-red-300 truncate">
+                      {t("user")}
+                    </p>
+                  </div>
+                </div>
 
-                  {/* Section 1: Bantuan & Panduan - Dengan ikon dan deskripsi singkat */}
-                  <motion.section
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1, duration: 0.3 }}
-                    className="px-6 py-4 border-b border-red-500/20"
-                  >
+                {/* Fullscreen Button - Placeholder */}
+                <button
+                  onClick={handleToggleFullscreen}
+                  className="w-full p-2 bg-black/60 border-2 border-red-500/50 hover:border-red-500 text-red-300 hover:bg-red-500/20 rounded text-center"
+                  aria-label="Toggle Fullscreen"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-sm text-red-300">{t("fullscreen") || "Fullscreen"}</span>
+                  </div>
+                </button>
 
-                    <div className="space-y-2">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start text-red-400 hover:bg-red-500/15 hover:text-red-300 font-mono text-left py-3 px-0 rounded-none border-0 transition-all duration-200 hover:pl-2"
-                        onClick={handleHowToPlayFromMenu}
-                      >
-                        <HelpCircle className="h-5 w-5 mr-4 flex-shrink-0 text-red-500" />
-                        <div className="flex-1 text-left">
-                          <span className="block text-sm font-medium">{t("howToPlay")}</span>
-                          <span className="block text-xs text-red-500/60 font-mono">Cara bermain game</span>
-                        </div>
-                      </Button>
-                    </div>
-                  </motion.section>
+                {/* How to Play Button */}
+                <button
+                  onClick={handleHowToPlayFromMenu}
+                  className="w-full p-2 bg-black/60 border-2 border-red-500/50 hover:border-red-500 text-red-300 hover:bg-red-500/20 rounded text-center"
+                  aria-label="How to Play"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                   
+                    <span className="text-sm text-red-300">{t("howToPlay")}</span>
+                  </div>
+                </button>
 
-                  <Separator className="bg-red-500/20 mx-6" /> {/* Divider yang lebih tipis dan themed */}
+                {/* Language Button */}
+                <button
+                  onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                  className="w-full p-2 bg-black/60 border-2 border-red-500/50 hover:border-red-500 text-red-300 hover:bg-red-500/20 rounded text-center"
+                  aria-label="Language"
+                >
+                  <div className="flex items-center justify-center gap-2">
+             
+                    <span className="text-sm text-red-300">{t("selectLanguage")}</span>
+                  </div>
+                </button>
 
-                  {/* Section 2: Pengaturan - Lebih terstruktur dengan subheader */}
-                  <motion.section
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.3 }}
-                    className="px-6 py-4 border-b border-red-500/20"
-                  >
-       
-                    <div className="space-y-3">
-                      <div className="bg-red-500/5 rounded-lg p-3 border border-red-500/10">
-                        <label className="block text-xs font-mono text-red-400 mb-2 uppercase tracking-wide flex items-center gap-2">
-                          <Globe className="h-3 w-3" />
-                          {t("selectLanguage")}
-                        </label>
-                        <Select value={i18n.language} onValueChange={handleLanguageChange}>
-                          <SelectTrigger className="bg-black/40 border-red-500/30 text-red-400 focus:ring-1 focus:ring-red-500/30 focus:outline-none data-[state=open]:bg-black/60 data-[state=open]:border-red-500 w-full h-10 text-sm">
-                            <SelectValue placeholder={t("selectLanguage")} />
-                          </SelectTrigger>
-                          <SelectContent className="bg-black/90 border border-red-500/40 text-red-400 w-full mt-1 shadow-lg shadow-red-500/10">
-                            {[
-                              { value: "en", label: "English", code: "EN" },
-                              { value: "id", label: "Indonesia", code: "ID" },
-                              { value: "de", label: "Deutsch", code: "DE" },
-                              { value: "fr", label: "Français", code: "FR" },
-                              { value: "ja", label: "日本語", code: "JA" },
-                              { value: "es", label: "Español", code: "ES" },
-                            ].map((lang) => (
-                              <SelectItem key={lang.value} value={lang.value} className="focus:bg-red-500/15 focus:text-red-300 text-sm py-2.5 hover:bg-red-500/10 transition-colors">
-                                <div className="flex items-center gap-3">
-                                  <span className="w-6 h-6 bg-red-500/10 border border-red-500/30 rounded flex items-center justify-center text-xs font-bold text-red-400">
-                                    {lang.code}
-                                  </span>
-                                  <span className="flex-1">{lang.label}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </motion.section>
+                {/* Language Submenu */}
+                <AnimatePresence>
+                  {isLangMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden space-y-2"
+                    >
+                      {[
+                        { value: "en", label: "English", code: "EN" },
+                        { value: "id", label: "Indonesia", code: "ID" },
+                        { value: "de", label: "Deutsch", code: "DE" },
+                        { value: "fr", label: "Français", code: "FR" },
+                        { value: "ja", label: "日本語", code: "JA" },
+                        { value: "es", label: "Español", code: "ES" },
+                      ].map((lang) => (
+                        <Button
+                          key={lang.value}
+                          variant={i18n.language === lang.value ? "secondary" : "ghost"}
+                          className="w-full justify-start text-red-300 hover:bg-red-500/15 hover:text-red-200 text-left py-2 px-3 rounded border border-red-500/10 bg-red-500/5 data-[state=active]:bg-red-500/20"
+                          onClick={() => handleLanguageChange(lang.value)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 bg-red-500/20 border border-red-500/40 rounded flex items-center justify-center text-xs font-bold text-red-300">
+                              {lang.code}
+                            </span>
+                            <span className="flex-1">{lang.label}</span>
+                          </div>
+                        </Button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                  <Separator className="bg-red-500/20 mx-6" /> {/* Divider lagi */}
-
-                  {/* Section 3: Akun - Dengan ikon user dan animasi hover */}
-                  <motion.section
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3, duration: 0.3 }}
-                    className="px-6 py-4"
-                  >
-
-                    <div className="space-y-2">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start text-red-400 hover:bg-red-500/15 hover:text-red-300 font-mono text-left py-3 px-0 rounded-none border-0 transition-all duration-200 hover:pl-2 group"
-                        onClick={handleLogout}
-                      >
-                        <LogOut className="h-5 w-5 mr-4 flex-shrink-0 text-red-500 group-hover:text-red-400 transition-colors" />
-                        <div className="flex-1 text-left">
-                          <span className="block text-sm font-medium">{t("logout")}</span>
-                          <span className="block text-xs text-red-500/60 font-mono">Keluar dari akun</span>
-                        </div>
-                      </Button>
-                    </div>
-                  </motion.section>
-
-                  {/* Footer dengan credit atau info tambahan untuk nuansa lengkap */}
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4, duration: 0.3 }}
-                    className="px-6 py-4 mt-auto border-t border-red-500/10 text-center text-xs text-red-500/40 font-mono"
-                  >
-                    <p>© 2025 Horror Quiz. Dibuat dengan ❤️ dan darah.</p>
-                  </motion.div>
-                </motion.div>
-              </DialogContent>
-            )}
-          </AnimatePresence>
-        </Dialog>
+                {/* Logout Button */}
+                <button
+                  onClick={handleLogout}
+                  className="w-full p-2 bg-black/60 border-2 border-red-500/50 hover:border-red-500 text-red-300 hover:bg-red-500/20 rounded text-center"
+                  aria-label="Logout"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <LogOut className="h-4 w-4" />
+                    <span className="text-sm text-red-300">{t("logout")}</span>
+                  </div>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="w-full max-w-4xl">
           <motion.div

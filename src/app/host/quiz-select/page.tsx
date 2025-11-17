@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skull, Bone, HeartPulse, Search, Loader2, X, Clock, ArrowRight } from "lucide-react";
+import { Skull, Bone, HeartPulse, Search, Loader2, X, Clock, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
@@ -218,8 +218,14 @@ export default function QuizSelectPage() {
 
   const isSearching = searchQuery.trim().length > 0;
 
+  // Golden ratio constant
+  const goldenRatio = 1.618;
+  const searchBarHeight = 12; // rem for h-12
+  const searchBarWidth = Math.round(searchBarHeight * goldenRatio * 16); // Approximate px for width, but we'll use rem
+  const searchBarRemWidth = Math.round(searchBarHeight * goldenRatio); // ~19.416 rem
+
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden select-none flex flex-col">
+    <div className="min-h-screen relative overflow-hidden select-none flex flex-col main-background bg-black" style={{ backgroundImage: "url('/background/12.gif')", backgroundPosition: "center" }}>
 
 
       {isClient &&
@@ -254,7 +260,7 @@ export default function QuizSelectPage() {
         </div>
       )}
 
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJzY3JhdGNoZXMiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48cGF0aCBkPSJNMCAwTDUwMCA1MDAiIHN0cm9rZT0icmdiYSgyNTUsMCwwLDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNMCAxMDBMNTAwIDYwMCIgc3Ryb2tlPSJyZ2JhKDI1NSwwLDAsMC4wMykiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0wIDIwMEw1MDAgNzAwIiBzdHJva2U9InJnYmEoMjU1LDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3NjcmF0Y2hlcykiIG9wYWNpdHk9IjAuMyIvPjwvc3ZnPg==')] opacity-20" />
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJzY3JhdGNoZXMiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48cGF0aCBkPSJNMCAwTDUwMCA1MDAiIHN0cm9rZT0icmdiYSgyNTUsMCwwLDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNMCAxMDBLNTAwIDYwMCIgc3Ryb2tlPSJyZ2JhKDI1NSwwLDAsMC4wMykiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0wIDIwMEw1MDAgNzAwIiBzdHJva2U9InJnYmEoMjU1LDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3NjcmF0Y2hlcykiIG9wYWNpdHk9IjAuMyIvPjwvc3ZnPg==')] opacity-20" />
 
       <div className="absolute top-0 left-0 w-64 h-64 opacity-20">
         <div className="absolute w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/70 to-transparent" />
@@ -277,7 +283,7 @@ export default function QuizSelectPage() {
           transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
           className="flex flex-col gap-1 mb-10"
         >
-          <div className="flex items-center justify-between mb-5 md:mb-0">
+          <div className="hidden md:flex items-center justify-between mb-5 md:mb-0">
             <Link href={"/"}>
               <h1
                 className="text-2xl md:text-4xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]"
@@ -293,67 +299,54 @@ export default function QuizSelectPage() {
             />
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.5, type: "spring", stiffness: 100 }}
-            className="flex justify-center items-center text-center"
-          >
-            <HeartPulse className="w-12 h-12 text-red-500 mr-4 animate-pulse" />
-            <h1
-              className={`text-4xl md:text-6xl font-bold font-mono tracking-wider transition-all duration-150 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse`}
-              style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
+          <div className="flex items-center justify-center w-full">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="max-w-[19.4rem]"
+              style={{ width: `${searchBarRemWidth}rem` }} // Exact golden ratio width
             >
-              {t("selectQuizTitle")}
-            </h1>
-            <HeartPulse className="w-12 h-12 text-red-500 ml-4 animate-pulse" />
-          </motion.div>
-        </motion.header>
+              <div className="relative">
+                <Input
+                  ref={searchInputRef}
+                  placeholder={t("searchButton")}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="bg-black/70 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-base font-mono h-12 rounded-full focus:border-red-500 focus:ring-red-500/30 backdrop-blur-sm pr-12" // Rounded-full for elegance, pr-12 for button space
+                />
 
-        <div className="w-full max-w-8xl mx-auto flex flex-col flex-1 px-2 md:px-8 gap-5">
-          {/* SEARCH INPUT (visible from start). Search runs only on Enter or clicking the search icon. */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="max-w-xl mx-auto"
-          >
-            <div className="relative">
-              <Input
-                ref={searchInputRef}
-                placeholder={t("searchButton")}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="bg-black/70 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-base font-mono h-12 rounded-xl focus:border-red-500 focus:ring-red-500/30 backdrop-blur-sm"
-              />
+                {/* tombol clear X (hanya muncul kalau ada teks), posisinya sebelum tombol submit */}
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-10 top-1/2 -translate-y-1/2 text-red-400/60 hover:text-red-400 transition-colors duration-200" // Adjusted position, added transition
+                    onClick={handleSearchClear}
+                    aria-label={t("closeSearch")}
+                  >
+                    <X className="h-4 w-4" /> {/* Smaller icon for better fit */}
+                  </Button>
+                )}
 
-              {/* tombol clear X (hanya muncul kalau ada teks), posisinya sebelum tombol submit */}
-              {searchTerm && (
+                {/* tombol submit search */}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute right-12 top-1/2 -translate-y-1/2 text-red-400/60 hover:text-red-400"
-                  onClick={handleSearchClear}
-                  aria-label={t("closeSearch")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400/80 hover:text-red-400 transition-colors duration-200 shadow-md hover:shadow-lg" // Added shadow for depth, transition
+                  disabled={searchTerm.trim().length === 0}
+                  onClick={handleSearchSubmit}
+                  aria-label={t("searchButton")}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-
-              {/* tombol submit search */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400/80 hover:text-red-400"
-                disabled={searchTerm.trim().length === 0}
-                onClick={handleSearchSubmit}
-                aria-label={t("searchButton")}
-              >
-                <Search className="h-5 w-5" />
+                   <Search className="h-5 w-5" />
               </Button>
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
+          </div>
+        </motion.header>
+
+        <div className="w-full max-w-8xl mx-auto flex flex-col flex-1 px-2 md:px-8 gap-5">
 
           {/* If user has submitted a search (Enter or icon click), show results for that query.
     Otherwise show default quiz grid / pagination. */}
@@ -371,13 +364,7 @@ export default function QuizSelectPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className={`mt-4 grid gap-4 grid-cols-1 ${{
-                  1: "md:grid-cols-1",
-                  2: "md:grid-cols-2",
-                  3: "md:grid-cols-3",
-                  4: "md:grid-cols-4",
-                }[Math.min(filteredQuizzes.length, 5)] || "md:grid-cols-5"
-                  }`}
+                className="mt-4 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
               >
                 {filteredQuizzes.map((quiz) => (
                   <motion.div
@@ -389,7 +376,6 @@ export default function QuizSelectPage() {
                   >
                     <Card
                       className="bg-black/40 border-red-500/20 hover:border-red-500 cursor-pointer shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] h-full flex flex-col"
-                      style={{ minHeight: "150px", maxHeight: "200px" }}
                       onClick={() => handleQuizSelect(quiz.id)}
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -424,77 +410,81 @@ export default function QuizSelectPage() {
                 {t("noQuizzesAvailable")}
               </div>
             ) : (
-              <div className="flex flex-col flex-1 gap-7">
-                <div className={`mt-4 grid gap-4 grid-cols-1 ${{
-                  1: "md:grid-cols-1",
-                  2: "md:grid-cols-2",
-                  3: "md:grid-cols-3",
-                  4: "md:grid-cols-4",
-                }[Math.min(filteredQuizzes.length, 5)] || "md:grid-cols-5"
-                  }`}>
-                  {filteredQuizzes.map((quiz) => (
-                    <motion.div
-                      key={quiz.id}
+              <><div className="flex flex-col flex-1 gap-7">
+                      <div className="mt-4 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                        {filteredQuizzes.map((quiz) => (
+                          <motion.div
+                            key={quiz.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 * (quiz.id % 4), duration: 0.5 }}
+                            whileHover={{ scale: 1.02 }}
+                            className="w-full"
+                          >
+                            <Card
+                              className="bg-black/50 border-red-500/20 hover:border-red-500 cursor-pointer shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] h-full flex flex-col"
+                              onClick={() => handleQuizSelect(quiz.id)}
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") handleQuizSelect(quiz.id);
+                              } }
+                              aria-label={t("selectQuiz", { theme: quiz.theme })}
+                            >
+                              <CardHeader className="pb-2 flex-shrink-0">
+                                <CardTitle className="text-red-400 font-mono text-lg line-clamp-2">{quiz.theme}</CardTitle>
+                                <CardDescription className="text-gray-300 text-sm line-clamp-3">
+                                  {quiz.description || t("defaultQuizDescription")}
+                                </CardDescription>
+                              </CardHeader>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div><motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 * (quiz.id % 4), duration: 0.5 }}
-                      whileHover={{ scale: 1.02 }}
-                      className="w-full"
+                      transition={{ duration: 0.5 }}
+                      className="mt-auto pb-3"
                     >
-                      <Card
-                        className="bg-black/50 border-red-500/20 hover:border-red-500 cursor-pointer shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] h-full flex flex-col"
-                        style={{ minHeight: "150px", maxHeight: "200px" }}
-                        onClick={() => handleQuizSelect(quiz.id)}
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") handleQuizSelect(quiz.id);
-                        }}
-                        aria-label={t("selectQuiz", { theme: quiz.theme })}
-                      >
-                        <CardHeader className="pb-2 flex-shrink-0">
-                          <CardTitle className="text-red-400 font-mono text-lg line-clamp-2">{quiz.theme}</CardTitle>
-                          <CardDescription className="text-gray-300 text-sm line-clamp-3">
-                            {quiz.description || t("defaultQuizDescription")}
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <div className="flex justify-center gap-4">
-                    <Button
-                      variant="outline"
-                      className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20 text-sm py-1"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1 || isCreating || isSearching}
-                    >
-                      {t("previousButton")}
-                    </Button>
-                    <span className="text-red-400 font-mono text-sm self-center">
-                      {t("pageInfo", { current: currentPage, total: totalPages })}
-                    </span>
-                    <Button
-                      variant="outline"
-                      className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20 text-sm py-1"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages || isCreating}
-                    >
-                      {t("nextButton")}
-                    </Button>
-                  </div>
-                </motion.div>
-              </div>
+                        <div className="flex justify-center gap-4">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20"
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1 || isCreating || isSearching}
+                          >
+                            <ChevronLeft className="h-5 w-5" />
+                          </Button>
+                          <span className="text-red-400 font-mono text-sm self-center">
+                            {t("pageInfo", { current: currentPage, total: totalPages })}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20"
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages || isCreating}
+                          >
+                            <ChevronRight className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </motion.div></>
             )
           )}
         </div>
       </div>
 
       <style jsx global>{`
+        .main-background {
+          background-size: 60%;
+          background-repeat: no-repeat;
+        }
+        @media (min-width: 768px) { /* md breakpoint */
+          .main-background {
+            background-size: 60%;
+          }
+        }
         @keyframes fall {
           to {
             transform: translateY(100vh);

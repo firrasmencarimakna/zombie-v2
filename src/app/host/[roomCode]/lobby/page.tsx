@@ -97,7 +97,7 @@ function QRModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
@@ -109,22 +109,30 @@ function QRModal({
         animate={{ y: 0, scale: 1 }}
         exit={{ y: 10, opacity: 0 }}
         transition={{ type: "spring", stiffness: 240, damping: 28 }}
-        className="relative z-10 w-[50vw] max-w-[100%] max-h-screen bg-black/95 text-white rounded-2xl p-4 overflow-hidden shadow-[0_0_60px_rgba(255,0,0,0.45)]"
+        className="relative z-10 w-full max-w-sm sm:max-w-md bg-black/95 text-white rounded-2xl p-4 sm:p-6 overflow-hidden shadow-[0_0_60px_rgba(255,0,0,0.45)] max-h-[90vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
       >
-        <div className="h-full flex flex-col md:flex-row gap-4" style={{ minHeight: 400 }}>
-          <div className="flex-1 flex items-center justify-center p-2 md:p-4">
-            <div className="w-full h-full bg-white rounded-lg p-3 flex items-center justify-center">
-              <div className="w-full h-full flex items-center justify-center">
-                <QRCode
-                  value={`${window.location.origin}/?code=${roomCode}`}
-                  style={{ width: "100%", height: "100%" }}
-                  viewBox="0 0 256 256"
-                />
-              </div>
+        <div className="flex flex-col items-center justify-center gap-4 py-4" style={{ minHeight: 300 }}>
+          <div className="w-full bg-white rounded-lg p-2 sm:p-3 flex items-center justify-center">
+            <div className="w-40 h-40 flex items-center justify-center sm:w-48 sm:h-48 md:w-64 md:h-64">
+              <QRCode
+                value={`${window.location.origin}/?code=${roomCode}`}
+                style={{ width: "100%", height: "100%" }}
+                viewBox="0 0 256 256"
+              />
             </div>
           </div>
+          <div className="text-center text-sm sm:text-base text-red-400">
+            <p>Scan QR Code untuk bergabung</p>
+          </div>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white border-red-600"
+          >
+            Tutup
+          </Button>
         </div>
       </motion.section>
     </motion.div>,
@@ -486,7 +494,7 @@ useEffect(() => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
@@ -498,21 +506,39 @@ useEffect(() => {
 
   if (!room) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-red-400 text-xl font-mono">Room tidak ditemukan</div>
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="text-red-400 text-xl font-mono text-center">Room tidak ditemukan</div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden select-none">
+      <div className="absolute top-4 left-4 z-20 hidden md:block">
+        <Link href={"/"}>
+          <h1
+            className="text-3xl md:text-5xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]"
+            style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
+          >
+            {t("title")} {/* QuizRush */}
+          </h1>
+        </Link>
+      </div>
+      <div className="absolute top-4 right-4 z-20 hidden md:block">
+        <img
+        src={`/logo/gameforsmartlogo-horror.png`}
+          alt="Game for Smart Logo"
+          className="w-40 md:w-48 lg:w-56 h-auto"
+        />
+      </div>
       <audio src="/musics/background-music-room.mp3" autoPlay loop muted />
+      <div className="absolute inset-0 z-0" style={{ backgroundImage: "url('/background/21.gif')", backgroundSize: "cover", backgroundPosition: "center" }}></div>
       <div className="absolute inset-0 bg-gradient-to-br from-red-900/5 via-black to-purple-900/5">
         <div className="absolute inset-0 opacity-20">
           {[...Array(10)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-64 h-64 bg-red-900 rounded-full mix-blend-multiply blur-xl"
+              className="absolute w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 bg-red-900 rounded-full mix-blend-multiply blur-xl"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
@@ -538,7 +564,7 @@ useEffect(() => {
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="absolute text-red-900/20 animate-float"
+            className="absolute text-red-900/20 animate-float hidden sm:block"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -554,16 +580,16 @@ useEffect(() => {
 
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJzY3JhdGNoZXMiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48cGF0aCBkPSJNMCAwLDUwMCA1MDAiIHN0cm9rZT0icmdiYSgyNTUsMCwwLDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNMCAxMDBLNTAwIDYwMCIgc3Ryb2tlPSJyZ2JhKDI1NSwwLDAsMC4wMykiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0wIDIwMEw1MDAgNzAwIiBzdHJva2U9InJnYmEoMjU1LDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3NjcmF0Y2hlcykiIG9wYWNpdHk9IjAuMyIvPjwvc3ZnPg==')] opacity-20" />
 
-      <div className="absolute top-0 left-0 w-64 h-64 opacity-20">
+      <div className="absolute top-0 left-0 w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 opacity-20">
         <div className="absolute w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/70 to-transparent" />
       </div>
-      <div className="absolute top-0 right-0 w-64 h-64 opacity-20">
+      <div className="absolute top-0 right-0 w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 opacity-20">
         <div className="absolute w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/70 to-transparent" />
       </div>
-      <div className="absolute bottom-0 left-0 w-64 h-64 opacity-20">
+      <div className="absolute bottom-0 left-0 w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 opacity-20">
         <div className="absolute w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/70 to-transparent" />
       </div>
-      <div className="absolute bottom-0 right-0 w-64 h-64 opacity-20">
+      <div className="absolute bottom-0 right-0 w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 opacity-20">
         <div className="absolute w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/70 to-transparent" />
       </div>
 
@@ -573,12 +599,12 @@ useEffect(() => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
           >
             <motion.div
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-              className="text-[20rem] md:text-[30rem] font-mono font-bold text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]"
+              className="text-[8rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem] xl:text-[30rem] font-mono font-bold text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)] flex-shrink-0"
             >
               {countdown}
             </motion.div>
@@ -586,58 +612,48 @@ useEffect(() => {
         )}
       </AnimatePresence>
 
-      <div className={`relative z-10 mx-auto p-7 ${countdown !== null ? "hidden" : ""}`}>
+      <div className={`relative z-10 mx-auto p-4 sm:p-6 lg:p-7 ${countdown !== null ? "hidden" : ""}`}>
         <motion.header
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
-          className="flex flex-col gap-1 mb-10"
+          className="flex flex-col gap-2 sm:gap-4 mb-6 sm:mb-10 max-w-7xl mx-auto"
         >
-          <div className="flex items-center justify-between">
-            <Link href={"/"}>
-              <h1
-                className="text-4xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)]"
-                style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
-              >
-                {t("title")}
-              </h1>
-            </Link>
-            <Image src={`/logo/gameforsmartlogo-horror.png`} alt="" width={254} height={80} />
-          </div>
-
+          
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.5, type: "spring", stiffness: 100 }}
-            className="flex justify-center items-center text-center"
+            className="flex justify-center items-center text-center mt-10"
           >
-            <HeartPulse className="w-12 h-12 text-red-500 mr-4 animate-pulse" />
+           
             <h1
-              className={`text-4xl md:text-6xl font-bold font-mono tracking-wider transition-all duration-150 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse ${flickerText ? 'opacity-100' : 'opacity-50'}`}
+              className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-6xl font-bold font-mono tracking-wider transition-all duration-150 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse ${flickerText ? 'opacity-100' : 'opacity-50'}`}
               style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
             >
               {t("hostRoomTitle")}
             </h1>
-            <HeartPulse className="w-12 h-12 text-red-500 ml-4 animate-pulse" />
+           
           </motion.div>
         </motion.header>
-        <div className="grid grid-cols-5 gap-4 mb-5">
+
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5 mb-4 sm:mb-6 lg:mb-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="grid grid-cols-1 col-span-1 gap-4"
+            className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3 lg:gap-4 lg:col-span-1"
           >
-            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] justify-center">
+            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]">
               <CardContent>
-                <div className="flex items-center gap-6">
-                  <Users className="w-8 h-8 text-red-500 flex-shrink-0" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 text-red-500 flex-shrink-0" />
                   <div>
                     <motion.div
                       key={players.length}
                       initial={{ scale: 1.2 }}
                       animate={{ scale: 1 }}
-                      className="text-4xl font-bold text-red-500 font-mono"
+                      className="text-lg sm:text-xl md:text-2xl lg:text-3xl lg:text-4xl font-bold text-red-500 font-mono"
                     >
                       {players.length}
                     </motion.div>
@@ -645,24 +661,24 @@ useEffect(() => {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] justify-center">
+            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]">
               <CardContent>
-                <div className="flex items-center gap-6">
-                  <Clock className="w-8 h-8 text-red-500 flex-shrink-0" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 text-red-500 flex-shrink-0" />
                   <div>
-                    <div className="text-4xl font-bold text-red-500 font-mono">
+                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl lg:text-4xl font-bold text-red-500 font-mono">
                       {Math.floor((room.duration || 600) / 60)}:{((room.duration || 600) % 60).toString().padStart(2, "0")}
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] justify-center">
+            <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]">
               <CardContent>
-                <div className="flex items-center gap-6">
-                  <List className="w-8 h-8 text-red-500 flex-shrink-0" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <List className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 text-red-500 flex-shrink-0" />
                   <div>
-                    <div className="text-4xl font-bold text-red-500 font-mono">{room.question_count || 20}</div>
+                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl lg:text-4xl font-bold text-red-500 font-mono">{room.question_count || 20}</div>
                   </div>
                 </div>
               </CardContent>
@@ -672,10 +688,10 @@ useEffect(() => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="relative flex items-center bg-black/40 border border-red-900/50 rounded-lg p-4 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] col-span-4"
+            className="relative flex flex-col lg:flex-row items-stretch lg:items-center bg-black/40 border border-red-900/50 rounded-lg p-4 lg:p-6 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] lg:col-span-4 gap-4 lg:gap-6"
           >
             <motion.div
-              className="w-[40%] h-auto bg-white border border-red-900/50 rounded overflow-hidden p-2 cursor-pointer hover:scale-105 transition-transform"
+              className="w-full lg:w-[25%] h-40 sm:h-48 lg:h-auto bg-white border border-red-900/50 rounded overflow-hidden p-2 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center mx-auto order-last lg:order-first"
               onClick={() => setIsQrModalOpen(true)}
             >
               <QRCode
@@ -685,87 +701,83 @@ useEffect(() => {
                 viewBox={`0 0 256 256`}
               />
             </motion.div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsQrModalOpen(true)}
-              className="bg-black/60 text-red-400 hover:bg-red-700/20 border border-red-800/20 p-2 rounded-md items-start mb-auto ml-3"
-            >
-              <Maximize2 className="w-5 h-5" />
-            </Button>
-            <div className="grid gap-4 w-full">
-              <div className="relative w-full max-w-[90%] mx-auto bg-black/50 p-4 rounded-2xl border border-red-500/30">
-                <div className="absolute top-2 right-2 z-20">
+            <div className="grid gap-3 w-full flex-1 lg:pl-4">
+              <div className="relative w-full bg-black/50 p-3 sm:p-4 rounded-2xl border border-red-500/30">
+                <div className="absolute top-1 right-1 sm:top-2 sm:right-2 z-20">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={copyRoomCode}
-                    className="text-red-400 hover:bg-red-500/20 rounded-full p-2 pointer-events-auto"
+                    className="text-red-400 hover:bg-red-500/20 rounded-full p-1 sm:p-2 pointer-events-auto"
                     aria-label={t("copyInvite")}
                   >
                     <motion.div key={copied ? "check" : "copy"} initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                      {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                      {copied ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : <Copy className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </motion.div>
                   </Button>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className="text-5xl font-mono font-bold text-red-500 tracking-widest break-words select-text">
+                  <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-mono font-bold text-red-500 tracking-widest break-words select-text">
                     {roomCode}
                   </div>
                 </div>
               </div>
-              <div className="relative w-full max-w-[90%] mx-auto bg-black/50 p-4 rounded-2xl border border-red-500/30">
-                <div className="absolute top-2 right-2 z-20">
+              <div className="relative w-full bg-black/50 p-3 sm:p-4 rounded-2xl border border-red-500/30">
+                <div className="absolute top-1 right-1 sm:top-2 sm:right-2 z-20">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={copyLinkRoomCode}
-                    className="text-red-400 hover:bg-red-500/20 rounded-full p-2 pointer-events-auto"
+                    className="text-red-400 hover:bg-red-500/20 rounded-full p-1 sm:p-2 pointer-events-auto"
                     aria-label={t("copyInvite")}
                   >
                     <motion.div key={copied1 ? "check" : "copy"} initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                      {copied1 ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                      {copied1 ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : <Copy className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </motion.div>
                   </Button>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className="text-red-400 font-mono mb-1">{t("joinLink")}</div>
-                  <div className="text-lg font-mono font-bold text-red-500 text-center break-words">
+                  <div className="text-red-400 font-mono mb-1 text-xs sm:text-sm md:text-base">{t("joinLink")}</div>
+                  <div className="text-sm sm:text-base md:text-lg font-mono font-bold text-red-500 text-center break-words px-2">
                     {`${window.location.origin}/?code=${roomCode}`}
                   </div>
                 </div>
               </div>
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="flex justify-center"
-              >
-                <Button
-                  onClick={startGame}
-                  disabled={players.length === 0 || isStarting || countdown !== null}
-                  className="relative overflow-hidden bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 text-white font-mono text-lg md:text-xl px-8 md:px-10 py-4 md:py-6 rounded-lg border-2 border-red-700 shadow-[0_0_20px_rgba(239,68,68,0.5)] hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group w-full sm:w-auto"
-                >
-                  <span className="relative z-10 flex items-center">
-                    {isStarting || countdown !== null ? (
-                        <motion.div
-                          animate={{ rotate: 360 }} 
-                          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                          className="w-5 h-5 mr-2"
-                        >
-                          <Play className="w-5 h-5" />
-                        </motion.div>
-                      ) : (
-                        <Play className="w-5 h-5 mr-2" />
-                      )}
-                      {isStarting
-                        ? t("startGame.starting")
-                        : t("startGame.start")}
-                  </span>
-                  <span className="absolute inset-0 bg-red-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                  <span className="absolute bottom-0 left-0 right-0 h-1 bg-red-500 animate-pulse" />
-                </Button>
-              </motion.div>
+              <Card className="bg-black/20 border border-red-900/50">
+                <CardContent className="p-4">
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                    className="flex justify-center"
+                  >
+                    <Button
+                      onClick={startGame}
+                      disabled={players.length === 0 || isStarting || countdown !== null}
+                      className="relative overflow-hidden bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 text-white font-mono text-sm sm:text-base md:text-lg lg:text-xl px-4 sm:px-6 md:px-8 lg:px-10 py-2 sm:py-3 md:py-4 lg:py-6 rounded-lg border-2 border-red-700 shadow-[0_0_20px_rgba(239,68,68,0.5)] hover:shadow-[0_0_30px_rgba(239,68,68,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group w-full"
+                    >
+                      <span className="relative z-10 flex items-center justify-center">
+                        {isStarting || countdown !== null ? (
+                            <motion.div
+                              animate={{ rotate: 360 }} 
+                              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                              className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-2"
+                            >
+                              <Play className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+                            </motion.div>
+                          ) : (
+                            <Play className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 mr-2" />
+                          )}
+                        <span className="hidden sm:inline">{isStarting
+                          ? t("startGame.starting")
+                          : t("startGame.start")}</span>
+                      </span>
+                      <span className="absolute inset-0 bg-red-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                      <span className="absolute bottom-0 left-0 right-0 h-1 bg-red-500 animate-pulse" />
+                    </Button>
+                  </motion.div>
+                </CardContent>
+              </Card>
             </div>
           </motion.div>
         </div>
@@ -780,15 +792,16 @@ useEffect(() => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
+          className="max-w-7xl mx-auto"
         >
-          <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] gap-3">
-            <CardHeader>
-              <CardTitle className="text-red-500 text-xl md:text-2xl font-mono flex items-center gap-3">
-                <Users className="w-5 h-5 md:w-6 md:h-6" />
+          <Card className="bg-black/40 border border-red-900/50 hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-red-500 text-base sm:text-lg md:text-xl lg:text-2xl font-mono flex items-center gap-2 sm:gap-3">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                 {t("players")}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <AnimatePresence mode="popLayout">
                 {players.length === 0 ? (
                   <motion.div
@@ -796,7 +809,7 @@ useEffect(() => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-center py-10"
+                    className="text-center py-8 sm:py-10"
                   >
                     <motion.div
                       animate={{
@@ -808,14 +821,14 @@ useEffect(() => {
                         ease: "easeInOut",
                       }}
                     >
-                      <p className="text-red-400 text-lg font-mono">{t("waitingHost")}</p>
-                      <p className="text-red-400/80 text-sm font-mono">{t("shareCode")}</p>
+                      <p className="text-red-400 text-sm sm:text-base md:text-lg font-mono">{t("waitingHost")}</p>
+                      <p className="text-red-400/80 text-xs sm:text-sm font-mono mt-2">{t("shareCode")}</p>
                     </motion.div>
                   </motion.div>
                 ) : (
                   <motion.div
                     key="players"
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-10 gap-4 md:gap-6"
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2 sm:gap-3 md:gap-4 lg:gap-6"
                     transition={{ layout: { type: "spring", stiffness: 200, damping: 20 } }}
                   >
                     <AnimatePresence>
@@ -826,47 +839,47 @@ useEffect(() => {
                         return (
                           <motion.div
                             key={player.player_id}
-                            initial={{ scale: 0.9 }}
-                            animate={{ scale: 1 }}
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
                             exit={{
                               opacity: 0,
                               scale: 0.5,
-                              x: Math.random() > 0.5 ? 200 : -200,
-                              rotate: Math.random() * 360,
-                              transition: { duration: 0.5, ease: "easeIn" },
+                              x: Math.random() > 0.5 ? 100 : -100,
+                              rotate: Math.random() * 180,
+                              transition: { duration: 0.3, ease: "easeIn" },
                             }}
                             transition={{
                               type: "spring",
                               stiffness: 200,
                               damping: 20,
+                              delay: index * 0.05,
                             }}
-                            className="bg-black/40 border border-red-900/50 rounded-lg p-4 text-center hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] relative"
+                            className="bg-black/40 border border-red-900/50 rounded-lg p-2 sm:p-3 md:p-4 text-center hover:border-red-500 transition-all duration-300 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] relative group"
                           >
                             {!player.is_host && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => kickPlayer(player.player_id, player.nickname)}
-                                className="absolute z-10 top-2 left-2 bg-black/40 text-red-500 hover:bg-red-700/50 p-2"
+                                className="absolute z-10 top-1 left-1 sm:top-2 sm:left-2 bg-black/60 text-red-500 hover:bg-red-700/60 p-1 sm:p-2 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                                 aria-label={t("kickPlayer", { nickname: player.nickname })}
                               >
-                                <Trash2 className="w-4 h-4" />
-                                <span className="absolute inset-0" style={{ zIndex: -1 }} />
+                                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                               </Button>
                             )}
                             <motion.div
-                              className="mb-2"
+                              className="mb-1 sm:mb-2"
                               animate={{
-                                rotate: [0, 10, -10, 0],
+                                rotate: [0, 5, -5, 0],
                               }}
                               transition={{
-                                duration: 2,
+                                duration: 3,
                                 repeat: Number.POSITIVE_INFINITY,
-                                delay: index * 0.2,
+                                delay: index * 0.1,
                               }}
                             >
                               {selectedCharacter ? (
-                                <div className="h-24 w-full flex items-center justify-center mt-2">
+                                <div className="h-12 sm:h-16 md:h-20 lg:h-24 w-full flex items-center justify-center mt-1 sm:mt-2">
                                   <img
                                     src={selectedCharacter.gif}
                                     alt={selectedCharacter.alt}
@@ -874,12 +887,12 @@ useEffect(() => {
                                   />
                                 </div>
                               ) : (
-                                <div className="h-24 w-full flex items-center justify-center mb-2 text-red-400 text-xs">
+                                <div className="h-12 sm:h-16 md:h-20 lg:h-24 w-full flex items-center justify-center mb-1 sm:mb-2 text-red-400 text-xs sm:text-sm">
                                   {player.character_type}
                                 </div>
                               )}
                             </motion.div>
-                            <div className="text-red-500 font-medium text-sm truncate mb-1 font-mono">{player.nickname}</div>
+                            <div className="text-red-500 font-medium text-xs sm:text-sm truncate mb-1 font-mono line-clamp-1">{player.nickname}</div>
                             {player.is_host && (
                               <Badge variant="secondary" className="text-xs bg-red-900 text-red-400 font-mono">
                                 {t("host")}
@@ -897,9 +910,9 @@ useEffect(() => {
         </motion.div>
       </div>
       <Dialog open={kickDialogOpen} onOpenChange={setKickDialogOpen}>
-        <DialogContent className="bg-black/95 border border-red-600/70 text-red-400 rounded-xl shadow-[0_0_30px_rgba(255,0,0,0.4)]">
+        <DialogContent className="bg-black/95 border border-red-600/70 text-red-400 rounded-xl shadow-[0_0_30px_rgba(255,0,0,0.4)] max-w-sm sm:max-w-md mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-red-500">
+            <DialogTitle className="text-base sm:text-lg font-bold text-red-500">
               {t("kickPlayerConfirm", { nickname: selectedPlayer?.nickname })}
             </DialogTitle>
           </DialogHeader>
@@ -907,13 +920,13 @@ useEffect(() => {
             <Button
               variant="ghost"
               onClick={() => setKickDialogOpen(false)}
-              className="text-gray-400 hover:text-red-400 hover:bg-red-950/40"
+              className="text-gray-400 hover:text-red-400 hover:bg-red-950/40 px-3 py-2"
             >
               {t("cancel")}
             </Button>
             <Button
               onClick={confirmKickPlayer}
-              className="bg-red-600 hover:bg-red-700 text-white shadow-[0_0_10px_rgba(255,0,0,0.6)]"
+              className="bg-red-600 hover:bg-red-700 text-white shadow-[0_0_10px_rgba(255,0,0,0.6)] px-4 py-2"
             >
               {t("confirm")}
             </Button>
@@ -934,6 +947,12 @@ useEffect(() => {
           50% {
             transform: translateY(-20px) rotate(180deg);
           }
+        }
+        .line-clamp-1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
       `}</style>
     </div>
