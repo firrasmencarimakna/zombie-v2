@@ -60,7 +60,16 @@ const DialogContent = React.forwardRef<
 
       {/* Close Button — Keren dengan glow merah */}
       {showCloseButton && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 bg-red-900/80 hover:bg-red-800 text-white transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-black">
+        <DialogPrimitive.Close 
+          className={cn(
+            "absolute left-4 top-4 rounded-full p-2",
+            "bg-red-900/80 hover:bg-red-800 text-white",
+            "transition-all hover:scale-110",
+            "focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-black",
+            "shadow-lg shadow-red-900/50"
+          )}
+          aria-label="Close"
+        >
           <X className="h-5 w-5" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

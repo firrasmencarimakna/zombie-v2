@@ -339,20 +339,49 @@ export default function LobbyPage() {
     <LoadingScreen minDuration={500} isReady={!isLoading && !!currentPlayer && !!room}>
       {/* SELURUH KONTEN LOBBY */}
       <div className="min-h-screen bg-black relative overflow-hidden select-none">
-        {/* Countdown Overlay */}
-        {countdown !== null && countdown > 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black flex items-center justify-center z-50">
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 1, repeat: Infinity }}
-              className="text-[20rem] md:text-[30rem] font-mono font-bold text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]"
-            >
-              {countdown}
-            </motion.div>
-          </motion.div>
-        )}
+          {/* Logos */}
+          <div className="absolute top-4 left-4 z-20 hidden md:block">
+            <Image
+              src="/logo/quizrushlogo.png"
+              alt="QuizRush Logo"
+              width={140}
+              height={35}
+              className="w-32 md:w-40 lg:w-48 h-auto"
+              unoptimized
+            />
+          </div>
+          <div className="absolute top-4 right-4 z-20 hidden md:block">
+            <img
+              src={`/logo/gameforsmartlogo-horror.png`}
+              alt="Game for Smart Logo"
+              className="w-40 md:w-48 lg:w-56 h-auto"
+            />
+          </div>
 
-        <div className="relative z-10 mx-auto p-4 pt-6 pb-28 max-w-7xl">
+          {/* Background Image */}
+          <Image
+            src="/background/30.gif"
+            alt="Background"
+            layout="fill"
+            objectFit="cover"
+            className="absolute inset-0 z-0 opacity-30" // Adjust opacity as needed
+            unoptimized
+          />
+
+          {/* Countdown Overlay */}
+          {countdown !== null && countdown > 0 && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black flex items-center justify-center z-50">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="text-[20rem] md:text-[30rem] font-mono font-bold text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]"
+              >
+                {countdown}
+              </motion.div>
+            </motion.div>
+          )}
+
+        <div className="relative z-10 mx-auto p-4 pt-6 pb-28 max-w-7xl mt-10">
           <motion.header initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
             <h1 className="text-4xl md:text-6xl font-bold font-mono tracking-wider text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse">
               {t("waitingRoomTitle")}
@@ -428,27 +457,58 @@ export default function LobbyPage() {
             )}
         </div>
 
-        {/* Dialog Keluar */}
-        <Dialog open={isExitDialogOpen} onOpenChange={setIsExitDialogOpen}>
-          <DialogContent className="bg-black/95 border border-red-600/70 text-red-400 rounded-xl">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-red-500">{t("exitConfirm")}</DialogTitle>
-            </DialogHeader>
-            <DialogFooter className="mt-4 flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setIsExitDialogOpen(false)}>{t("cancel")}</Button>
-              <Button onClick={handleExitLobby} className="bg-red-600 hover:bg-red-700 text-white">
+
+          {/* Dialog Keluar – Dengan Karakter Pemain */}
+          <Dialog open={isExitDialogOpen} onOpenChange={setIsExitDialogOpen}>
+            <DialogContent className="bg-black/95 border-2 border-red-600/80 text-white max-w-sm rounded-2xl overflow-hidden">
+              {/* Header dengan karakter di tengah */}
+              <div className="relative pt-8 pb-4">
+                <motion.div
+                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                  className="mx-auto w-32 h-32 relative"
+                >
+                  {currentPlayer?.character_type ? (
+                    <Image
+                      src={characterOptions.find(c => c.value === selectedCharacter)?.gif || "/character/player/character.webp"}
+                      alt="Karakter kamu"
+                      fill
+                      unoptimized
+                      className="object-cover rounded-fullshadow-[0_0_30px_rgba(239,68,68,0.8)]"
+                    />
+                  ) : (
+                    <div className="" />
+                  )}
+                  {/* Efek glow merah di sekitar karakter */}
+                  <div className="" />
+                </motion.div>
+                <DialogTitle className="text-2xl font-bold text-red-500 text-center mt-6 font-mono tracking-wider">
+                  {t("exitConfirm")}
+                </DialogTitle>
+              </div>
+            <DialogFooter className="justify-center gap-6 mt-6 pb-8">
+              <Button
+                variant="ghost"
+                onClick={() => setIsExitDialogOpen(false)}
+                className="bg-red-800/80 hover:bg-red-700 text-white text-lg px-10"
+              >
+                {t("cancel")}
+              </Button>
+              <Button
+                onClick={handleExitLobby}
+                className="bg-red-600 hover:bg-red-500 text-white text-lg px-10"
+              >
                 {t("exit")}
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
 
         {/* Dialog Pilih Karakter Desktop */}
         {!isMobile && isCharacterSelectorOpen && (
           <Dialog open={isCharacterSelectorOpen} onOpenChange={setIsCharacterSelectorOpen}>
             <DialogContent className="bg-black/95 border-red-800/60 text-white p-6 max-w-lg rounded-2xl">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold font-mono text-red-500">Pilih Karakter</DialogTitle>
+                <DialogTitle className="text-2xl font-bold font-mono text-red-500 mb-3"></DialogTitle>
               </DialogHeader>
               <div className="grid grid-cols-5 gap-4 mt-6">
                 {characterOptions.map((character) => (

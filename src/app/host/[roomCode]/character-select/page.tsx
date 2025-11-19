@@ -457,7 +457,7 @@ export default function CharacterSelectPage() {
                     <Minus className="w-3 h-3" />
                   </motion.button>
                   <span className="text-red-400 font-mono text-xs min-w-[2rem] text-center">
-                    {questionCount} {t("questions")} {questionCount === totalQuestions ? `(${t("allLabel")})` : ""}
+                    {questionCount} {t("questions")} 
                   </span>
                   <motion.button whileTap={{ scale: 0.9 }} onClick={() => handleQuestionCountChange(5)} className="w-8 h-8 bg-red-800/50 rounded text-red-200 border border-red-600/50 flex items-center justify-center text-sm" disabled={questionCount >= totalQuestions}>
                     <Plus className="w-3 h-3" />
