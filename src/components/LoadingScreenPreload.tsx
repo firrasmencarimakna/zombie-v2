@@ -55,7 +55,7 @@ export default function LoadingScreenPreload() {
           animate={{ x: [-2, 2, -2, 2, 0] }}
           transition={{ duration: 0.1, repeat: Infinity, repeatDelay: 1 }}
         >
-          PREPARING ASSETS{dots}
+          PREPARING GAME{dots}
         </motion.h1>
         <p className="text-sm text-red-500 mt-4 opacity-80 animate-pulse font-mono">
           Please wait a moment...

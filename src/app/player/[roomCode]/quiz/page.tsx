@@ -10,10 +10,9 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import ZombieFeedback from "@/components/game/ZombieFeedback"
 import { useTranslation } from "react-i18next"
-
 import toast from "react-hot-toast"
 
-// Define types for GameRoom and EmbeddedPlayer if not already imported from supabase
+// Define types for GameRoom and EmbeddedPlayer
 interface GameRoom {
   id: string
   room_code: string
@@ -32,7 +31,7 @@ interface GameRoom {
   question_count: number
   embedded_questions: any[]
   players: EmbeddedPlayer[]
-  quiz?: { questions: any[] } // Add quiz property for direct access if needed
+  quiz?: { questions: any[] }
 }
 
 interface EmbeddedPlayer {
@@ -68,28 +67,20 @@ export default function QuizPage() {
 
   const [room, setRoom] = useState<GameRoom | null>(null)
   const [currentPlayer, setCurrentPlayer] = useState<EmbeddedPlayer | null>(null)
-  const [roomInfo, setRoomInfo] = useState<{ game_start_time: string; duration: number; difficulty_level: string; embedded_questions: any[]; players: any[] } | null>(null)
-  const [gameStartTime, setGameStartTime] = useState<number | null>(null)
-  const [playerJoinTime, setPlayerJoinTime] = useState<number | null>(null)
+  const [roomInfo, setRoomInfo] = useState<Partial<GameRoom> | null>(null)
   const [timeLeft, setTimeLeft] = useState(0)
   const [timeLoaded, setTimeLoaded] = useState(false)
-  const [inactivityCountdown, setInactivityCountdown] = useState<number | null>(null)
-  const [penaltyCountdown, setPenaltyCountdown] = useState<number | null>(null)
   const [isClient, setIsClient] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [isAnswered, setIsAnswered] = useState(false)
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0) // Initialized safely
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [playerHealth, setPlayerHealth] = useState(3)
   const [playerSpeed, setPlayerSpeed] = useState(20)
   const [correctAnswers, setCorrectAnswers] = useState(0)
   const [showFeedback, setShowFeedback] = useState(false)
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null)
   const [isProcessingAnswer, setIsProcessingAnswer] = useState(false)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Ambil questions dari embedded_questions atau quiz.questions
   const questions = roomInfo?.embedded_questions && roomInfo.embedded_questions.length > 0
     ? roomInfo.embedded_questions
     : room?.quiz?.questions || []
@@ -97,16 +88,6 @@ export default function QuizPage() {
   const currentQuestion = questions[currentQuestionIndex]
   const pulseIntensity = timeLeft <= 30 ? (31 - timeLeft) / 30 : 0
   const FEEDBACK_DURATION = 1000
-
-  // Definisikan pengaturan berdasarkan difficulty_level
-  const difficultySettings = {
-    easy: { inactivityPenalty: 45 },
-    medium: { inactivityPenalty: 30 },
-    hard: { inactivityPenalty: 20 },
-  }
-  const inactivityPenalty = roomInfo && ["easy", "medium", "hard"].includes(roomInfo.difficulty_level)
-    ? difficultySettings[roomInfo.difficulty_level as keyof typeof difficultySettings].inactivityPenalty
-    : difficultySettings.medium.inactivityPenalty // Default ke medium
 
   // Initial data fetching for room and current player
   useEffect(() => {
@@ -118,10 +99,7 @@ export default function QuizPage() {
 
       const { data: roomData, error: roomError } = await supabase
         .from("game_rooms")
-        .select(`
-          *,
-          quiz:quiz_id (questions)
-        `)
+        .select(`*, quiz:quiz_id (questions)`)
         .eq("room_code", roomCode)
         .single();
 
@@ -132,178 +110,142 @@ export default function QuizPage() {
         return;
       }
       setRoom(roomData);
-      setRoomInfo(roomData); // Also set roomInfo for consistency
+      setRoomInfo(roomData);
 
       const playerId = localStorage.getItem("playerId");
       if (playerId) {
         const player = roomData.players?.find((p: EmbeddedPlayer) => p.player_id === playerId) || null;
         setCurrentPlayer(player);
+        if (player) {
+          setPlayerHealth(player.health.current);
+          setPlayerSpeed(player.health.speed);
+          setCorrectAnswers(player.correct_answers);
+          // Set initial question index based on player's progress
+          const lastAnsweredIndex = player.answers.length > 0 ? player.answers[player.answers.length - 1].question_index : -1;
+          setCurrentQuestionIndex(lastAnsweredIndex + 1);
+        }
       } else {
-        console.error("Player ID not found in localStorage. Cannot identify current player.");
+        console.error("Player ID not found in localStorage.");
         toast.error("Tidak dapat mengidentifikasi pemain. Silakan bergabung kembali.");
         router.replace("/");
       }
     };
 
     fetchInitialData();
+    setIsClient(true);
   }, [roomCode, router]);
 
+  // Supabase Realtime Subscription
   useEffect(() => {
-    const fetchRoomInfo = async () => {
-      const { data, error } = await supabase
-        .from("game_rooms")
-        .select("game_start_time, duration, difficulty_level, embedded_questions, players")
-        .eq("id", room?.id) // Use optional chaining
-        .single()
+    if (!room?.id) return;
 
-      if (error) {
-        console.error(t("log.fetchRoomInfoError", { error: error.message }))
-        return
-      }
+    const channel = supabase
+      .channel(`room:${room.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'game_rooms',
+          filter: `id=eq.${room.id}`,
+        },
+        (payload) => {
+          console.log('Room updated via Realtime!', payload.new);
+          const updatedRoomData = payload.new as Partial<GameRoom>;
 
-      setRoomInfo(data)
-      if (data.game_start_time) {
-        const startTime = new Date(data.game_start_time).getTime()
-        setGameStartTime(startTime)
-        
-        // Cari player data dari room.players JSONB
-        const playerData = data.players?.find((p: any) => p.player_id === currentPlayer?.player_id) // Use optional chaining
-        if (playerData?.joined_at) {
-          setPlayerJoinTime(new Date(playerData.joined_at).getTime())
+          // Merge new data without overwriting the nested 'quiz' object
+          setRoom(prevRoom => prevRoom ? { ...prevRoom, ...updatedRoomData } : updatedRoomData as GameRoom);
+          setRoomInfo(prevRoomInfo => prevRoomInfo ? { ...prevRoomInfo, ...updatedRoomData } : updatedRoomData);
+
+          // Find and update current player's state from the new payload
+          const playerId = localStorage.getItem('playerId');
+          if (playerId && updatedRoomData.players) {
+            const updatedPlayer = updatedRoomData.players.find(p => p.player_id === playerId);
+            if (updatedPlayer) {
+              setCurrentPlayer(updatedPlayer);
+              
+              if (updatedPlayer.health?.current !== undefined) {
+                setPlayerHealth(updatedPlayer.health.current);
+              }
+              if (updatedPlayer.health?.speed !== undefined) {
+                setPlayerSpeed(updatedPlayer.health.speed);
+              }
+              if (updatedPlayer.correct_answers !== undefined) {
+                setCorrectAnswers(updatedPlayer.correct_answers);
+              }
+            }
+          }
         }
-        
-        // Sync health, speed, correctAnswers, currentIndex dari player data jika ada
-        if (playerData) {
-          // Data is now synced via handleAnswerSelect's response
-        }
-      }
-    }
+      )
+      .subscribe();
 
-    if (room?.id && currentPlayer?.player_id) {
-      fetchRoomInfo()
-    }
-  }, [room?.id, currentPlayer?.player_id, t])
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [room?.id]); // Add state dependencies to ensure re-subscription if local state desyncs, though unlikely
 
+  // Game Timer
   useEffect(() => {
-    if (room && roomInfo) {
-      const questions = roomInfo.embedded_questions && roomInfo.embedded_questions.length > 0
-        ? roomInfo.embedded_questions
-        : room.quiz?.questions || []
-      const totalQuestions = questions.length
-      const initialIndex = Math.min(0, (totalQuestions > 0 ? totalQuestions : 1) - 1) // resumeState is not available here
-      setCurrentQuestionIndex(initialIndex)
-    }
-  }, [room, roomInfo]) // Removed resumeState from dependencies as it's not a prop anymore
-
-  useEffect(() => {
-    if (!roomInfo?.game_start_time || !roomInfo.duration) return
+    if (!roomInfo?.game_start_time || !roomInfo.duration) return;
 
     const start = new Date(roomInfo.game_start_time).getTime()
     const updateTimeLeft = () => {
       const now = Date.now()
       const elapsed = Math.floor((now - start) / 1000)
-      const remaining = Math.max(0, roomInfo.duration - elapsed)
+      const remaining = Math.max(0, (roomInfo.duration ?? 0) - elapsed)
       setTimeLeft(remaining)
-      setTimeLoaded(true)
+      if (!timeLoaded) setTimeLoaded(true)
     }
 
     updateTimeLeft()
     const interval = setInterval(updateTimeLeft, 1000)
     return () => clearInterval(interval)
-  }, [roomInfo])
+  }, [roomInfo, timeLoaded]);
+
+  // Redirect on game end (time up or health depleted)
+  useEffect(() => {
+    if (playerHealth <= 0) {
+      console.log(t("log.playerEliminated"));
+      redirectToResults(0, correctAnswers, currentQuestionIndex, true);
+    }
+  }, [playerHealth, correctAnswers, currentQuestionIndex]);
 
   useEffect(() => {
-    const initializePlayerState = async () => {
-      if (!room?.id || !currentPlayer?.player_id) return
-
-      // Cek apakah player sudah ada di room.players
-      const { data: roomData, error } = await supabase
-        .from("game_rooms")
-        .select("players")
-        .eq("id", room.id)
-        .single()
-
-      if (error) {
-        console.error("Error fetching room:", error)
-        return
-      }
-
-      const currentPlayers = roomData?.players || []
-      const existingPlayerIndex = currentPlayers.findIndex((p: any) => p.player_id === currentPlayer.player_id)
-      
-      if (existingPlayerIndex === -1) {
-        // Tambah player baru
-        const newPlayer = {
-          player_id: currentPlayer.player_id,
-          nickname: currentPlayer.nickname,
-          character_type: currentPlayer.character_type,
-          joined_at: new Date().toISOString(),
-          health: { current: playerHealth, max: 3, is_being_attacked: false, last_attack_time: new Date().toISOString(), speed: playerSpeed, last_answer_time: new Date().toISOString(), countdown: 0 },
-          speed: playerSpeed,
-          correct_answers: 0,
-          current_index: 0,
-          answers: [],
-          last_answer_time: new Date().toISOString(),
-        }
-        const updatedPlayers = [...currentPlayers, newPlayer]
-        await supabase
-          .from("game_rooms")
-          .update({ players: updatedPlayers })
-          .eq("id", room.id)
-      } else {
-        // Update last_answer_time jika belum ada
-        const updatedPlayers = [...currentPlayers]
-        if (!updatedPlayers[existingPlayerIndex].health.last_answer_time) {
-          updatedPlayers[existingPlayerIndex].health.last_answer_time = new Date().toISOString()
-          await supabase
-            .from("game_rooms")
-            .update({ players: updatedPlayers })
-            .eq("id", room.id)
-        }
-      }
+    if (timeLoaded && timeLeft <= 0 && !isProcessingAnswer) {
+      redirectToResults(playerHealth, correctAnswers, currentQuestionIndex, true);
     }
+  }, [timeLeft, timeLoaded, isProcessingAnswer, playerHealth, correctAnswers, currentQuestionIndex]);
 
-    initializePlayerState()
-  }, [room?.id, currentPlayer?.player_id, playerHealth, playerSpeed])
-
+  // Feedback and question progression
   useEffect(() => {
-    const fetchAnsweredProgress = async () => {
-      if (!room?.id || !currentPlayer?.player_id) return
-
-      const { data: roomData, error } = await supabase
-        .from("game_rooms")
-        .select("players")
-        .eq("id", room.id)
-        .single()
-
-      if (error) {
-        console.error(t("log.fetchAnsweredProgressError", { error: error.message }))
-        return
-      }
-
-      const playerData = roomData?.players?.find((p: any) => p.player_id === currentPlayer.player_id)
-      if (playerData && playerData.answers && playerData.answers.length > 0) {
-        const lastIndex = playerData.answers[playerData.answers.length - 1].question_index
-        setCurrentQuestionIndex(lastIndex + 1)
-        setCorrectAnswers(playerData.correct_answers || 0)
-      }
+    if (showFeedback) {
+      const feedbackTimer = setTimeout(async () => {
+        setShowFeedback(false)
+        if (playerHealth <= 0) {
+          // Redirect is handled by the other useEffect
+        } else if (currentQuestionIndex + 1 >= totalQuestions) {
+          redirectToResults(playerHealth, correctAnswers, totalQuestions, false, correctAnswers === totalQuestions)
+        } else {
+          await nextQuestion()
+        }
+      }, FEEDBACK_DURATION)
+      return () => clearTimeout(feedbackTimer)
     }
-
-    fetchAnsweredProgress()
-  }, [room?.id, currentPlayer?.player_id, t])
+  }, [showFeedback, playerHealth, correctAnswers, currentQuestionIndex, totalQuestions]);
 
   const getDangerLevel = () => {
     if (playerHealth <= 1) return 3
     if (playerHealth <= 2) return 2
     return 1
   }
-
   const dangerLevel = getDangerLevel()
 
   const calculateSurvivalDuration = () => {
-    if (!gameStartTime || !playerJoinTime) return 0
-    const effectiveStartTime = Math.max(gameStartTime, playerJoinTime)
-    return Math.floor((Date.now() - effectiveStartTime) / 1000)
+    if (!roomInfo?.game_start_time || !currentPlayer?.joined_at) return 0;
+    const gameStartTime = new Date(roomInfo.game_start_time).getTime();
+    const playerJoinTime = new Date(currentPlayer.joined_at).getTime();
+    const effectiveStartTime = Math.max(gameStartTime, playerJoinTime);
+    return Math.floor((Date.now() - effectiveStartTime) / 1000);
   }
 
   const saveGameCompletion = async (
@@ -312,24 +254,12 @@ export default function QuizPage() {
     totalAnswered: number,
     isEliminated = false,
   ) => {
-    if (!room || !currentPlayer) {
-      console.error("Room or currentPlayer is null, cannot save game completion.");
-      return;
-    }
+    if (!room || !currentPlayer) return;
     try {
       const actuallyEliminated = isEliminated || finalHealth <= 0
       const survivalDuration = calculateSurvivalDuration()
-      const completionTime = new Date().toISOString()
-
-      console.log(t("log.saveGameCompletion", {
-        nickname: currentPlayer.nickname,
-        health: finalHealth,
-        correct: finalCorrect,
-        eliminated: actuallyEliminated,
-        completion_type: actuallyEliminated ? "eliminated" : "completed"
-      }))
-
-      const { data, error } = await supabase.from("game_completions").upsert({
+      
+      await supabase.from("game_completions").upsert({
         player_id: currentPlayer.player_id,
         room_id: room.id,
         final_health: Math.max(0, finalHealth),
@@ -337,26 +267,16 @@ export default function QuizPage() {
         total_questions_answered: totalAnswered,
         is_eliminated: actuallyEliminated,
         completion_type: actuallyEliminated ? "eliminated" : "completed",
-        completed_at: completionTime,
+        completed_at: new Date().toISOString(),
         survival_duration: survivalDuration
-      })
-
-      if (error) {
-        console.error(t("log.saveGameCompletionError", { error: error.message }))
-      } else {
-        console.log(t("log.saveGameCompletionSuccess", { data }))
-      }
+      });
     } catch (error) {
       console.error(t("log.saveGameCompletionError", { error }))
     }
   }
 
   const submitAnswer = async (answer: string, isCorrectAnswer: boolean) => {
-    if (!room || !currentPlayer) {
-      console.error("Room or currentPlayer is null, cannot submit answer.");
-      return;
-    }
-
+    if (!room || !currentPlayer) return;
     setIsProcessingAnswer(true);
 
     let newHealth = playerHealth;
@@ -422,138 +342,15 @@ export default function QuizPage() {
     if (updateError) {
       console.error(t("log.saveAnswerError", { error: updateError.message }));
     } else {
+      // Optimistically update local state
       setPlayerHealth(newHealth);
       setPlayerSpeed(newSpeed);
       if (isCorrectAnswer) {
         setCorrectAnswers((prev) => prev + 1);
       }
     }
-
     setIsProcessingAnswer(false);
   };
-
-  const syncPlayerStateFromDatabase = async () => {
-    if (!room?.id || !currentPlayer?.player_id) {
-      console.log(t("log.skipSync"))
-      return
-    }
-    try {
-      const { data: roomData, error } = await supabase
-        .from("game_rooms")
-        .select("players")
-        .eq("id", room.id)
-        .single()
-
-      if (error) {
-        console.error("Error syncing player state:", error)
-        return
-      }
-
-      const playerData = roomData?.players?.find((p: any) => p.player_id === currentPlayer.player_id)
-      if (!playerData) return
-
-      if (playerData.health?.current !== undefined && playerData.health.current !== playerHealth) {
-        console.log(t("log.syncHealth", { oldHealth: playerHealth, newHealth: playerData.health.current }))
-        setPlayerHealth(playerData.health.current)
-      }
-
-      if (playerData.health?.speed !== undefined && playerData.health.speed !== playerSpeed) {
-        console.log(t("log.syncSpeed", { oldSpeed: playerSpeed, newSpeed: playerData.health.speed }))
-        setPlayerSpeed(playerData.health.speed)
-      }
-
-      if (playerData.correct_answers !== undefined && playerData.correct_answers !== correctAnswers) {
-        setCorrectAnswers(playerData.correct_answers)
-      }
-
-      if (playerData.current_index !== undefined && playerData.current_index !== currentQuestionIndex) {
-        setCurrentQuestionIndex(playerData.current_index)
-      }
-    } catch (error) {
-      console.error(t("log.syncHealthAndSpeedError", { error }))
-    }
-  }
-
-  const checkInactivityPenalty = async () => {
-    if (!room?.id || !currentPlayer?.player_id || playerHealth <= 0 || isProcessingAnswer || isAnswered) {
-      console.log(t("log.skipInactivityCheck"))
-      setInactivityCountdown(null)
-      setPenaltyCountdown(null)
-      return
-    }
-    try {
-      const { data: roomData, error } = await supabase
-        .from("game_rooms")
-        .select("players")
-        .eq("id", room.id)
-        .single()
-
-      if (error) {
-        console.error(t("log.inactivityCheckError", { error: error.message }))
-        setInactivityCountdown(null)
-        setPenaltyCountdown(null)
-        return
-      }
-
-      const currentPlayers = roomData?.players || []
-      const playerData = currentPlayers.find((p: any) => p.player_id === currentPlayer.player_id)
-      if (!playerData?.health?.last_answer_time) {
-        console.log(t("log.noLastAnswerTime"))
-        // Update last_answer_time
-        const playerIndex = currentPlayers.findIndex((p: any) => p.player_id === currentPlayer.player_id)
-        if (playerIndex !== -1) {
-          currentPlayers[playerIndex].health.last_answer_time = new Date().toISOString()
-          await supabase
-            .from("game_rooms")
-            .update({ players: currentPlayers })
-            .eq("id", room.id)
-        }
-        setInactivityCountdown(null)
-        setPenaltyCountdown(null)
-        return
-      }
-
-      const lastAnswerTime = new Date(playerData.health.last_answer_time).getTime()
-      const currentTime = Date.now()
-      const timeSinceLastAnswer = (currentTime - lastAnswerTime) / 1000
-
-      console.log(t("log.inactivityCheck", { timeSinceLastAnswer, speed: playerData.health.speed }))
-
-      const warningThreshold = inactivityPenalty - 10 // Peringatan 10 detik sebelum penalti
-      if (timeSinceLastAnswer >= warningThreshold && timeSinceLastAnswer < inactivityPenalty && playerData.health.speed > 20) {
-        const countdown = Math.ceil(inactivityPenalty - timeSinceLastAnswer)
-        console.log(t("log.startPenaltyCountdown", { countdown }))
-        setInactivityCountdown(null)
-        setPenaltyCountdown(null)
-      } else if (timeSinceLastAnswer >= inactivityPenalty && playerData.health.speed > 20) {
-        const newSpeed = Math.max(20, playerData.health.speed - 10)
-        console.log(t("log.applyInactivityPenalty", { timeSinceLastAnswer, oldSpeed: playerData.health.speed, newSpeed }))
-        // Update speed dan last_answer_time
-        const playerIndex = currentPlayers.findIndex((p: any) => p.player_id === currentPlayer.player_id)
-        if (playerIndex !== -1) {
-          currentPlayers[playerIndex].health.speed = newSpeed
-          currentPlayers[playerIndex].health.last_answer_time = new Date().toISOString()
-          await supabase
-            .from("game_rooms")
-            .update({ players: currentPlayers })
-            .eq("id", room.id)
-        }
-        setPlayerSpeed(newSpeed)
-        setInactivityCountdown(null)
-        setPenaltyCountdown(null)
-      } else {
-        if (inactivityCountdown !== null || penaltyCountdown !== null) {
-          console.log(t("log.clearCountdowns"))
-          setInactivityCountdown(null)
-          setPenaltyCountdown(null)
-        }
-      }
-    } catch (error) {
-      console.error(t("log.inactivityCheckError", { error }))
-      setInactivityCountdown(null)
-      setPenaltyCountdown(null)
-    }
-  }
 
   const redirectToResults = async (
     health: number,
@@ -562,219 +359,47 @@ export default function QuizPage() {
     isEliminated = false,
     isPerfect = false,
   ) => {
-    if (!currentPlayer) {
-      console.error("currentPlayer is null, cannot redirect to results.");
-      return;
-    }
-    const actuallyEliminated = isEliminated || health <= 0
-
-    console.log(t("log.redirectToResults", {
-      nickname: currentPlayer.nickname,
-      health,
-      correct,
-      total,
-      eliminated: actuallyEliminated,
-      perfect: isPerfect
-    }))
-
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-
-    try {
-      await saveGameCompletion(health, correct, total, actuallyEliminated)
-      await new Promise((resolve) => setTimeout(resolve, 500))
-    } catch (error) {
-      console.error(t("log.redirectToResultsError", { error }))
-    }
+    if (!currentPlayer) return;
+    
+    await saveGameCompletion(health, correct, total, isEliminated);
 
     const lastResult = {
-      playerId: currentPlayer.player_id, // Changed from currentPlayer.id to currentPlayer.player_id
+      playerId: currentPlayer.player_id,
       roomCode: roomCode,
       nickname: currentPlayer.nickname,
       health: Math.max(0, health),
       correct: correct,
       total: total,
-      eliminated: actuallyEliminated,
+      eliminated: isEliminated || health <= 0,
       timestamp: Date.now(),
-    }
+    };
 
-    localStorage.setItem("lastGameResult", JSON.stringify(lastResult))
-    localStorage.setItem(`gameResult_${roomCode}_${currentPlayer.player_id}`, JSON.stringify(lastResult)) // Changed from currentPlayer.id to currentPlayer.player_id
-
-    // onGameComplete is not a prop anymore
-    // if (onGameComplete) onGameComplete(lastResult)
-
-    router.push(`/player/${roomCode}/result`)
+    localStorage.setItem("lastGameResult", JSON.stringify(lastResult));
+    router.push(`/player/${roomCode}/result`);
   }
 
-  useEffect(() => {
-    if (!timeLoaded || timeLeft > 0) return
-    if (isProcessingAnswer) return
-    if (timeLeft === 0 && !isProcessingAnswer) {
-      redirectToResults(playerHealth, correctAnswers, currentQuestionIndex + 1, true)
-    }
-  }, [timeLeft, isProcessingAnswer, playerHealth, correctAnswers, currentQuestionIndex, timeLoaded])
-
-  useEffect(() => {
-    // onProgressUpdate is not a prop anymore, so this can be removed or adapted
-    // if (onProgressUpdate) {
-    //   onProgressUpdate({
-    //     health: playerHealth,
-    //     correctAnswers,
-    //     currentIndex: currentQuestionIndex,
-    //   })
-    // }
-  }, [playerHealth, correctAnswers, currentQuestionIndex])
-
-  useEffect(() => {
-    syncPlayerStateFromDatabase()
-    const syncInterval = setInterval(syncPlayerStateFromDatabase, 2000)
-    return () => clearInterval(syncInterval)
-  }, [currentPlayer?.player_id, room?.id])
-
-  useEffect(() => {
-    const penaltyInterval = setInterval(checkInactivityPenalty, 1000)
-    return () => clearInterval(penaltyInterval)
-  }, [currentPlayer?.player_id, room?.id, playerHealth, isProcessingAnswer, isAnswered])
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  useEffect(() => {
-    if (playerHealth <= 0) {
-      console.log(t("log.playerEliminated"))
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
-      setShowFeedback(false)
-      redirectToResults(0, correctAnswers, currentQuestionIndex + 1, true)
-    }
-  }, [playerHealth, correctAnswers, currentQuestionIndex])
-
-  useEffect(() => {
-    if (showFeedback) {
-      const feedbackTimer = setTimeout(async () => {
-        setShowFeedback(false)
-        if (playerHealth <= 0) {
-          console.log(t("log.eliminatedDuringFeedback"))
-          redirectToResults(0, correctAnswers, currentQuestionIndex + 1, true)
-        } else if (currentQuestionIndex + 1 >= totalQuestions) {
-          console.log(t("log.allQuestionsAnswered"))
-          redirectToResults(playerHealth, correctAnswers, totalQuestions, false, correctAnswers === totalQuestions)
-        } else {
-          await nextQuestion()
-        }
-      }, FEEDBACK_DURATION)
-      return () => clearTimeout(feedbackTimer)
-    }
-  }, [showFeedback, playerHealth, correctAnswers, currentQuestionIndex, totalQuestions])
-
   const nextQuestion = async () => {
-    if (!room || !currentPlayer) {
-      console.error("Room or currentPlayer is null, cannot advance to next question.");
-      return false;
-    }
-    // Update current_index di player state
-    const { data: roomData, error } = await supabase
-      .from("game_rooms")
-      .select("players")
-      .eq("id", room.id)
-      .single()
-
-    if (error) {
-      console.error("Error updating next question index:", error)
-      return false
-    }
-
-    const currentPlayers = roomData?.players || []
-    const playerIndex = currentPlayers.findIndex((p: any) => p.player_id === currentPlayer.player_id)
-    if (playerIndex !== -1) {
-      currentPlayers[playerIndex].current_index = currentQuestionIndex + 1
-      await supabase
-        .from("game_rooms")
-        .update({ players: currentPlayers })
-        .eq("id", room.id)
-    }
-
-    // onNextQuestion is not a prop anymore
-    // if (onNextQuestion) {
-    //   const success = await onNextQuestion(currentQuestionIndex);
-    //   if (!success) {
-    //     console.error("Failed to advance to next question");
-    //     return false;
-    //   }
-    // }
-
     setCurrentQuestionIndex(prevIndex => prevIndex + 1)
     setSelectedAnswer(null)
     setIsAnswered(false)
     setIsCorrect(null)
-    return true;
   }
 
-  const handleAnswerSelect = async (answer: string) => {
-    if (isAnswered || !currentQuestion || isProcessingAnswer) return
-    if (!room || !currentPlayer) {
-      console.error("Room or currentPlayer is null, cannot handle answer selection.");
-      return;
-    }
+  const handleAnswerSelect = async (answer: string, index: number) => {
+    if (isAnswered || !currentQuestion || isProcessingAnswer) return;
 
-    // Cek apakah sudah dijawab sebelumnya
-    const { data: roomData, error } = await supabase
-      .from("game_rooms")
-      .select("players")
-      .eq("id", room.id)
-      .single()
+    setSelectedAnswer(answer);
+    setIsAnswered(true);
 
-    if (error) {
-      console.error("Error checking existing answer:", error)
-      return
-    }
+    const selectedLetter = String.fromCharCode(97 + index); // a, b, c, d
+    const correctAnswerLetter = currentQuestion.correct_answer.trim().toLowerCase();
 
-    const playerData = roomData?.players?.find((p: any) => p.player_id === currentPlayer.player_id)
-    const existingAnswer = playerData?.answers?.find((a: any) => a.question_index === currentQuestionIndex)
-    if (existingAnswer) {
-      console.log(t("log.alreadyAnswered"))
-      return
-    }
-
-    setSelectedAnswer(answer)
-    setIsAnswered(true)
-    setInactivityCountdown(null)
-    setPenaltyCountdown(null)
-
-    const playerSelectedLetter = answer.trim().toUpperCase().charAt(0);
-    const normalizedPlayerAnswer = playerSelectedLetter.toLowerCase();
-    const normalizedCorrectAnswer = currentQuestion?.correct_answer ? currentQuestion.correct_answer.trim().toLowerCase() : '';
-    const isCorrectAnswer = normalizedPlayerAnswer === normalizedCorrectAnswer;
-
-    if (isCorrectAnswer) {
-      await handleCorrectAnswer()
-    } else {
-      await handleWrongAnswer()
-    }
-  }
-
-  const handleCorrectAnswer = async () => {
-    if (isProcessingAnswer) return
-
-    setIsCorrect(true)
-    setShowFeedback(true)
-
-    await submitAnswer(selectedAnswer || "", true)
-  }
-
-  const handleWrongAnswer = async () => {
-    if (isProcessingAnswer) return
-
-    setIsCorrect(false)
-    setShowFeedback(true)
-
-    await submitAnswer(selectedAnswer || "TIME_UP", false)
+    const isCorrectAnswer = selectedLetter === correctAnswerLetter;
+    
+    setIsCorrect(isCorrectAnswer);
+    setShowFeedback(true);
+    
+    await submitAnswer(answer, isCorrectAnswer);
   }
 
   const formatTime = (seconds: number) => {
@@ -783,39 +408,27 @@ export default function QuizPage() {
     return `${minutes}:${secs < 10 ? "0" : ""}${secs}`
   }
 
-  const getAnswerButtonClass = (option: string) => {
-    const normalizedOption = option.trim().toLowerCase();
-    const normalizedCorrectAnswer = currentQuestion?.correct_answer ? currentQuestion.correct_answer.trim().toLowerCase() : '';
-    const normalizedSelectedAnswer = selectedAnswer ? selectedAnswer.trim().toLowerCase() : null;
-
-    console.log("getAnswerButtonClass Debug for option:", option);
-    console.log("  normalizedOption:", normalizedOption);
-    console.log("  normalizedCorrectAnswer:", normalizedCorrectAnswer);
-    console.log("  normalizedSelectedAnswer:", normalizedSelectedAnswer);
-    console.log("  isAnswered:", isAnswered);
-
+  const getAnswerButtonClass = (option: string, index: number) => {
     if (!isAnswered) {
-      console.log("  Returning: bg-gray-800 (not answered)");
       return "bg-gray-800 border-gray-600 text-white"
     }
 
-    // If the option is the correct answer
-    if (normalizedOption === normalizedCorrectAnswer) {
-      console.log("  Returning: bg-green-600 (correct answer)");
+    const optionLetter = String.fromCharCode(97 + index);
+    const correctAnswerLetter = currentQuestion.correct_answer.trim().toLowerCase();
+    const isCorrectOption = optionLetter === correctAnswerLetter;
+
+    const isSelectedOption = option.trim().toLowerCase() === selectedAnswer?.trim().toLowerCase();
+
+    if (isCorrectOption) {
       return "bg-green-600 border-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)]"
     }
-
-    // If the option is the selected answer AND it's not the correct answer
-    if (normalizedOption === normalizedSelectedAnswer && normalizedOption !== normalizedCorrectAnswer) {
-      console.log("  Returning: bg-red-600 (selected incorrect answer)");
+    if (isSelectedOption) { // And it's not the correct one
       return "bg-red-600 border-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)]"
     }
-
-    console.log("  Returning: bg-gray-700 (unselected incorrect answer)");
     return "bg-gray-700 border-gray-600 text-gray-400"
   }
 
-  if (!room || !currentPlayer) {
+  if (!room || !currentPlayer || !currentQuestion) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
@@ -916,11 +529,11 @@ export default function QuizPage() {
           </div>
 
           <Card className="max-w-4xl mx-auto bg-gray-900/90 border-red-900/50 backdrop-blur-sm p-0">
-            <div className="p-8 relative overflow-hidden">
+            <div className="p-4 sm:p-6 md:p-8 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-purple-500/5" />
               <div className="relative z-10">
                 {currentQuestion.question_type === "IMAGE" && currentQuestion.image_url && (
-                  <div className="mb-4 text-center">  
+                  <div className="mb-4 text-center">
                     <img
                       src={currentQuestion.image_url || "/placeholder.svg"}
                       alt={currentQuestion.question_text}
@@ -928,32 +541,35 @@ export default function QuizPage() {
                     />
                   </div>
                 )}
-                <div className="flex items-start space-x-4 mb-8">
-                  <h2 className="text-2xl font-bold text-white leading-relaxed">{currentQuestion.question_text}</h2>
+                <div className="mb-6 sm:mb-8 min-h-[6rem] flex items-center justify-center">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white leading-relaxed text-center">{currentQuestion.question_text}</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {currentQuestion.options.map((option: string, index: number) => (
                     <Button
                       key={index}
-                      onClick={() => handleAnswerSelect(option)}
+                      onClick={() => handleAnswerSelect(option, index)}
                       disabled={isAnswered || isProcessingAnswer}
-                      className={`${getAnswerButtonClass(option)} p-6 text-left justify-start font-mono text-lg border-2 transition-all duration-300 relative overflow-hidden group ${
+                      className={`${getAnswerButtonClass(
+                        option,
+                        index
+                      )} p-4 sm:p-6 h-full text-left justify-start font-mono text-base sm:text-lg border-2 transition-all duration-300 relative overflow-hidden group ${
                         isProcessingAnswer ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                      <div className="flex items-center space-x-3 relative z-10">
-                        <span className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center text-sm font-bold">
+                      <div className="flex items-center space-x-3 relative z-10 w-full">
+                        <span className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center text-sm font-bold flex-shrink-0">
                           {String.fromCharCode(65 + index)}
                         </span>
-                        <span className="flex-1 whitespace-normal">{option}</span>
-                        {isAnswered && option === currentQuestion.correct_answer && (
-                          <CheckCircle className="w-5 h-5 ml-auto animate-pulse" />
+                        <span className="flex-1 whitespace-normal text-center md:text-left">{option}</span>
+                        {isAnswered && String.fromCharCode(97 + index) === currentQuestion.correct_answer.trim().toLowerCase() && (
+                          <CheckCircle className="w-5 h-5 ml-auto animate-pulse flex-shrink-0" />
                         )}
                         {isAnswered &&
                           option === selectedAnswer &&
-                          option !== currentQuestion?.correct_answer && (
-                            <XCircle className="w-5 h-5 ml-auto animate-pulse" />
+                          String.fromCharCode(97 + index) !== currentQuestion.correct_answer.trim().toLowerCase() && (
+                            <XCircle className="w-5 h-5 ml-auto animate-pulse flex-shrink-0" />
                           )}
                       </div>
                     </Button>
