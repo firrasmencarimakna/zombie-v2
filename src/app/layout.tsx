@@ -1,13 +1,17 @@
-"use client";
-
+import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import ClientProviders from "./ClientProviders";
-import { useTranslation } from "react-i18next";
-import { useEffect, useState } from "react";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { Toaster } from "react-hot-toast";
-import Script from "next/script"; // ✅ Tambahkan ini
+import ClientLayout from './ClientLayout';
+
+export const metadata: Metadata = {
+  title: "QuizRush",
+  description: "Speed thinking or face the chase!",
+  // manifest: "/manifest.json",
+  // icons: {
+  //   icon: "/icons/icon-192x192.png",
+  //   shortcut: "/favicon.ico",
+  //   apple: "/icons/icon-512x512.png",
+  // },
+};
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,89 +24,17 @@ const geistMono = Geist_Mono({
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const { i18n } = useTranslation();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-    const savedLang = localStorage.getItem("language");
-    if (savedLang && i18n.language !== savedLang) {
-      i18n.changeLanguage(savedLang);
-    }
-  }, [i18n]);
-
-  useEffect(() => {
-    if (isClient) {
-      document.documentElement.lang = i18n.language;
-    }
-  }, [i18n.language, isClient]);
-
-  // ✅ Daftar gambar karakter yang dipakai di game — preload agar cepat muncul
-  const characterImages = [
-    "/character/player/character.webp",
-    "/character/player/character1-crop.webp",
-    "/character/player/character2-crop.webp",
-    "/character/player/character3-crop.webp",
-    "/character/player/character4-crop.webp",
-    "/character/player/character5.webp",
-    "/character/player/character6.webp",
-    "/character/player/character7-crop.webp",
-    "/character/player/character8-crop.webp",
-    "/character/player/character9-crop.webp",
-    "/character/chaser/zombie.webp",
-    "/character/chaser/monster1.webp",
-    "/character/chaser/monster2.webp",
-    "/character/chaser/monster3.webp",
-    "/character/chaser/darknight.webp",
-    "/map6/6.webp",
-    "/map6/1.webp",
-    "/map6/2.webp",
-    "/map6/3.webp",
-    "/map6/4.webp",
-    "/map6/5.webp",
-    "/map6/7.webp",
-    "/map6/8.webp",
-    "/map6/9.webp",
-    // Tambahkan gambar lain yang sering muncul di g
-  ];
-
   return (
-    <html lang={isClient ? i18n.language : "en"}>
+    <html lang="en">
+      <head>
+        {/* <link rel="manifest" href="/manifest.json" />
+        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" fetchPriority='high'/>
+        <link rel="prefetch" as="image" href="/gameforsmartlogo.webp" type="image/webp" fetchPriority="high" />
+        <link rel="preload" as="image" href="/assets/background/1.webp" type="image/webp" fetchPriority="high" />
+        <link rel="preload" as="image" href="/assets/background/host/10.webp" type="image/webp" fetchPriority="high" /> */}
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          <ClientProviders>
-            {children}
-            <Toaster
-              position="top-center"
-              reverseOrder={false}
-              gutter={8}
-              toastOptions={{
-                duration: 2000,
-                style: {
-                  background: '#1a0000',
-                  color: '#ff4444',
-                  border: '1px solid #ff0000',
-                  borderRadius: '8px',
-                  fontFamily: 'monospace',
-                },
-                success: {
-                  style: {
-                    background: '#1a0000',
-                    color: '#44ff44',
-                    border: '1px solid #44ff44',
-                  },
-                },
-                error: {
-                  style: {
-                    background: '#1a0000',
-                    color: '#ff0000',
-                    border: '1px solid #ff0000',
-                  },
-                },
-              }}
-            />
-          </ClientProviders>
-        </AuthProvider>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

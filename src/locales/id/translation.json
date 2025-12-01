@@ -234,8 +234,8 @@
   "errorMessages.roomNotActive": "Ruangan tidak aktif atau sudah dimulai!",
   "user": "Pengguna",
   "fullscreen": "Layar Penuh",
+  "exitFullscreen": "Keluar Layar Penuh",
   "selectLanguage": "Pilih Bahasa",
-  "exit": "Keluar",
 
   "loginTitle": "Masuk",
   "loginDescription": "Masuk untuk memulai petualanganmu",

@@ -238,8 +238,8 @@
   "errorMessages.roomNotActive": "Room is not active or has already started!",
   "user": "User",
   "fullscreen": "Fullscreen",
+  "exitFullscreen": "Exit Fullscreen",
   "selectLanguage": "Language",
-  "exit": "Exit",
 
   "loginTitle": "Login",
   "loginDescription": "Sign in to start your adventure",
