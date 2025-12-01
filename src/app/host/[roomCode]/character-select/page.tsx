@@ -13,16 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useHostGuard } from "@/lib/host-guard";
 import Link from "next/link";
 import toast from "react-hot-toast";
-
-// Utility function to shuffle an array
-export function shuffleArray(array: any[]) {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
+import { shuffleArray } from "@/utils/array-helpers";
 
 const validChaserTypes = ["zombie", "monster1", "monster2", "monster3", "darknight"] as const;
 type ChaserType = typeof validChaserTypes[number];
