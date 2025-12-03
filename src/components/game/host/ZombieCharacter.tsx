@@ -20,6 +20,8 @@ interface ZombieCharacterProps {
   centerX: number;
   chaserType: string;
   players: EmbeddedPlayer[];
+  screenHeight: number;
+  isPortraitMobile: boolean;
 }
 
 const chaserImages = {
@@ -65,18 +67,32 @@ const chaserImages = {
   },
 };
 
-const ZombieCharacter = React.memo(
-  ({ zombieState, animationTime, gameMode, centerX, chaserType }: ZombieCharacterProps) => {
-    const selectedChaser = chaserImages[chaserType as keyof typeof chaserImages] || chaserImages.zombie;
-    const ATTACK_DISTANCE = 50;
+// You can adjust this value to change the zombie's vertical position on mobile
+const MOBILE_BOTTOM_OFFSET = 30; // Pixels from the bottom of the screen
+const MOBILE_RIGHTWARD_SHIFT_PX = 20; // Pixels to shift the zombie character to the right on mobile
 
-    // ✅ Memoisasi gerakan & transform
+const ZombieCharacter = React.memo(
+  ({
+    zombieState,
+    animationTime,
+    gameMode,
+    centerX,
+    chaserType,
+    screenHeight,
+    isPortraitMobile,
+  }: ZombieCharacterProps) => {
+    const selectedChaser = chaserImages[chaserType as keyof typeof chaserImages] || chaserImages.zombie;
+
+    const designHeight = 1080;
+    const scaleFactor = Math.max(0.4, screenHeight / designHeight);
+    const ATTACK_DISTANCE_SCALED = 50 * scaleFactor;
+
     const { x, y, rotation, scale, filter } = useMemo(() => {
       const isAttacking = zombieState.isAttacking;
       const attackProgress = isAttacking ? zombieState.attackProgress : 0;
 
-      const movementX = attackProgress * ATTACK_DISTANCE;
-      const currentScale = isAttacking
+      const movementX = attackProgress * ATTACK_DISTANCE_SCALED;
+      const baseScale = isAttacking
         ? gameMode === "panic" ? 2.0 : 1.8
         : gameMode === "panic" ? 1.8 : 1.6;
 
@@ -84,24 +100,35 @@ const ZombieCharacter = React.memo(
         x: movementX,
         y: 0,
         rotation: 0,
-        scale: currentScale,
+        scale: baseScale * scaleFactor,
         filter: "none",
       };
-    }, [zombieState.isAttacking, zombieState.attackProgress, animationTime, gameMode]);
+    }, [zombieState.isAttacking, zombieState.attackProgress, animationTime, gameMode, scaleFactor, ATTACK_DISTANCE_SCALED]);
+
+    const finalHorizontalOffset = selectedChaser.horizontalOffset * scaleFactor;
+    
+    // Use a different positioning style for mobile
+    const positionStyle = isPortraitMobile
+      ? {
+          left: `${centerX - zombieState.currentPosition + x + finalHorizontalOffset + MOBILE_RIGHTWARD_SHIFT_PX}px`,
+          bottom: `${MOBILE_BOTTOM_OFFSET * scaleFactor}px`,
+        }
+      : {
+          left: `${centerX - zombieState.currentPosition + x + selectedChaser.horizontalOffset}px`,
+          top: selectedChaser.verticalOffset,
+        };
 
     return (
       <div
         className="absolute z-40 origin-bottom"
         style={{
-          left: `${centerX - zombieState.currentPosition + x + selectedChaser.horizontalOffset}px`,
-          top: selectedChaser.verticalOffset,
+          ...positionStyle,
           transform: `translateY(${y}px)`,
           filter,
           willChange: "transform, filter",
         }}
       >
         <div className="relative">
-          {/* ✅ Gambar pengejar — tanpa Framer Motion */}
           <Image
             src={selectedChaser.src}
             alt={selectedChaser.alt}
