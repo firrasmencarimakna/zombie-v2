@@ -76,6 +76,8 @@ interface ZombieState {
   isAttacking: boolean;
   targetPlayerId: string | null;
   attackProgress: number;
+  basePosition: number;
+  currentPosition: number;
 }
 
 export default function HostGamePage() {
@@ -102,6 +104,8 @@ export default function HostGamePage() {
     isAttacking: false,
     targetPlayerId: null,
     attackProgress: 0,
+    basePosition: 500,
+    currentPosition: 500,
   });
   const [attackQueue, setAttackQueue] = useState<string[]>([]);
   const [backgroundFlash, setBackgroundFlash] = useState<boolean>(false);
@@ -113,7 +117,9 @@ export default function HostGamePage() {
     isAttacking: zombieState.isAttacking,
     targetPlayerId: zombieState.targetPlayerId,
     attackProgress: zombieState.attackProgress,
-  }), [zombieState.isAttacking, zombieState.targetPlayerId, zombieState.attackProgress]);
+    basePosition: zombieState.basePosition,
+    currentPosition: zombieState.currentPosition,
+  }), [zombieState.isAttacking, zombieState.targetPlayerId, zombieState.attackProgress, zombieState.basePosition, zombieState.currentPosition]);
 
   const initializePlayerStates = useCallback((playersData: Player[]) => {
     const newStates: { [playerId: string]: PlayerState } = {};
@@ -155,18 +161,18 @@ export default function HostGamePage() {
 
     if (attackIntervalRef.current) clearInterval(attackIntervalRef.current);
 
-    setZombieState({ isAttacking: true, targetPlayerId: playerId, attackProgress: 0 });
+    setZombieState({ isAttacking: true, targetPlayerId: playerId, attackProgress: 0, basePosition: 500, currentPosition: 500 });
     setGameMode("panic");
 
     let progress = 0;
     attackIntervalRef.current = setInterval(() => {
       progress += 0.0333;
-      setZombieState((prev) => ({ ...prev, attackProgress: progress }));
+      setZombieState((prev) => ({ ...prev, attackProgress: progress, currentPosition: prev.basePosition * (1 - progress * 0.8) }));
 
       if (progress >= 1) {
         clearInterval(attackIntervalRef.current!);;
         attackIntervalRef.current = null;
-        setZombieState({ isAttacking: false, targetPlayerId: null, attackProgress: 0 });
+        setZombieState({ isAttacking: false, targetPlayerId: null, attackProgress: 0, basePosition: 500, currentPosition: 500 });
         setGameMode("normal");
       }
     }, 30);

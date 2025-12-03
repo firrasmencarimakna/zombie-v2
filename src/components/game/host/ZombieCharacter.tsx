@@ -111,11 +111,13 @@ const ZombieCharacter = React.memo(
     // Use a different positioning style for mobile
     const positionStyle = isPortraitMobile
       ? {
+          // New, simplified logic for mobile
           left: `${centerX + x + finalHorizontalOffset + mobileHorizontalShift}px`,
           bottom: `${MOBILE_BOTTOM_OFFSET * scaleFactor}px`,
         }
       : {
-          left: `${centerX + x + selectedChaser.horizontalOffset}px`,
+          // Old logic for desktop
+          left: `${centerX - zombieState.currentPosition + x + selectedChaser.horizontalOffset}px`,
           top: selectedChaser.verticalOffset,
         };
 
