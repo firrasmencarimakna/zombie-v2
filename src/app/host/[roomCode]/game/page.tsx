@@ -16,8 +16,8 @@ import React from "react";
 import type { GameRoom, EmbeddedPlayer as Player } from "@/lib/supabase";
 
 // User-configurable Zombie Position for Mobile Landscape
-const ZOMBIE_MOBILE_VERTICAL_OFFSET = 11; // Percentage from the top (e.g., 85 means 85% down)
-const ZOMBIE_MOBILE_HORIZONTAL_OFFSET = 50; // Pixels from the center, positive to move right
+const ZOMBIE_MOBILE_VERTICAL_OFFSET = 90; // Percentage from the top (e.g., 85 means 85% down)
+const ZOMBIE_MOBILE_HORIZONTAL_OFFSET = 20; // Pixels from the center, positive to move right
 
 // Custom hook to get the previous value of a prop or state
 function usePrevious<T>(value: T): T | undefined {
@@ -76,8 +76,6 @@ interface ZombieState {
   isAttacking: boolean;
   targetPlayerId: string | null;
   attackProgress: number;
-  basePosition: number;
-  currentPosition: number;
 }
 
 export default function HostGamePage() {
@@ -104,8 +102,6 @@ export default function HostGamePage() {
     isAttacking: false,
     targetPlayerId: null,
     attackProgress: 0,
-    basePosition: 500,
-    currentPosition: 500,
   });
   const [attackQueue, setAttackQueue] = useState<string[]>([]);
   const [backgroundFlash, setBackgroundFlash] = useState<boolean>(false);
@@ -117,8 +113,6 @@ export default function HostGamePage() {
     isAttacking: zombieState.isAttacking,
     targetPlayerId: zombieState.targetPlayerId,
     attackProgress: zombieState.attackProgress,
-    basePosition: zombieState.basePosition,
-    currentPosition: zombieState.currentPosition,
   }), [zombieState.isAttacking, zombieState.targetPlayerId, zombieState.attackProgress]);
 
   const initializePlayerStates = useCallback((playersData: Player[]) => {
@@ -161,23 +155,22 @@ export default function HostGamePage() {
 
     if (attackIntervalRef.current) clearInterval(attackIntervalRef.current);
 
-    setZombieState({ isAttacking: true, targetPlayerId: playerId, attackProgress: 0, basePosition: 500, currentPosition: 500 });
+    setZombieState({ isAttacking: true, targetPlayerId: playerId, attackProgress: 0 });
     setGameMode("panic");
 
     let progress = 0;
     attackIntervalRef.current = setInterval(() => {
       progress += 0.0333;
-      setZombieState((prev) => ({ ...prev, attackProgress: progress, currentPosition: prev.basePosition * (1 - progress * 0.8) }));
+      setZombieState((prev) => ({ ...prev, attackProgress: progress }));
 
       if (progress >= 1) {
-        clearInterval(attackIntervalRef.current!);
+        clearInterval(attackIntervalRef.current!);;
         attackIntervalRef.current = null;
-        setZombieState({ isAttacking: false, targetPlayerId: null, attackProgress: 0, basePosition: 500, currentPosition: 500 });
+        setZombieState({ isAttacking: false, targetPlayerId: null, attackProgress: 0 });
         setGameMode("normal");
       }
     }, 30);
   }, [gameRoom, zombieState.isAttacking]);
-
   const fetchGameData = useCallback(async () => {
     if (!roomCode) {
       setLoadingError(t("error.invalidRoomCode"));
@@ -321,7 +314,7 @@ export default function HostGamePage() {
 
   return (
     <div className={mainContentClass} style={wrapperStyle}>
-      <MemoizedBackground3 isFlashing={false} />
+      {/* <MemoizedBackground3 isFlashing={false} /> */}
       <motion.header
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
