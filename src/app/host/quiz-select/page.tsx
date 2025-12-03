@@ -15,6 +15,15 @@ import Image from "next/image";
 import { preloadHostAssets } from "@/lib/preloadAssets";
 import LoadingScreen from "@/components/LoadingScreen"; // ← Pastikan ini versi all-in-one di bawah
 
+// Polyfill untuk crypto.randomUUID agar kompatibel di browser lama/mobile (fallback ke UUID v4 sederhana)
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export default function QuizSelectPage() {
   const { t, i18n } = useTranslation();
   const [quizzes, setQuizzes] = useState<any[]>([]);
@@ -137,7 +146,8 @@ export default function QuizSelectPage() {
 
     try {
       const roomCode = generateRoomCode();
-      const tabHostId = crypto.randomUUID();
+      // Gunakan fallback jika crypto.randomUUID tidak tersedia (kompatibel di mobile/browser lama)
+      const tabHostId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : generateUUID();
       sessionStorage.setItem("currentHostId", tabHostId);
 
       const createRoomPromise = supabase

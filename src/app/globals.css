@@ -299,3 +299,14 @@
   80% { transform: scaleX(1); }
   100% { left: 30%; opacity: 1; transform: scaleX(1); }
 }
+
+/* Mobile landscape forcing */
+@media (max-width: 768px) and (orientation: portrait) {
+  .rotate-to-landscape-wrapper {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center;
+  }
+}
