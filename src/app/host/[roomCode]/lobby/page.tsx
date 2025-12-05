@@ -21,7 +21,7 @@ interface Session {
   id: string
   game_pin: string
   quiz_id: string
-  status: "waiting" | "playing" | "finished"
+  status: "waiting" | "active" | "finished"
   host_id: string
   difficulty: string
   question_limit: number
@@ -55,7 +55,7 @@ function FullscreenQrOverlay({ open, onClose, roomCode }: { open: boolean; onClo
 
   if (!open) return null
 
-  const joinUrl = `${window.location.origin}/?code=${roomCode}`
+  const joinUrl = `${window.location.origin}/${roomCode}`
 
   return (
     <motion.div
@@ -109,6 +109,20 @@ export default function HostPage() {
   const [selectedPlayer, setSelectedPlayer] = useState<Participant | null>(null)
   const [isFullscreenQrOpen, setIsFullscreenQrOpen] = useState(false)
 
+  const setSessionStatus = async (status: Session['status']) => {
+    if (!session?.id) return;
+    const { error } = await mysupa
+      .from('sessions')
+      .update({
+        status,
+        started_at: new Date().toISOString(),
+        countdown_started_at: null
+      })
+      .eq('id', session.id);
+    if (error) console.error('Set status error:', error);
+  };
+
+
   useHostGuard(roomCode)
 
   // ========================================
@@ -154,62 +168,81 @@ export default function HostPage() {
   // 2. REALTIME – 2 CHANNELS
   // ========================================
   useEffect(() => {
-    if (!session?.id) return
+    if (!session?.id) return;
 
-    const sessionChannel = mysupa.channel(`session:${session.id}`)
-      .on("postgres_changes", {
-        event: "UPDATE",
-        schema: "public",
-        table: "sessions",
-        filter: `id=eq.${session.id}`
-      }, (payload) => {
-        const newSess = payload.new as Session
-        setSession(newSess)
-        if (newSess.status === "playing") {
-          router.replace(`/host/${roomCode}/game`)
+    const sessionChannel = mysupa
+      .channel(`session:${session.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "sessions",
+          filter: `id=eq.${session.id}`,
+        },
+        (payload) => {
+          const newSess = payload.new as Session;
+          setSession(newSess);
+
+          // SAMAKAN DENGAN STATUS YANG KAMU TULIS
+          if (newSess.status === "active") {
+            router.replace(`/host/${roomCode}/game`);
+          }
         }
-      })
-      .subscribe()
+      )
+      .subscribe();
 
-    const participantsChannel = mysupa.channel(`participants:${session.id}`)
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "participants",
-        filter: `session_id=eq.${session.id}`
-      }, (payload) => {
-        if (payload.eventType === "INSERT") setPlayers(p => [...p, payload.new as Participant])
-        if (payload.eventType === "UPDATE") setPlayers(p => p.map(x => x.id === payload.new.id ? payload.new as Participant : x))
-        if (payload.eventType === "DELETE") setPlayers(p => p.filter(x => x.id !== payload.old.id))
-      })
-      .subscribe()
+    const participantsChannel = mysupa
+      .channel(`participants:${session.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "participants",
+          filter: `session_id=eq.${session.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT")
+            setPlayers((p) => [...p, payload.new as Participant]);
+          if (payload.eventType === "UPDATE")
+            setPlayers((p) =>
+              p.map((x) => (x.id === payload.new.id ? (payload.new as Participant) : x))
+            );
+          if (payload.eventType === "DELETE")
+            setPlayers((p) => p.filter((x) => x.id !== payload.old.id));
+        }
+      )
+      .subscribe();
 
-    return () => { mysupa.removeAllChannels() }
-  }, [session?.id, roomCode, router])
+    // === CLEANUP ===
+    return () => {
+      mysupa.removeChannel(sessionChannel);
+      mysupa.removeChannel(participantsChannel);
+    };
+  }, [session?.id, roomCode, router]);
 
   // ========================================
   // 3. COUNTDOWN
   // ========================================
   useEffect(() => {
     if (!session?.countdown_started_at) {
-      setCountdown(null)
-      setIsStarting(false)
-      return
+      setCountdown(null);
+      setIsStarting(false);
+      return;
     }
-
     const update = () => {
-      const remaining = calculateCountdown(session.countdown_started_at!, 10000)
-      setCountdown(remaining)
+      const remaining = calculateCountdown(session.countdown_started_at!, 10_000);
+      setCountdown(remaining);
       if (remaining <= 0) {
-        setCountdown(null)
-        setIsStarting(false)
+        setCountdown(null);
+        setSessionStatus('active');
       }
-    }
-
-    update()
-    const iv = setInterval(update, 100)
-    return () => clearInterval(iv)
-  }, [session?.countdown_started_at])
+    };
+    update();
+    const iv = setInterval(update, 100);
+    return () => clearInterval(iv);
+  }, [session?.countdown_started_at]);
 
   // ========================================
   // 4. KICK PLAYER

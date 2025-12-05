@@ -174,7 +174,7 @@ export default function HomePage() {
       // 1. Cari session berdasarkan game_pin
       const { data: session, error: sessionError } = await mysupa
         .from("sessions")
-        .select("id, status, game_pin, host_id, question_limit, total_time_minutes")
+        .select("id, status, game_pin, host_id, question_limit, total_time_minutes, difficulty")
         .eq("game_pin", gameCode.toUpperCase())
         .single();
 
@@ -214,6 +214,11 @@ export default function HomePage() {
         ? savedChar
         : characterOptions[Math.floor(Math.random() * characterOptions.length)];
 
+      // Tentukan health berdasarkan difficulty session (format: "zombie:medium")
+      const diffLevel = (session.difficulty || "").split(":")[1]?.trim().toLowerCase() || "medium";
+      const healthMap: Record<string, number> = { easy: 5, medium: 3, hard: 1 };
+      const healthMax = healthMap[diffLevel] ?? 3;
+
       // 4. Insert participant baru
       const { data: newParticipant, error: insertError } = await mysupa
         .from("participants")
@@ -230,9 +235,9 @@ export default function HomePage() {
           position_y: 0,
           power_ups: 0,
           health: {
-            max: 100,
-            current: 100,
-            speed: 1,
+            max: healthMax,
+            current: healthMax,
+            speed: 20,
             countdown: 0,
             last_answer_time: null,
             last_attack_time: null,
