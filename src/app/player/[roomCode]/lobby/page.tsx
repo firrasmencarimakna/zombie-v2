@@ -30,7 +30,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 interface Session {
   id: string;
   game_pin: string;
-  status: "waiting" | "playing" | "finished";
+  status: "waiting" | "active" | "finished";
   countdown_started_at?: string | null;
   total_time_minutes: number;
   question_limit: number;
@@ -295,7 +295,7 @@ export default function LobbyPage() {
 
   // AUTO REDIRECT — HANYA UBAH KOLOMNYA
   useEffect(() => {
-    if (session?.status === "playing" || (countdown !== null && countdown <= 0)) {
+    if (session?.status === "active" || (countdown !== null && countdown <= 0)) {
       router.replace(`/player/${roomCode}/quiz`);
     }
   }, [session?.status, countdown, roomCode, router]);
