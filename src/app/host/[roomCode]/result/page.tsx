@@ -183,14 +183,6 @@ export default function ResultsHostPage() {
     return [leftColumn, rightColumn].filter((column) => column.length > 0);
   }, []);
 
-  const generateRoomCode = useCallback(() => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    return Array(6)
-      .fill(0)
-      .map(() => chars[Math.floor(Math.random() * chars.length)])
-      .join("");
-  }, []);
-
   const handlePlayAgain = async () => {
     if (!roomCode) return;
     setIsCreatingNewSession(true);
@@ -199,7 +191,7 @@ export default function ResultsHostPage() {
       // 1. Ambil session lama dari mysupa (QuizRush)
       const { data: oldSess, error: oldErr } = await mysupa
         .from("sessions")
-        .select("quiz_id, host_id, question_limit, total_time_minutes, difficulty, current_questions, quiz_detail")
+        .select("quiz_id, host_id, question_limit, total_time_minutes, difficulty, current_questions")
         .eq("game_pin", roomCode.toUpperCase())
         .single();
 
@@ -225,7 +217,6 @@ export default function ResultsHostPage() {
           total_time_minutes: oldSess.total_time_minutes,
           difficulty: oldSess.difficulty,
           current_questions: selectedQuestions,
-          quiz_detail: oldSess.quiz_detail,
           application: "quizrush"
         });
 
@@ -246,7 +237,6 @@ export default function ResultsHostPage() {
           current_questions: selectedQuestions,
           participants: [],
           responses: [],
-          quiz_detail: oldSess.quiz_detail
         });
 
       if (mainErr) throw mainErr;
