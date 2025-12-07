@@ -382,14 +382,21 @@ export default function HostGamePage() {
     );
   }
 
-  return (
-    <div
-      className={`relative w-full h-screen bg-black overflow-hidden ${isPortraitMobile ? "rotate-to-landscape-wrapper" : ""}`}
-      style={isPortraitMobile ? { width: `${screenHeight}px`, height: `${screenWidth}px` } : {}}
-    >
-      <MemoizedBackground3 isFlashing={false} />
+  const mainContentClass = `relative w-full h-screen bg-black overflow-hidden ${isPortraitMobile ? 'rotate-to-landscape-wrapper' : ''}`;
+  const wrapperStyle = isPortraitMobile ? {
+    width: `${screenHeight}px`,
+    height: `${screenWidth}px`,
+  } : {};
 
-      <motion.header initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3 px-4 pt-4">
+  return (
+    <div className={mainContentClass} style={wrapperStyle}>
+      <MemoizedBackground3 isFlashing={false} />
+      <motion.header
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
+        className="flex flex-col gap-3 mb-10 px-4"
+      >
         <div className="flex justify-between items-center">
           <h1 className="text-5xl font-bold font-mono text-red-500 drop-shadow-lg">{t("title")}</h1>
           <Image src="/logo/gameforsmartlogo-horror.png" alt="logo" width={254} height={80} />

@@ -32,13 +32,13 @@ const chaserImages = {
     alt: "Zombie",
     width: 150,
     height: 50,
-    verticalOffset: "80%",
+    verticalOffset: "75%",
     horizontalOffset: -150,
   },
   monster1: {
     src: "/character/chaser/monster1.webp",
     alt: "Mutant Gila",
-    width: 150,
+    width: 165,
     height: 60,
     verticalOffset: "80%",
     horizontalOffset: -150,
@@ -48,7 +48,7 @@ const chaserImages = {
     alt: "Monster Rawa",
     width: 150,
     height: 75,
-    verticalOffset: "80%",
+    verticalOffset: "75%",
     horizontalOffset: -150,
   },
   monster3: {
@@ -56,7 +56,7 @@ const chaserImages = {
     alt: "Samurai Gila",
     width: 150,
     height: 65,
-    verticalOffset: "80%",
+    verticalOffset: "75%",
     horizontalOffset: -150,
   },
   darknight: {
@@ -64,7 +64,7 @@ const chaserImages = {
     alt: "Ksatria Gelap",
     width: 150,
     height: 70,
-    verticalOffset: "80%",
+    verticalOffset: "75%",
     horizontalOffset: -150,
   },
 };
