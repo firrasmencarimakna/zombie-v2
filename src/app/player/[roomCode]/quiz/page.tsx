@@ -284,11 +284,8 @@ useEffect(() => {
       const { error } = await mysupa
         .from("participants")
         .update({
-          finished_at: new Date().toISOString(),           // waktu selesai
+          finished_at: new Date().toISOString(),
           completion: true,
-          // score: finalCorrect * perQuestionScore,          // skor akhir menyesuaikan jumlah soal
-          // correct_answers: finalCorrect,
-          // answers: currentPlayer.answers,                   // tetap simpan (sudah ada)
           health: {
             ...currentPlayer.health,
             current: Math.max(0, finalHealth)
@@ -469,7 +466,7 @@ useEffect(() => {
 
   // === GANTI kondisi loading (ganti room → session) ===
   // Jangan paksa presence currentQuestion untuk show page; tampilkan placeholder soal jika belum ada.
-  if (!session || !currentPlayer) {
+  if (!session || !currentQuestion || !currentPlayer) {
     <LoadingScreen children={undefined} />
   }
 

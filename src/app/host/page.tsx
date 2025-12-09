@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skull, Bone, HeartPulse, Search, X, Clock, ArrowRight, ChevronLeft, ChevronRight, Heart, User, HelpCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { mysupa, supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
@@ -20,9 +20,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { generateXID } from "@/lib/id-generator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { generateGamePin } from "@/utils/gameHelpers";
+import { set } from "lodash";
 
 export default function QuizSelectPage() {
-   const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [allQuizzes, setAllQuizzes] = useState<any[]>([]);
   const [filteredQuizzes, setFilteredQuizzes] = useState<any[]>([]);
@@ -223,40 +224,65 @@ export default function QuizSelectPage() {
       setIsCreating(true);
       try {
         const gamePin = generateGamePin();
-        const hostId = profile?.id || generateXID();
+        const sessId = generateXID();
+        const hostId = profile?.id || user?.id;
 
-        const newSession = {
+        const primarySession = {
+          id: sessId,
           quiz_id: quizId,
           host_id: hostId,
           game_pin: gamePin,
-          status: "waiting",
           total_time_minutes: 5,
           question_limit: 5,
           difficulty: "zombie:medium",
+          current_questions: [],
+          status: "waiting",
+        }
+
+        const newMainSession = {
+          ...primarySession,
           game_end_mode: "manual",
           allow_join_after_start: false,
           participants: [],
           responses: [],
-          current_questions: [],
           application: "quizrush"
         };
 
-        const { error } = await supabase
+        const { error: mainError } = await supabase
           .from("game_sessions")
-          .insert(newSession)
+          .insert(newMainSession)
           .select("game_pin")
           .single();
 
-        if (error) throw error;
+        if (mainError) {
+          console.error("Error creating session:", mainError);
+          setIsCreating(false);
+          return;
+        }
+
+        const { error: gameError } = await mysupa
+          .from("sessions")
+          .insert(primarySession)
+          .select("id")
+          .single();
+
+        if (gameError) {
+          console.error("Error creating session (mysupa):", gameError);
+
+          // 3) ROLLBACK di supabase utama
+          await supabase.from("game_sessions").delete().eq("id", sessId);
+
+          setIsCreating(false);
+          return;
+        }
 
         localStorage.setItem("hostGamePin", gamePin);
         sessionStorage.setItem("currentHostId", hostId);
 
-        await router.push(`/host/${gamePin}/settings`);
+        router.replace(`/host/${gamePin}/settings`);
       } catch (error) {
         console.error("Error creating game:", error);
         toast.error(t("errorMessages.createGameFailed"));
-      } finally {
         setIsCreating(false);
       }
     },
@@ -272,7 +298,7 @@ export default function QuizSelectPage() {
   const searchBarRemWidth = Math.round(searchBarHeight * goldenRatio);
 
   if (isLoading) {
-    <LoadingScreen children={undefined}/>
+    <LoadingScreen children={undefined} />
   }
 
   // ==== RENDER ====
@@ -323,198 +349,198 @@ export default function QuizSelectPage() {
         ))}
 
         <div className="relative z-10 flex flex-col min-h-screen p-7">
-        <motion.header
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
-          className="flex flex-col gap-1 mb-10"
-        >
-          <div className="hidden md:flex items-center justify-between mb-5 md:mb-0">
-              <Image 
-                  src="/logo/quizrushlogo.png" 
-                  alt="QuizRush Logo" 
-                  width={140}   // turunin sedikit biar proporsional
-                  height={35}   // sesuaikan tinggi
-                  className="w-32 md:w-40 lg:w-48 h-auto"   // ini yang paling berpengaruh
-                  unoptimized 
-                  onClick={() => router.push("/")}
-                />
+          <motion.header
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
+            className="flex flex-col gap-1 mb-10"
+          >
+            <div className="hidden md:flex items-center justify-between mb-5 md:mb-0">
+              <Image
+                src="/logo/quizrushlogo.png"
+                alt="QuizRush Logo"
+                width={140}   // turunin sedikit biar proporsional
+                height={35}   // sesuaikan tinggi
+                className="w-32 md:w-40 lg:w-48 h-auto"   // ini yang paling berpengaruh
+                unoptimized
+                onClick={() => router.push("/")}
+              />
               <img src={`/logo/gameforsmartlogo-horror.png`} alt="Logo" className="w-40 md:w-52 lg:w-64 h-auto" />
             </div>
 
-          <div className="flex items-center justify-center w-full">
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="max-w-[19.4rem]"
-              style={{ width: `${searchBarRemWidth}rem` }}
-            >
-              <div className="relative">
-                <Input
-                  ref={searchInputRef}
-                  placeholder={t("searchButton")}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="bg-black/70 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-base font-mono h-12 rounded-full focus:border-red-500 focus:ring-red-500/30 backdrop-blur-sm pr-12"
-                />
-                {searchTerm && (
+            <div className="flex items-center justify-center w-full">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="max-w-[19.4rem]"
+                style={{ width: `${searchBarRemWidth}rem` }}
+              >
+                <div className="relative">
+                  <Input
+                    ref={searchInputRef}
+                    placeholder={t("searchButton")}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="bg-black/70 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-base font-mono h-12 rounded-full focus:border-red-500 focus:ring-red-500/30 backdrop-blur-sm pr-12"
+                  />
+                  {searchTerm && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-10 top-1/2 -translate-y-1/2 text-red-400/60 hover:text-red-400 transition-colors duration-200"
+                      onClick={handleSearchClear}
+                      aria-label={t("closeSearch")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-10 top-1/2 -translate-y-1/2 text-red-400/60 hover:text-red-400 transition-colors duration-200"
-                    onClick={handleSearchClear}
-                    aria-label={t("closeSearch")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400/80 hover:text-red-400 transition-colors duration-200 shadow-md hover:shadow-lg"
+                    disabled={searchTerm.trim().length === 0}
+                    onClick={handleSearchSubmit}
+                    aria-label={t("searchButton")}
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400/80 hover:text-red-400 transition-colors duration-200 shadow-md hover:shadow-lg"
-                  disabled={searchTerm.trim().length === 0}
-                  onClick={handleSearchSubmit}
-                  aria-label={t("searchButton")}
-                >
-                  <Search className="h-5 w-5" />
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mt-4">
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[180px] bg-black/70 border-red-500/50 text-red-400 focus:border-red-500 capitalize">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-black/80 text-red-400 border-red-500/50 capitalize">
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat} className="text-red-400">
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-10 w-10 rounded-full ${favoritesMode
-                  ? 'bg-red-500 text-white'
-                  : 'border-red-500 text-red-400 hover:bg-red-900/20'
-                  }`}
-                onClick={toggleFavorites}
-              >
-                <Heart className={`h-5 w-5 ${favoritesMode ? 'fill-current' : ''}`} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-10 w-10 rounded-full ${myQuizzesMode
-                  ? 'bg-red-500 text-white'
-                  : 'border-red-500 text-red-400 hover:bg-red-900/20'
-                  }`}
-                onClick={toggleMyQuizzes}
-                disabled={!profile}
-              >
-                <User className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </motion.header>
-
-        <div className="w-full max-w-8xl mx-auto flex flex-col flex-1 px-2 md:px-8 gap-5">
-          {paginatedQuizzes.length === 0 ? (
-            <div className="text-center text-red-400/80 text-base font-mono flex-1 flex items-center justify-center">
-              {t("noQuizzesAvailable")}
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-col flex-1 gap-7">
-                <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                  {paginatedQuizzes.map((quiz) => (
-                    <motion.div
-                      key={quiz.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 * (quiz.id % 4), duration: 0.5 }}
-                      whileHover={{ scale: 1.02 }}
-                      className="w-full"
-                    >
-                      <Card
-                        className="bg-black/50 border-red-500/20 hover:border-red-500 cursor-pointer shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] h-full flex flex-col gap-3"
-                        onClick={() => handleQuizSelect(quiz.id)}
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") handleQuizSelect(quiz.id);
-                        }}
-                        aria-label={t("selectQuiz", { theme: quiz.title })}
-                      >
-                        <CardHeader className="flex-shrink-0">
-                          <TooltipProvider>
-                            <Tooltip delayDuration={500}>
-                              <TooltipTrigger asChild>
-                                <CardTitle className="text-red-400 font-mono text-base line-clamp-3">{quiz.title}</CardTitle>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="top"
-                                className="bg-black/80 text-red-400 border border-red-500/50 whitespace-normal break-words max-w-xs"
-                              >
-                                {quiz.title}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </CardHeader>
-                        <CardFooter className="pt-2 flex justify-between items-center flex-shrink-0 mt-auto">
-                          {quiz.category && (
-                            <span className="text-red-300 text-xs font-mono capitalize">{quiz.category}</span>
-                          )}
-                          <div className="flex items-center gap-1 text-red-300 text-xs font-mono">
-                            <HelpCircle className="h-3 w-3" />
-                            {quiz.question_count ?? 0}
-                          </div>
-                        </CardFooter>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mt-auto pb-3"
-              >
-                <div className="flex justify-center gap-4">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1 || isCreating}
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
-                  <span className="text-red-400 font-mono text-sm self-center">
-                    {t("pageInfo", { current: currentPage, total: totalPages })}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages || isCreating}
-                  >
-                    <ChevronRight className="h-5 w-5" />
+                    <Search className="h-5 w-5" />
                   </Button>
                 </div>
               </motion.div>
-            </>
-          )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mt-4">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-[180px] bg-black/70 border-red-500/50 text-red-400 focus:border-red-500 capitalize">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-black/80 text-red-400 border-red-500/50 capitalize">
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat} className="text-red-400">
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-10 w-10 rounded-full ${favoritesMode
+                    ? 'bg-red-500 text-white'
+                    : 'border-red-500 text-red-400 hover:bg-red-900/20'
+                    }`}
+                  onClick={toggleFavorites}
+                >
+                  <Heart className={`h-5 w-5 ${favoritesMode ? 'fill-current' : ''}`} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-10 w-10 rounded-full ${myQuizzesMode
+                    ? 'bg-red-500 text-white'
+                    : 'border-red-500 text-red-400 hover:bg-red-900/20'
+                    }`}
+                  onClick={toggleMyQuizzes}
+                  disabled={!profile}
+                >
+                  <User className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          </motion.header>
+
+          <div className="w-full max-w-8xl mx-auto flex flex-col flex-1 px-2 md:px-8 gap-5">
+            {paginatedQuizzes.length === 0 ? (
+              <div className="text-center text-red-400/80 text-base font-mono flex-1 flex items-center justify-center">
+                {t("noQuizzesAvailable")}
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col flex-1 gap-7">
+                  <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    {paginatedQuizzes.map((quiz) => (
+                      <motion.div
+                        key={quiz.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 * (quiz.id % 4), duration: 0.5 }}
+                        whileHover={{ scale: 1.02 }}
+                        className="w-full"
+                      >
+                        <Card
+                          className="bg-black/50 border-red-500/20 hover:border-red-500 cursor-pointer shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] h-full flex flex-col gap-3"
+                          onClick={() => handleQuizSelect(quiz.id)}
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") handleQuizSelect(quiz.id);
+                          }}
+                          aria-label={t("selectQuiz", { theme: quiz.title })}
+                        >
+                          <CardHeader className="flex-shrink-0">
+                            <TooltipProvider>
+                              <Tooltip delayDuration={500}>
+                                <TooltipTrigger asChild>
+                                  <CardTitle className="text-red-400 font-mono text-base line-clamp-3">{quiz.title}</CardTitle>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="top"
+                                  className="bg-black/80 text-red-400 border border-red-500/50 whitespace-normal break-words max-w-xs"
+                                >
+                                  {quiz.title}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </CardHeader>
+                          <CardFooter className="pt-2 flex justify-between items-center flex-shrink-0 mt-auto">
+                            {quiz.category && (
+                              <span className="text-red-300 text-xs font-mono capitalize">{quiz.category}</span>
+                            )}
+                            <div className="flex items-center gap-1 text-red-300 text-xs font-mono">
+                              <HelpCircle className="h-3 w-3" />
+                              {quiz.question_count ?? 0}
+                            </div>
+                          </CardFooter>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="mt-auto pb-3"
+                >
+                  <div className="flex justify-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1 || isCreating}
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    <span className="text-red-400 font-mono text-sm self-center">
+                      {t("pageInfo", { current: currentPage, total: totalPages })}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages || isCreating}
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
         {/* Global styles (tetap) */}
         <style jsx global>{`

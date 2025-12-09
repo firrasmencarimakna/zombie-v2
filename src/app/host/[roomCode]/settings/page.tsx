@@ -159,30 +159,15 @@ export default function CharacterSelectPage() {
         current_questions: shuffleArray(quiz.questions).slice(0, questionCount),
       };
 
-      // 2. Update main Supabase (supabase)
-      const { error: mainDbError } = await supabase
-        .from("game_sessions")
+      const { error } = await mysupa
+        .from("sessions")
         .update(settings)
         .eq("game_pin", roomCode);
 
-      if (mainDbError) {
-        throw new Error(`Main DB Error: ${mainDbError.message}`);
-      }
-
-      // 3. Upsert to secondary Supabase (mysupa)
-      // This assumes 'mysupa' has a 'sessions' table with a similar structure.
-      const { error: secondaryDbError } = await mysupa.from("sessions").upsert({
-        id: sessionData.id,
-        game_pin: sessionData.game_pin,
-        quiz_id: sessionData.quiz_id,
-        host_id: sessionData.host_id,
-        ...settings,
-      }, { onConflict: 'id' });
-
-      if (secondaryDbError) {
-        // We can decide if this is a critical error. For now, we'll log it but still proceed.
-        console.warn("Could not save settings to secondary DB:", secondaryDbError);
+      if (error) {
+        console.warn("Could not save settings to DB:", error);
         toast.error("Warning: Secondary DB update failed.");
+        setIsSaving(false);
       }
 
       toast.dismiss();
@@ -193,7 +178,6 @@ export default function CharacterSelectPage() {
       console.error(t("errorMessages.saveSettingsFailedLog"), error);
       toast.dismiss();
       toast.error(error.message || t("errorMessages.saveSettingsFailed"));
-    } finally {
       setIsSaving(false);
     }
   };
