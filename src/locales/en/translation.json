@@ -266,5 +266,7 @@
     "message": "Are you sure you want to log out?"
   },
   "logout": "Logout",
-  "logoutSuccess": "Successfully signed out!"
+  "logoutSuccess": "Successfully signed out!",
+  "installApp": "Install App",
+  "appInstalled": "Installed"
 }

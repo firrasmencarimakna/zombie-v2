@@ -29,6 +29,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePWAInstall } from "@/contexts/pwaContext";
+import PWAInstallBanner from "@/components/ui/pwa-install-banner";
 
 // Dynamically import the QR Scanner
 const Scanner = dynamic(
@@ -47,6 +49,7 @@ interface BloodDrip {
 export default function HomePage() {
   const { t, i18n } = useTranslation();
   const { user, profile, loading: authLoading } = useAuth();
+  const { installPrompt, handleInstall: handlePWAInstall } = usePWAInstall();
   const [gameCode, setGameCode] = useState<string>("");
   const [nickname, setNickname] = useState<string>("");
   const [isJoining, setIsJoining] = useState<boolean>(false);
@@ -65,6 +68,7 @@ export default function HomePage() {
   const [showTooltipOnce, setShowTooltipOnce] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
   const [tab, setTab] = useState<"join">("join");
+  const [isBannerVisible, setIsBannerVisible] = useState(false);
 
   // State untuk debug mode
   const [debugMode, setDebugMode] = useState(false);
@@ -78,6 +82,18 @@ export default function HomePage() {
   useEffect(() => {
     preloadGlobalAssets();
   }, []);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem("pwaBannerDismissed") === "true";
+    if (installPrompt && !dismissed) {
+      setIsBannerVisible(true);
+    }
+  }, [installPrompt]);
+
+  const handleDismissBanner = () => {
+    localStorage.setItem("pwaBannerDismissed", "true");
+    setIsBannerVisible(false);
+  };
 
   const bloodDrips = useMemo(() => {
     if (!isClient) return [];
@@ -155,6 +171,11 @@ export default function HomePage() {
     setNickname(defaultNick);
     localStorage.setItem("nickname", defaultNick);
   }, [user, profile, authLoading, generateRandomNickname]);
+
+  const isInstalled =
+    typeof window !== "undefined" &&
+    (window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true);
 
   const handleHostGame = useCallback(() => {
     setIsCreating(true);
@@ -442,6 +463,22 @@ export default function HomePage() {
                     <span className="text-sm font-mono text-red-300">{t("howToPlay")}</span>
                   </div>
                 </button>
+                
+                
+                <button
+                  onClick={handlePWAInstall}
+                  className="w-full p-2 bg-black/60 border-2 border-red-500/50 hover:border-red-500 text-red-300 hover:bg-red-500/20 rounded text-center"
+                  aria-label="Install App"
+                >
+                  <div className="flex items-center justify-center gap-2">
+
+                    <span className="text-sm font-mono text-red-300">
+                      {isInstalled
+                      ? t("appInstalled")
+                      : t("installApp")}
+                    </span>
+                  </div>
+                </button>
 
                 {/* Language Button */}
                 <button
@@ -540,6 +577,15 @@ export default function HomePage() {
               </motion.p>
             )}
           </motion.div>
+          {isBannerVisible && (
+            <PWAInstallBanner
+              onInstall={() => {
+                handlePWAInstall();
+                setIsBannerVisible(false);
+              }}
+              onDismiss={handleDismissBanner}
+            />
+          )}
           <div className="w-full max-w-4xl">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl w-full">
               <motion.div

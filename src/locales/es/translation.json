@@ -257,5 +257,7 @@
     "message": "¿Estás seguro de que quieres cerrar la sesión?"
   },
   "logout": "Cerrar sesión",
-  "logoutSuccess": "¡Sesión cerrada con éxito!"
+  "logoutSuccess": "¡Sesión cerrada con éxito!",
+  "installApp": "Instalar aplicación",
+  "appInstalled": "Instalado"
 }

@@ -263,5 +263,7 @@
     "message": "Apakah Anda yakin ingin keluar?"
   },
   "logout": "Keluar",
-  "logoutSuccess": "Berhasil keluar!"
+  "logoutSuccess": "Berhasil keluar!",
+  "installApp": "Instal Aplikasi",
+  "appInstalled": "Terinstal"
 }

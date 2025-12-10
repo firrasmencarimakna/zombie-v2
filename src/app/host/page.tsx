@@ -297,15 +297,12 @@ export default function QuizSelectPage() {
   const searchBarHeight = 12;
   const searchBarRemWidth = Math.round(searchBarHeight * goldenRatio);
 
-  if (isLoading) {
-    <LoadingScreen children={undefined} />
-  }
-
   // ==== RENDER ====
   return (
     <LoadingScreen minDuration={500} isReady={!isLoading}>
       {/* SEMUA KONTEN HALAMAN DI BAWAH INI */}
       <div className="min-h-screen relative overflow-hidden select-none flex flex-col main-background bg-black" style={{ backgroundImage: "url('/background/12.gif')", backgroundPosition: "center" }}>
+      {isLoading || isCreating && (<LoadingScreen children={undefined} />)}
 
         {/* Blood drips */}
         {isClient && bloodDrips.map((drip) => (

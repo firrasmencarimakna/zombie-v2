@@ -341,6 +341,76 @@ export default function HostGamePage() {
     }
   }, [participants, session, router, gamePin]);
 
+  // Finish session when timer expires (based on session.started_at + total_time_minutes)
+  useEffect(() => {
+    if (!session || session.status === "finished" || !session.started_at) return;
+
+    const totalMinutes = session.total_time_minutes || 0;
+    if (totalMinutes <= 0) return;
+
+    const endTime = new Date(session.started_at).getTime() + totalMinutes * 60 * 1000;
+    const now = Date.now();
+    const msLeft = endTime - now;
+
+    let timer: NodeJS.Timeout | null = null;
+
+    const doFinish = async () => {
+      const finishAt = new Date().toISOString();
+      try {
+        // 1) fetch participants who haven't finished yet
+        const { data: pending, error: pendingErr } = await mysupa
+          .from("participants")
+          .select("*")
+          .eq("session_id", session.id)
+          .is("finished_at", null);
+
+        if (pendingErr) console.error("Error fetching pending participants:", pendingErr);
+
+        // 2) mark each pending participant as finished (is_alive false, finished_at, completion true, health.current = 0)
+        if (Array.isArray(pending) && pending.length > 0) {
+          await Promise.all(pending.map((p: any) => {
+            const newHealth = {
+              ...(p.health || {}),
+              current: 0
+            };
+            return mysupa
+              .from("participants")
+              .update({
+                finished_at: finishAt,
+                completion: true,
+                is_alive: false,
+                health: newHealth
+              })
+              .eq("id", p.id);
+          }));
+        }
+
+        // 3) update session status to finished
+        await mysupa
+          .from("sessions")
+          .update({ status: "finished", ended_at: finishAt })
+          .eq("id", session.id);
+
+        // 4) sync to main supabase and redirect host
+        await syncResultsToMainSupabase(session.id);
+        router.push(`/host/${gamePin}/result`);
+      } catch (err) {
+        console.error("Error finishing session on timeout:", err);
+        // still redirect to result to avoid host stuck
+        router.push(`/host/${gamePin}/result`);
+      }
+    };
+
+    if (msLeft <= 0) {
+      // already passed end time — finish immediately
+      doFinish();
+    } else {
+      timer = setTimeout(() => doFinish(), msLeft);
+    }
+
+    return () => { if (timer) clearTimeout(timer); };
+  }, [session, router, gamePin]);
+
   // Redirect jika game selesai
   useEffect(() => {
     if (session?.status === "finished") {
@@ -397,10 +467,15 @@ export default function HostGamePage() {
         transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
         className="flex flex-col gap-3 mb-10 px-4"
       >
-        <div className="flex justify-between items-center">
-          <h1 className="text-5xl font-bold font-mono text-red-500 drop-shadow-lg">{t("title")}</h1>
-          <Image src="/logo/gameforsmartlogo-horror.png" alt="logo" width={254} height={80} />
-        </div>
+        <Image
+          src="/logo/quizrushlogo.png"
+          alt="QuizRush Logo"
+          width={140}   // turunin sedikit biar proporsional
+          height={35}   // sesuaikan tinggi
+          className="w-32 md:w-40 lg:w-48 h-auto"   // ini yang paling berpengaruh
+          unoptimized
+        />
+        <img src={`/logo/gameforsmartlogo-horror.png`} alt="Logo" className="w-40 md:w-52 lg:w-64 h-auto" />
       </motion.header>
 
       <MemoizedRunningCharacters

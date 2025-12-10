@@ -257,5 +257,7 @@
     "message": "本当にログアウトしますか？"
   },
   "logout": "ログアウト",
-  "logoutSuccess": "正常にログアウトしました！"
+  "logoutSuccess": "正常にログアウトしました！",
+  "installApp": "アプリをインストール",
+  "appInstalled": "インストール済み"
 }

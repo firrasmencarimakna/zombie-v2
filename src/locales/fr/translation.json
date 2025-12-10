@@ -257,5 +257,7 @@
     "message": "Êtes-vous sûr de vouloir vous déconnecter?"
   },
   "logout": "Se déconnecter",
-  "logoutSuccess": "Déconnecté avec succès!"
+  "logoutSuccess": "Déconnecté avec succès!",
+  "installApp": "Installer l'application",
+  "appInstalled": "Installé"
 }

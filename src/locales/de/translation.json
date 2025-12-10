@@ -257,5 +257,7 @@
     "message": "Möchten Sie sich wirklich abmelden?"
   },
   "logout": "Abmelden",
-  "logoutSuccess": "Erfolgreich abgemeldet!"
+  "logoutSuccess": "Erfolgreich abgemeldet!",
+  "installApp": "App installieren",
+  "appInstalled": "Installiert"
 }
