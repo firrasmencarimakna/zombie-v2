@@ -1,5 +1,6 @@
 "use client";
 
+import { Participant } from "@/app/host/[roomCode]/game/page";
 import { EmbeddedPlayer } from "@/lib/supabase";
 import Image from "next/image";
 import { useMemo } from "react";
@@ -19,7 +20,7 @@ interface ZombieCharacterProps {
   gameMode: "normal" | "panic";
   centerX: number;
   chaserType: string;
-  players: EmbeddedPlayer[];
+  players: Participant[];
   screenHeight: number;
   isPortraitMobile: boolean;
   mobileHorizontalShift: number; // New prop for mobile horizontal adjustment
