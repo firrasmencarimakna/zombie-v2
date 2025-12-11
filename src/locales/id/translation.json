@@ -83,7 +83,16 @@
     "fetchRoomFailed": "Gagal mengambil ruangan!",
     "saveSettingsFailed": "Gagal menyimpan pengaturan!",
     "nicknameTaken": "Nickname sudah digunakan di room ini.",
-    "checkNicknameFailed": "Gagal memvalidasi nickname. Silakan coba lagi."
+    "checkNicknameFailed": "Gagal memvalidasi nickname. Silakan coba lagi.",
+    "missingInputTitle": "Input Tidak Lengkap",
+    "invalidCodeTitle": "Kode Tidak Valid",
+    "invalidCode": "Kode game harus terdiri dari 6 karakter!",
+    "roomNotFoundTitle": "Room Tidak Ditemukan",
+    "gameStartedTitle": "Game Telah Dimulai",
+    "nicknameTakenTitle": "Nickname Telah Digunakan",
+    "joinFailedTitle": "Gagal Bergabung",
+    "unexpectedErrorTitle": "Kesalahan Tidak Terduga",
+    "unexpectedError": "Terjadi kesalahan. Coba lagi nanti."
   },
   "start": "Mulai",
   "starting": "Memulai...",

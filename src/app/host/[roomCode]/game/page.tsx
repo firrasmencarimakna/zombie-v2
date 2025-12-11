@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import Image from "next/image";
 import React from "react";
 import { generateXID } from "@/lib/id-generator";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const ZOMBIE_MOBILE_VERTICAL_OFFSET = 90;
 const ZOMBIE_MOBILE_HORIZONTAL_OFFSET = 20;
@@ -446,9 +447,7 @@ export default function HostGamePage() {
 
   if (!isClient || !session) {
     return (
-      <div className="w-full h-screen bg-black flex-center text-white text-xl">
-        {t("loading")}
-      </div>
+      <LoadingScreen children={undefined} />
     );
   }
 
@@ -461,22 +460,41 @@ export default function HostGamePage() {
   return (
     <div className={mainContentClass} style={wrapperStyle}>
       <MemoizedBackground3 isFlashing={false} />
+
+{/* QuizRush Logo - Top Left */}
+<div className="absolute top-4 left-4 z-50 hidden md:block">
+  <Image
+    src="/logo/quizrushlogo.png"
+    alt="QuizRush Logo"
+    width={200}
+    height={50}
+    className="h-auto w-32 md:w-48 lg:w-64"
+    unoptimized
+  />
+</div>
+
+
+{/* GameForSmart Logo - Top Right */}
+<div className="absolute -top-5 right-4 z-50 hidden md:block">
+  <Image
+    src="/logo/gameforsmartlogo.png"
+    alt="GameForSmart Logo"
+    width={200}
+    height={50}
+    className="h-auto w-32 md:w-48 lg:w-88"
+    unoptimized
+  />
+</div>
+
+
       <motion.header
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
         className="flex flex-col gap-3 mb-10 px-4"
       >
-        <Image
-          src="/logo/quizrushlogo.png"
-          alt="QuizRush Logo"
-          width={140}   // turunin sedikit biar proporsional
-          height={35}   // sesuaikan tinggi
-          className="w-32 md:w-40 lg:w-48 h-auto"   // ini yang paling berpengaruh
-          unoptimized
-        />
-        <img src={`/logo/gameforsmartlogo-horror.png`} alt="Logo" className="w-40 md:w-52 lg:w-64 h-auto" />
-      </motion.header>
+
+      </motion.header>  
 
       <MemoizedRunningCharacters
         players={activePlayers}

@@ -85,7 +85,7 @@ export default function CharacterSelectPage() {
 
   useEffect(() => {
     if (!roomCode) {
-      toast.error(t("errorMessages.invalidRoomCode"));
+
       router.push("/");
       return;
     }
@@ -147,7 +147,7 @@ export default function CharacterSelectPage() {
   const saveSettings = async () => {
     if (!sessionData || !quiz || !isFormValid) return;
     setIsSaving(true);
-    toast.loading(t("savingSettings"));
+
 
     try {
       // 1. Prepare settings object
@@ -171,13 +171,13 @@ export default function CharacterSelectPage() {
       }
 
       toast.dismiss();
-      toast.success(t("settingsSaved"));
+ 
       router.push(`/host/${roomCode}/lobby`);
 
     } catch (error: any) {
       console.error(t("errorMessages.saveSettingsFailedLog"), error);
       toast.dismiss();
-      toast.error(error.message || t("errorMessages.saveSettingsFailed"));
+
       setIsSaving(false);
     }
   };

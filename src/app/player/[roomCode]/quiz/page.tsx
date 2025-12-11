@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next"
 import toast from "react-hot-toast"
 import LoadingScreen from "@/components/LoadingScreen"
 import { generateXID } from "@/lib/id-generator"
+import Image from "next/image"
 
 // === TIPE BARU YANG SESUAI DENGAN SKEMA BARU ===
 export interface Session {
@@ -503,6 +504,30 @@ useEffect(() => {
       )}
 
       <div className="relative z-10 container mx-auto px-4 pt-8">
+        {/* QuizRush Logo - Top Left */}
+<div className="absolute top-4 left-0 z-50 hidden md:block">
+  <Image
+    src="/logo/quizrushlogo.png"
+    alt="QuizRush Logo"
+    width={200}           // ukuran asli dalam piksel (untuk optimasi Next.js)
+    height={50}
+    className="h-auto w-32 md:w-48 lg:w-64"  // lebih besar: kecil di HP, sedang di tablet, besar di desktop
+    unoptimized
+  />
+</div>
+
+{/* GameForSmart Logo - Top Right */}
+<div className="absolute -top-5 right-0 z-50 hidden md:block">
+  <Image
+    src="/logo/gameforsmartlogo.png"
+    alt="GameForSmart Logo"
+    width={200}
+    height={50}
+    className="h-auto w-32 md:w-48 lg:w-88"  // sama besarnya dengan QuizRush
+    unoptimized
+  />
+</div>
+
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-6">
 
@@ -512,12 +537,6 @@ useEffect(() => {
               transition={{ duration: 0.6 }}
               className="text-center"
             >
-              <h1
-                className={`text-4xl md:text-6xl font-bold font-mono tracking-wider transition-all duration-150 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse text-red-500`}
-                style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}
-              >
-                {t("title")}
-              </h1>
             </motion.div>
 
           </div>

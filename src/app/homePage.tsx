@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePWAInstall } from "@/contexts/pwaContext";
 import PWAInstallBanner from "@/components/ui/pwa-install-banner";
 
+
 // Dynamically import the QR Scanner
 const Scanner = dynamic(
   () => import("@yudiel/react-qr-scanner").then((mod) => mod.Scanner),
@@ -182,9 +183,22 @@ export default function HomePage() {
     router.push("/host");
   }, [router]);
 
+  const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false);
+  const [errorDialogTitle, setErrorDialogTitle] = useState("");
+  const [errorDialogMessage, setErrorDialogMessage] = useState("");
+
   const handleJoinGame = useCallback(async () => {
-    if (isJoining || !gameCode || !nickname.trim()) {
-      toast.error("Kode game dan nickname harus diisi!");
+    if (!gameCode.trim() || !nickname.trim()) {
+      setErrorDialogTitle(t("errorMessages.missingInputTitle") || "Input Tidak Lengkap");
+      setErrorDialogMessage(t("errorMessages.missingInput") || "Kode game dan nickname harus diisi!");
+      setIsErrorDialogOpen(true);
+      return;
+    }
+
+    if (gameCode.length !== 6) {
+      setErrorDialogTitle(t("errorMessages.invalidCodeTitle") || "Kode Tidak Valid");
+      setErrorDialogMessage(t("errorMessages.invalidCode") || "Kode game harus terdiri dari 6 karakter!");
+      setIsErrorDialogOpen(true);
       return;
     }
 
@@ -200,13 +214,17 @@ export default function HomePage() {
         .single();
 
       if (sessionError || !session) {
-        toast.error(t("roomNotFound") || "Kode game tidak ditemukan atau sudah expired!");
+        setErrorDialogTitle(t("errorMessages.roomNotFoundTitle") || "Room Tidak Ditemukan");
+        setErrorDialogMessage(t("roomNotFound") || "Kode game tidak ditemukan atau sudah expired!");
+        setIsErrorDialogOpen(true);
         setIsJoining(false);
         return;
       }
 
       if (session.status !== "waiting") {
-        toast.error(t("gameAlreadyStarted") || "Game sudah dimulai atau selesai!");
+        setErrorDialogTitle(t("errorMessages.gameStartedTitle") || "Game Telah Dimulai");
+        setErrorDialogMessage(t("gameAlreadyStarted") || "Game sudah dimulai atau selesai!");
+        setIsErrorDialogOpen(true);
         setIsJoining(false);
         return;
       }
@@ -220,7 +238,9 @@ export default function HomePage() {
         .maybeSingle();
 
       if (existingParticipant) {
-        toast.error(t("nicknameTaken") || "Nickname sudah digunakan di room ini!");
+        setErrorDialogTitle(t("errorMessages.nicknameTakenTitle") || "Nickname Telah Digunakan");
+        setErrorDialogMessage(t("nicknameTaken") || "Nickname sudah digunakan di room ini!");
+        setIsErrorDialogOpen(true);
         setIsJoining(false);
         return;
       }
@@ -270,7 +290,9 @@ export default function HomePage() {
 
       if (insertError || !newParticipant) {
         console.error("Insert participant error:", insertError);
-        toast.error(t("joinFailed") || "Gagal masuk ke room. Coba lagi!");
+        setErrorDialogTitle(t("errorMessages.joinFailedTitle") || "Gagal Bergabung");
+        setErrorDialogMessage(t("joinFailed") || "Gagal masuk ke room. Coba lagi!");
+        setIsErrorDialogOpen(true);
         setIsJoining(false);
         return;
       }
@@ -282,7 +304,7 @@ export default function HomePage() {
       localStorage.setItem("nickname", nickname.trim());
       localStorage.setItem("selectedCharacter", character_type);
 
-      toast.success(t("joinSuccess") || `Berhasil masuk sebagai ${nickname}!`);
+
       localStorage.removeItem("roomCode")
 
       // 6. Pindah ke waiting room player
@@ -290,10 +312,12 @@ export default function HomePage() {
 
     } catch (err) {
       console.error("Unexpected error:", err);
-      toast.error("Terjadi kesalahan. Coba lagi nanti.");
+      setErrorDialogTitle(t("errorMessages.unexpectedErrorTitle") || "Kesalahan Tidak Terduga");
+      setErrorDialogMessage(t("errorMessages.unexpectedError") || "Terjadi kesalahan. Coba lagi nanti.");
+      setIsErrorDialogOpen(true);
       setIsJoining(false);
     }
-  }, [gameCode, nickname, user, router, t, isJoining]);
+  }, [gameCode, nickname, user, router, t, isJoining, profile]);
 
   // --- QR SCANNER HANDLERS ---
   const handleScan = (result: any) => {
@@ -340,6 +364,7 @@ export default function HomePage() {
       {isClient && bloodDrips.map((drip) => (
         <motion.div key={drip.id} initial={{ y: -100 }} animate={{ y: "100vh" }} transition={{ duration: drip.speed, delay: drip.delay, ease: "linear", repeat: Infinity }} className="fixed top-0 w-0.5 h-16 bg-gradient-to-b from-red-600 to-red-800/50" style={{ left: `${drip.left}%`, opacity: drip.opacity }} />
       ))}
+
 
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         {/* Hamburger Menu Button - Adapted from reference */}

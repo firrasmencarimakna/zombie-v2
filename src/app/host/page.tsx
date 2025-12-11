@@ -358,11 +358,11 @@ export default function QuizSelectPage() {
                 alt="QuizRush Logo"
                 width={140}   // turunin sedikit biar proporsional
                 height={35}   // sesuaikan tinggi
-                className="w-32 md:w-40 lg:w-48 h-auto"   // ini yang paling berpengaruh
+                className="w-82 md:w-80 lg:w-88 h-auto"   // ini yang paling berpengaruh
                 unoptimized
                 onClick={() => router.push("/")}
               />
-              <img src={`/logo/gameforsmartlogo-horror.png`} alt="Logo" className="w-40 md:w-52 lg:w-64 h-auto" />
+              <img src={`/logo/gameforsmartlogo-horror.png`} alt="Logo" className="w-80 md:w-82 lg:w-84 h-auto" />
             </div>
 
             <div className="flex items-center justify-center w-full">
