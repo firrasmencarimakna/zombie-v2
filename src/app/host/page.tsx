@@ -352,18 +352,18 @@ export default function QuizSelectPage() {
             transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
             className="flex flex-col gap-1 mb-10"
           >
-            <div className="hidden md:flex items-center justify-between mb-5 md:mb-0">
-              <Image
-                src="/logo/quizrushlogo.png"
-                alt="QuizRush Logo"
-                width={140}   // turunin sedikit biar proporsional
-                height={35}   // sesuaikan tinggi
-                className="w-82 md:w-80 lg:w-88 h-auto"   // ini yang paling berpengaruh
-                unoptimized
-                onClick={() => router.push("/")}
-              />
-              <img src={`/logo/gameforsmartlogo-horror.png`} alt="Logo" className="w-80 md:w-82 lg:w-84 h-auto" />
-            </div>
+        <div className="hidden md:flex items-center justify-between">
+          <Image
+            src="/logo/quizrushlogo.png"
+            alt="QuizRush Logo"
+            width={140}   // turunin sedikit biar proporsional
+            height={35}   // sesuaikan tinggi
+            className="w-32 md:w-40 lg:w-48 h-auto"   // ini yang paling berpengaruh
+            unoptimized
+            onClick={() => router.push("/")}
+          />
+          <img src={`/logo/gameforsmartlogo-horror.png`} alt="Logo" className="w-40 md:w-52 lg:w-64 h-auto" />
+        </div>
 
             <div className="flex items-center justify-center w-full">
               <motion.div

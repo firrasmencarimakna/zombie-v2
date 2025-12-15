@@ -24,7 +24,7 @@ const geistMono = Geist_Mono({
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
+  return (  
     <html lang="en">
       <head>
         {/* <link rel="manifest" href="/manifest.json" />

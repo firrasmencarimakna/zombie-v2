@@ -517,9 +517,9 @@ useEffect(() => {
 </div>
 
 {/* GameForSmart Logo - Top Right */}
-<div className="absolute -top-5 right-0 z-50 hidden md:block">
+<div className="absolute top-5 right-0 z-50 hidden md:block">
   <Image
-    src="/logo/gameforsmartlogo.png"
+    src="/logo/gameforsmartlogo-horror.png"
     alt="GameForSmart Logo"
     width={200}
     height={50}

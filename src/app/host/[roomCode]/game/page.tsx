@@ -462,7 +462,7 @@ export default function HostGamePage() {
       <MemoizedBackground3 isFlashing={false} />
 
 {/* QuizRush Logo - Top Left */}
-<div className="absolute top-4 left-4 z-50 hidden md:block">
+<div className="absolute top-4 left-4 z-50 hidden lg:block">
   <Image
     src="/logo/quizrushlogo.png"
     alt="QuizRush Logo"
@@ -474,8 +474,13 @@ export default function HostGamePage() {
 </div>
 
 
-{/* GameForSmart Logo - Top Right */}
-<div className="absolute -top-5 right-4 z-50 hidden md:block">
+<div
+  className="
+    absolute right-4 z-50 hidden lg:block
+    md:top-10        /* tablet */
+    lg:-top-8        /* desktop ≈ mt-3 */
+  "
+>
   <Image
     src="/logo/gameforsmartlogo.png"
     alt="GameForSmart Logo"
@@ -485,6 +490,7 @@ export default function HostGamePage() {
     unoptimized
   />
 </div>
+
 
 
       <motion.header
