@@ -34,6 +34,9 @@ interface Session {
   countdown_started_at?: string | null;
   total_time_minutes: number;
   question_limit: number;
+  current_questions?: any[];  // TAMBAHAN: Array soal yang sudah dipilih dari settings
+  started_at?: string | null; // TAMBAHAN: Waktu start game untuk timer di Quiz
+  difficulty?: string; // TAMBAHAN: Difficulty untuk feedback zombie
 }
 
 interface Participant {
@@ -49,6 +52,7 @@ interface Participant {
   position_x: number;
   position_y: number;
   joined_at: string;
+  answers?: any[]; // TAMBAHAN: Array jawaban untuk index soal di Quiz
 }
 
 const characterOptions = [
@@ -137,6 +141,7 @@ export default function LobbyPage() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [players, setPlayers] = useState<Participant[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]);  // TAMBAHAN: State untuk soal yang dipilih
   const [currentPlayer, setCurrentPlayer] = useState<Participant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -145,6 +150,7 @@ export default function LobbyPage() {
   const [selectedCharacter, setSelectedCharacter] = useState("robot1");
   const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isPrefetchingQuiz, setIsPrefetchingQuiz] = useState(false); // TAMBAHAN: Loading state untuk prefetch
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -153,7 +159,7 @@ export default function LobbyPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // FETCH DATA — HANYA UBAH INI
+  // FETCH DATA — UBAH: Tambah setQuestions
   useEffect(() => {
     const fetchInitialData = async () => {
       if (!roomCode) {
@@ -177,6 +183,7 @@ export default function LobbyPage() {
         }
 
         setSession(sess);
+        setQuestions(sess.current_questions || []);  // TAMBAHAN: Fetch & set soal yang dipilih
 
         const { data: parts } = await mysupa
           .from("participants")
@@ -207,7 +214,52 @@ export default function LobbyPage() {
     syncServerTime();
   }, [roomCode, router]);
 
-  // === REALTIME YANG BENAR & PASTI LANGSUNG UPDATE KARAKTER ===
+  // TAMBAHAN: Fungsi untuk prefetch data Quiz (dipanggil saat countdown dimulai)
+  const prefetchQuizData = async () => {
+    if (!session || !currentPlayer || isPrefetchingQuiz) return;
+
+    setIsPrefetchingQuiz(true);
+    try {
+      // Fetch ulang session terbaru (untuk pastikan started_at, difficulty, dll. sudah di-set saat start game)
+      const { data: freshSession } = await mysupa
+        .from("sessions")
+        .select("*")
+        .eq("game_pin", roomCode)
+        .single();
+
+      if (!freshSession) throw new Error("Session tidak ditemukan");
+
+      // Fetch ulang currentPlayer terbaru (untuk answers, health awal, dll.)
+      const playerId = localStorage.getItem("playerId");
+      if (!playerId) throw new Error("Player ID tidak ditemukan");
+
+      const { data: freshPlayer } = await mysupa
+        .from("participants")
+        .select("*")
+        .eq("session_id", freshSession.id)
+        .eq("id", playerId)
+        .single();
+
+      if (!freshPlayer) throw new Error("Player tidak ditemukan");
+
+      // Simpan data lengkap ke localStorage untuk QuizPage
+      const quizData = {
+        session: freshSession,
+        currentPlayer: freshPlayer,
+        questions: freshSession.current_questions || [],
+      };
+      localStorage.setItem("quizPrefetchData", JSON.stringify(quizData));
+
+      console.log("Data Quiz berhasil di-prefetch!");
+    } catch (err) {
+      console.error("Gagal prefetch data Quiz:", err);
+      toast.error("Gagal mempersiapkan game!");
+    } finally {
+      setIsPrefetchingQuiz(false);
+    }
+  };
+
+  // === REALTIME: UBAH: Update questions saat session berubah
   useEffect(() => {
     if (!session?.id) return;
 
@@ -262,8 +314,13 @@ export default function LobbyPage() {
         { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${session.id}` },
         (payload) => {
           const updated = payload.new as Session;
-          setSession(updated);               // <-- penting, supaya
-          // countdown_started_at & status langsung ter-update
+          setSession(updated);
+          setQuestions(updated.current_questions || []);  // TAMBAHAN: Update soal jika session berubah
+
+          // TAMBAHAN: Jika status berubah ke "active" atau countdown dimulai, prefetch data Quiz
+          if (updated.status === "active" || updated.countdown_started_at) {
+            prefetchQuizData();
+          }
         }
       )
       .subscribe();
@@ -272,14 +329,20 @@ export default function LobbyPage() {
       mysupa.removeChannel(participantsChannel);
       mysupa.removeChannel(sessionChannel);
     };
-  }, [session?.id, currentPlayer?.id, router]);
+  }, [session?.id, currentPlayer?.id, router, isPrefetchingQuiz, roomCode]);  // Tambah deps untuk prefetch
 
-  // COUNTDOWN — HANYA UBAH KOLOMNYA
+  // COUNTDOWN — UBAH: Trigger prefetch saat countdown dimulai
   useEffect(() => {
     if (!session?.countdown_started_at) {
       setCountdown(null);
       return;
     }
+
+    // TAMBAHAN: Prefetch data saat countdown pertama kali dimulai
+    if (countdown === null) {
+      prefetchQuizData();
+    }
+
     const updateCountdown = () => {
       const remaining = calculateCountdown(session.countdown_started_at!, 10000);
       setCountdown(remaining);
@@ -293,12 +356,20 @@ export default function LobbyPage() {
     }
   }, [session?.countdown_started_at]);
 
-  // AUTO REDIRECT — HANYA UBAH KOLOMNYA
+  // AUTO REDIRECT — UBAH: Pastikan data sudah di-prefetch sebelum redirect
   useEffect(() => {
-    if (session?.status === "active" || (countdown !== null && countdown <= 0)) {
+    if ((session?.status === "active" || (countdown !== null && countdown <= 0)) && !isPrefetchingQuiz) {
+      // TAMBAHAN: Cek apakah data sudah tersimpan; jika belum, prefetch dulu
+      if (!localStorage.getItem("quizPrefetchData")) {
+        prefetchQuizData();
+        return; // Tunda redirect sampai prefetch selesai
+      }
+
+      // TAMBAHAN: Hapus data lama jika ada, tapi simpan yang baru
+      localStorage.removeItem("quizQuestions"); // Legacy clear
       router.replace(`/player/${roomCode}/quiz`);
     }
-  }, [session?.status, countdown, roomCode, router]);
+  }, [session?.status, countdown, roomCode, router, isPrefetchingQuiz]);  // Tambah isPrefetchingQuiz di deps
 
   // GANTI KARAKTER — HANYA UBAH INI
   const handleCharacterSelect = async (characterValue: string) => {
@@ -330,6 +401,7 @@ export default function LobbyPage() {
       localStorage.removeItem("sessionId");
       localStorage.removeItem("nickname");
       localStorage.removeItem("selectedCharacter");
+      localStorage.removeItem("quizPrefetchData");  // TAMBAHAN: Clear prefetch data jika exit
       router.replace("/");
     } catch (err) {
       console.error("Gagal keluar lobby:", err);

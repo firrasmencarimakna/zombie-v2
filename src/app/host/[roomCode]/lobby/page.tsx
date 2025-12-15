@@ -160,6 +160,19 @@ export default function HostPage() {
       '/map6/5.webp',
       '/map6/7.webp',
       '/map6/8.webp',
+      '/character/chaser/darknight.webp',
+      '/character/chaser/monster1.webp',
+      '/character/chaser/monster2.webp',
+      '/character/chaser/monster3.webp',
+      '/character/chaser/zombie.webp',
+      '/character/player/character1-crop.webp',
+      '/character/player/character2-crop.webp',
+      '/character/player/character3-crop.webp',
+      '/character/player/character4-crop.webp',
+      '/character/player/character5.webp',
+      '/character/player/character6.webp',
+      '/character/player/character8-crop.webp',
+      '/character/player/character9-crop.webp',
     ];
     let loadedCount = 0;
     const totalAssets = assetsToPreload.length;

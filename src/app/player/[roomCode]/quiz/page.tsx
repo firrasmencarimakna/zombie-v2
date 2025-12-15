@@ -86,14 +86,56 @@ export default function QuizPage() {
   const pulseIntensity = timeLeft <= 30 ? (31 - timeLeft) / 30 : 0
   const FEEDBACK_DURATION = 1200
 
-  // Initial data fetching → GANTI SEMUA INI
+  // Initial data loading → MODIFIKASI: Prioritaskan prefetch dari localStorage
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const loadInitialData = async () => {
       if (!gamePin) {
         router.replace("/");
         return;
       }
 
+      // TAMBAHAN: Cek apakah ada data prefetch dari LobbyPage
+      const prefetchData = localStorage.getItem("quizPrefetchData");
+      if (prefetchData) {
+        try {
+          const parsed = JSON.parse(prefetchData) as {
+            session: Session;
+            currentPlayer: Participant;
+            questions: any[];
+          };
+
+          // Validasi data dasar
+          if (parsed.session.game_pin !== gamePin || !parsed.currentPlayer.id) {
+            throw new Error("Prefetch data invalid");
+          }
+
+          // Set state dari prefetch
+          setSession(parsed.session);
+          setCurrentPlayer(parsed.currentPlayer);
+          setPlayerHealth(parsed.currentPlayer.health.current);
+          setPlayerSpeed(parsed.currentPlayer.health.speed || 1);
+          setCorrectAnswers(parsed.currentPlayer.correct_answers || 0);
+          const answeredCount = parsed.currentPlayer.answers?.length || 0;
+          setCurrentQuestionIndex(answeredCount);
+
+          // Hapus prefetch data setelah digunakan (cleanup)
+          localStorage.removeItem("quizPrefetchData");
+
+          console.log("Data loaded dari prefetch (no fetch needed)");
+          setIsClient(true);
+          return; // Skip fetch jika prefetch valid
+        } catch (err) {
+          console.warn("Prefetch data invalid, fallback to fetch:", err);
+          localStorage.removeItem("quizPrefetchData"); // Clear invalid data
+        }
+      }
+
+      // FALLBACK: Fetch dari Supabase jika tidak ada prefetch atau invalid
+      await fetchInitialData();
+    };
+
+    // Fungsi fetch lama (sekarang sebagai fallback)
+    const fetchInitialData = async () => {
       // 1. Ambil session berdasarkan game_pin
       const { data: sessionData, error: sessionError } = await mysupa
         .from("sessions")
@@ -145,7 +187,7 @@ export default function QuizPage() {
       setIsClient(true);
     };
 
-    fetchInitialData();
+    loadInitialData();
   }, [gamePin, router]);
 
   // Realtime: Dengarkan perubahan di session & participant
@@ -465,10 +507,9 @@ useEffect(() => {
     return "bg-gray-700 border-gray-600 text-gray-400"
   }
 
-  // === GANTI kondisi loading (ganti room → session) ===
-  // Jangan paksa presence currentQuestion untuk show page; tampilkan placeholder soal jika belum ada.
-  if (!session || !currentQuestion || !currentPlayer) {
-    <LoadingScreen children={undefined} />
+  // Kondisi loading: tampilkan LoadingScreen jika session atau currentPlayer belum siap
+  if (!session || !currentPlayer) {
+    return <LoadingScreen children={undefined} />
   }
 
   return (
@@ -594,7 +635,7 @@ useEffect(() => {
                 {/* PERTANYAAN */}
                 <div className="mb-8 min-h-[6rem] flex items-center justify-center px-4">
                   <h2 className="text-2xl sm:text-3xl font-bold text-white leading-relaxed text-center drop-shadow-lg">
-                    {currentQuestion?.question || "Loading soal..."}
+                    {currentQuestion?.question ?? "Menunggu soal berikutnya..."}
                   </h2>
                 </div>
 
