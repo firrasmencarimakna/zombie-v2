@@ -15,24 +15,42 @@ import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
 import Image from "next/image";
 import { preloadHostAssets } from "@/lib/preloadAssets";
-import LoadingScreen from "@/components/LoadingScreen"; // ← Pastikan ini versi all-in-one di bawah
+import LoadingScreen from "@/components/LoadingScreen";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateXID } from "@/lib/id-generator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { generateGamePin } from "@/utils/gameHelpers";
 import { set } from "lodash";
 
+// Custom hook untuk debounce
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function QuizSelectPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const [allQuizzes, setAllQuizzes] = useState<any[]>([]);
-  const [filteredQuizzes, setFilteredQuizzes] = useState<any[]>([]);
+  const [allQuizzesForCategories, setAllQuizzesForCategories] = useState<any[]>([]);
   const [paginatedQuizzes, setPaginatedQuizzes] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isCreating, setIsCreating] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true); // Untuk initial load
+  const [isFetching, setIsFetching] = useState(false); // Untuk search/filter
   const [flickerText, setFlickerText] = useState(true);
   const [bloodDrips, setBloodDrips] = useState<Array<{ id: number; left: number; speed: number; delay: number }>>([]);
   const [atmosphereText, setAtmosphereText] = useState(t("atmosphereTextInitial"));
@@ -45,6 +63,9 @@ export default function QuizSelectPage() {
   const quizzesPerPage = 15;
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Debounce search query
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
   const atmosphereTexts = useMemo(
     () => [
@@ -126,61 +147,84 @@ export default function QuizSelectPage() {
     }
   }, [user]);
 
+  // Fetch all quizzes for categories (no filters, high limit)
   useEffect(() => {
-    const fetchQuizzes = async () => {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .rpc('get_quizzes_with_question_count', {
-          user_id: profile?.id || null
-        });
+    const fetchAllQuizzesForCategories = async () => {
+      if (!profile?.id) return;
+      const { data, error } = await supabase.rpc('get_quizzes_paginated', {
+        p_user_id: profile.id,
+        p_search_query: null,
+        p_category_filter: null,
+        p_favorites_filter: null,
+        p_creator_filter: null,
+        p_limit: 1000, // High limit to get all for categories
+        p_offset: 0
+      });
 
       if (error) {
-        console.error("Error fetching quizzes:", error);
+        console.error("Error fetching quizzes for categories:", error);
       } else {
-        setAllQuizzes(data || []);
-        console.log('Fetched quizzes with counts:', data?.length);
+        setAllQuizzesForCategories(data || []);
+        console.log('Fetched all quizzes for categories:', data?.length);
       }
-      setIsLoading(false);
     };
 
-    fetchQuizzes();
+    fetchAllQuizzesForCategories();
   }, [profile?.id]);
 
-  const categories = useMemo(() => {
-    return ["All", ...new Set(allQuizzes.map(q => q.category).filter(Boolean))];
-  }, [allQuizzes]);
-
-  const filtered = useMemo(() => {
-    return allQuizzes.filter((q) => {
-      const matchesSearch = searchQuery === "" ||
-        q.title.toLowerCase().includes(searchQuery.toLowerCase());
-      let matchesCategory = selectedCategory === "All" || q.category === selectedCategory;
-
-      if (favoritesMode) {
-        const isFavorite = favorites.includes(q.id);
-        matchesCategory = isFavorite && matchesCategory;
-      }
-
-      if (myQuizzesMode) {
-        const isMine = q.creator_id === profile?.id;
-        matchesCategory = isMine && matchesCategory;
-      }
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [allQuizzes, searchQuery, selectedCategory, favoritesMode, myQuizzesMode, favorites, profile?.id]);
-
-  const totalPages = useMemo(() => Math.ceil(filtered.length / quizzesPerPage), [filtered.length]);
-
+  // Fetch paginated quizzes based on filters and page
   useEffect(() => {
-    const startIndex = (currentPage - 1) * quizzesPerPage;
-    const endIndex = startIndex + quizzesPerPage;
-    setPaginatedQuizzes(filtered.slice(startIndex, endIndex));
-  }, [filtered, currentPage]);
+    const fetchPaginatedQuizzes = async () => {
+      // Set loading sesuai konteks
+      if (!profile?.id && !favoritesMode && !myQuizzesMode) {
+        setIsLoadingInitial(true);
+      } else {
+        setIsFetching(true);
+      }
+
+      const { data, error } = await supabase.rpc('get_quizzes_paginated', {
+        p_user_id: profile?.id || null,
+        p_search_query: debouncedSearchQuery || null,
+        p_category_filter: selectedCategory === "All" ? null : selectedCategory,
+        p_favorites_filter: favoritesMode ? favorites : null,
+        p_creator_filter: myQuizzesMode ? profile?.id : null,
+        p_limit: quizzesPerPage,
+        p_offset: (currentPage - 1) * quizzesPerPage
+      });
+
+      if (error) {
+        console.error("Error fetching paginated quizzes:", error);
+        toast.error("Failed to fetch quizzes. Please try again.");
+      } else {
+        setPaginatedQuizzes(data || []);
+        setTotalCount(data.length > 0 ? data[0].total_count : 0);
+        console.log('Fetched paginated quizzes:', data?.length, 'Total:', data[0]?.total_count);
+      }
+
+      // Reset loading states
+      setIsFetching(false);
+      setIsLoadingInitial(false);
+    };
+
+    if (profile?.id || !favoritesMode && !myQuizzesMode) {
+      fetchPaginatedQuizzes();
+    } else {
+      setPaginatedQuizzes([]);
+      setTotalCount(0);
+      setIsFetching(false);
+      setIsLoadingInitial(false);
+    }
+  }, [profile?.id, debouncedSearchQuery, selectedCategory, favoritesMode, myQuizzesMode, currentPage, favorites]);
+
+  const categories = useMemo(() => {
+    return ["All", ...new Set(allQuizzesForCategories.map(q => q.category).filter(Boolean))];
+  }, [allQuizzesForCategories]);
+
+  const totalPages = useMemo(() => Math.ceil(totalCount / quizzesPerPage), [totalCount]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedCategory, favoritesMode, myQuizzesMode]);
+  }, [debouncedSearchQuery, selectedCategory, favoritesMode, myQuizzesMode]);
 
   const handleSearchSubmit = useCallback(async () => {
     const term = searchTerm.trim();
@@ -299,10 +343,8 @@ export default function QuizSelectPage() {
 
   // ==== RENDER ====
   return (
-    <LoadingScreen minDuration={500} isReady={!isLoading}>
-      {/* SEMUA KONTEN HALAMAN DI BAWAH INI */}
+    <LoadingScreen minDuration={500} isReady={!isLoadingInitial}>
       <div className="min-h-screen relative overflow-hidden select-none flex flex-col main-background bg-black" style={{ backgroundImage: "url('/background/12.gif')", backgroundPosition: "center" }}>
-      {isLoading || isCreating && (<LoadingScreen children={undefined} />)}
 
         {/* Blood drips */}
         {isClient && bloodDrips.map((drip) => (
@@ -352,18 +394,18 @@ export default function QuizSelectPage() {
             transition={{ duration: 1, delay: 0.3, type: "spring", stiffness: 120 }}
             className="flex flex-col gap-1 mb-10"
           >
-        <div className="hidden md:flex items-center justify-between">
-          <Image
-            src="/logo/quizrushfix.png"
-            alt="QuizRush Logo"
-            width={140}   // turunin sedikit biar proporsional
-            height={35}   // sesuaikan tinggi
-            className="w-32 md:w-40 lg:w-48 h-auto"   // ini yang paling berpengaruh
-            unoptimized
-            onClick={() => router.push("/")}
-          />
-          <img src={`/logo/gameforsmartlogo-horror.png`} alt="Logo" className="w-40 md:w-52 lg:w-64 h-auto" />
-        </div>
+            <div className="hidden md:flex items-center justify-between">
+              <Image
+                src="/logo/quizrushfix.png"
+                alt="QuizRush Logo"
+                width={140}
+                height={35}
+                className="w-32 md:w-40 lg:w-48 h-auto"
+                unoptimized
+                onClick={() => router.push("/")}
+              />
+              <img src={`/logo/gameforsmartlogo-horror.png`} alt="Logo" className="w-40 md:w-52 lg:w-64 h-auto" />
+            </div>
 
             <div className="flex items-center justify-center w-full">
               <motion.div
@@ -449,7 +491,7 @@ export default function QuizSelectPage() {
           </motion.header>
 
           <div className="w-full max-w-8xl mx-auto flex flex-col flex-1 px-2 md:px-8 gap-5">
-            {paginatedQuizzes.length === 0 ? (
+            {paginatedQuizzes.length === 0 && !isFetching ? (
               <div className="text-center text-red-400/80 text-base  flex-1 flex items-center justify-center">
                 {t("noQuizzesAvailable")}
               </div>
@@ -457,51 +499,78 @@ export default function QuizSelectPage() {
               <>
                 <div className="flex flex-col flex-1 gap-7">
                   <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                    {paginatedQuizzes.map((quiz) => (
-                      <motion.div
-                        key={quiz.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 * (quiz.id % 4), duration: 0.5 }}
-                        whileHover={{ scale: 1.02 }}
-                        className="w-full"
-                      >
-                        <Card
-                          className="bg-black/50 border-red-500/20 hover:border-red-500 cursor-pointer shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] h-full flex flex-col gap-3"
-                          onClick={() => handleQuizSelect(quiz.id)}
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") handleQuizSelect(quiz.id);
-                          }}
-                          aria-label={t("selectQuiz", { theme: quiz.title })}
+                    {isFetching ? (
+                      // Inline Skeleton Loading
+                      Array.from({ length: quizzesPerPage }).map((_, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="w-full"
                         >
-                          <CardHeader className="flex-shrink-0">
-                            <TooltipProvider>
-                              <Tooltip delayDuration={500}>
-                                <TooltipTrigger asChild>
-                                  <CardTitle className="text-red-400  text-base line-clamp-3">{quiz.title}</CardTitle>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="top"
-                                  className="bg-black/80 text-red-400 border border-red-500/50 whitespace-normal break-words max-w-xs"
-                                >
-                                  {quiz.title}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </CardHeader>
-                          <CardFooter className="pt-2 flex justify-between items-center flex-shrink-0 mt-auto">
-                            {quiz.category && (
-                              <span className="text-red-300 text-xs  capitalize">{quiz.category}</span>
-                            )}
-                            <div className="flex items-center gap-1 text-red-300 text-xs ">
-                              <HelpCircle className="h-3 w-3" />
-                              {quiz.question_count ?? 0}
-                            </div>
-                          </CardFooter>
-                        </Card>
-                      </motion.div>
-                    ))}
+                          <Card className="bg-black/50 border-red-500/20 h-full flex flex-col gap-3 animate-pulse">
+                            <CardHeader className="flex-shrink-0">
+                              <div className="h-4 bg-red-900/30 rounded w-3/4"></div>
+                              <div className="h-3 bg-red-900/30 rounded w-1/2 mt-2"></div>
+                              <div className="h-3 bg-red-900/30 rounded w-2/3 mt-1"></div>
+                            </CardHeader>
+                            <CardFooter className="pt-2 flex justify-between items-center flex-shrink-0 mt-auto">
+                              <span className="h-3 bg-red-900/30 rounded w-1/2"></span>
+                              <div className="flex items-center gap-1">
+                                <div className="h-3 w-3 bg-red-900/30 rounded-full"></div>
+                                <span className="h-3 bg-red-900/30 rounded w-4"></span>
+                              </div>
+                            </CardFooter>
+                          </Card>
+                        </motion.div>
+                      ))
+                    ) : (
+                      paginatedQuizzes.map((quiz) => (
+                        <motion.div
+                          key={quiz.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.1 * (quiz.id % 4), duration: 0.5 }}
+                          whileHover={{ scale: 1.02 }}
+                          className="w-full"
+                        >
+                          <Card
+                            className="bg-black/50 border-red-500/20 hover:border-red-500 cursor-pointer shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] h-full flex flex-col gap-3"
+                            onClick={() => handleQuizSelect(quiz.id)}
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") handleQuizSelect(quiz.id);
+                            }}
+                            aria-label={t("selectQuiz", { theme: quiz.title })}
+                          >
+                            <CardHeader className="flex-shrink-0">
+                              <TooltipProvider>
+                                <Tooltip delayDuration={500}>
+                                  <TooltipTrigger asChild>
+                                    <CardTitle className="text-red-400  text-base line-clamp-3">{quiz.title}</CardTitle>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="top"
+                                    className="bg-black/80 text-red-400 border border-red-500/50 whitespace-normal break-words max-w-xs"
+                                  >
+                                    {quiz.title}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </CardHeader>
+                            <CardFooter className="pt-2 flex justify-between items-center flex-shrink-0 mt-auto">
+                              {quiz.category && (
+                                <span className="text-red-300 text-xs  capitalize">{quiz.category}</span>
+                              )}
+                              <div className="flex items-center gap-1 text-red-300 text-xs ">
+                                <HelpCircle className="h-3 w-3" />
+                                {quiz.question_count ?? 0}
+                              </div>
+                            </CardFooter>
+                          </Card>
+                        </motion.div>
+                      ))
+                    )}
                   </div>
                 </div>
                 <motion.div
@@ -516,7 +585,7 @@ export default function QuizSelectPage() {
                       size="icon"
                       className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20"
                       onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1 || isCreating}
+                      disabled={currentPage === 1 || isCreating || isFetching}
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </Button>
@@ -528,7 +597,7 @@ export default function QuizSelectPage() {
                       size="icon"
                       className="bg-black/50 border-red-500/50 text-red-400 hover:bg-red-900/20"
                       onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages || isCreating}
+                      disabled={currentPage === totalPages || isCreating || isFetching}
                     >
                       <ChevronRight className="h-5 w-5" />
                     </Button>
@@ -539,7 +608,7 @@ export default function QuizSelectPage() {
           </div>
         </div>
 
-        {/* Global styles (tetap) */}
+        {/* Global styles */}
         <style jsx global>{`
           .main-background { background-size: 60%; background-repeat: no-repeat; }
           @media (min-width: 768px) { .main-background { background-size: 60%; } }

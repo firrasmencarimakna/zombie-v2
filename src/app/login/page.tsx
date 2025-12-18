@@ -242,7 +242,7 @@ export default function LoginPage() {
             className="text-center mt-8 pt-8"
           >
             <Image
-              src="/logo/quizrushlogo.png"
+              src="/logo/quizrushfix.png"
               alt="QuizRush Logo"
               width={140}
               height={35}
@@ -258,12 +258,21 @@ export default function LoginPage() {
             transition={{ delay: 0.3, duration: 0.8 }}
           >
             <Card className="bg-black/40 border-red-900/50 hover:border-red-500 transition-all duration-300 shadow-[0_0_15px_rgba(239,68,68,0.3)]">
-              <CardHeader className="text-center pb-4">
+              <CardHeader className="text-center pb-0">
                 <CardTitle className="text-3xl  text-red-400 ">
                   {t("loginTitle")}
                 </CardTitle>
+
               </CardHeader>
               <CardContent className="space-y-4 pt-0">
+                                       <motion.p
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="mb-3 text-sm text-center text-[#8B0000]/80"
+                        >
+                        Tekan tombol di bawah untuk masuk dengan cepat
+                        </motion.p> 
                 {errorMessage && (
                   <motion.p
                     initial={{ opacity: 0 }}
@@ -277,6 +286,8 @@ export default function LoginPage() {
 
                 {/* Google Sign-in Button */}
   <div className="relative">
+
+    
   <motion.div
     className="absolute -left-7 md:-left-10 top-1/2 -translate-y-1/2 text-2xl md:text-3xl text-[#8B0000]" // Merah darah gelap
     animate={{ x: [0, 10, 0] }}
@@ -289,6 +300,7 @@ export default function LoginPage() {
   >
     <FaHandPointRight />
   </motion.div>
+
 
   <Button
     type="button"
