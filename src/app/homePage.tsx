@@ -576,7 +576,7 @@ export default function HomePage() {
             className="text-center py-8"
           > 
             <Image
-              src="/logo/quizrushfix.png"
+              src="/logo/quizrush.png"
               alt="QuizRush Logo"
               width={140}   // turunin sedikit biar proporsional
               height={35}   // sesuaikan tinggi

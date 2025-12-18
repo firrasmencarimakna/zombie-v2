@@ -442,7 +442,7 @@ export default function ResultsHostPage() {
         >
           <div className="flex justify-between items-center">
             <Image
-              src="/logo/quizrushfix.png"
+              src="/logo/quizrush.png"
               alt="QuizRush Logo"
               width={140}   // turunin sedikit biar proporsional
               height={35}   // sesuaikan tinggi

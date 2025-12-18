@@ -242,7 +242,7 @@ export default function LoginPage() {
             className="text-center mt-8 pt-8"
           >
             <Image
-              src="/logo/quizrushfix.png"
+              src="/logo/quizrush.png"
               alt="QuizRush Logo"
               width={140}
               height={35}

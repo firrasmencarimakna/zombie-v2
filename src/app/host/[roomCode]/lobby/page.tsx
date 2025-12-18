@@ -481,7 +481,7 @@ export default function HostPage() {
         <div className="min-h-screen bg-black relative overflow-hidden select-none">
           <div className="absolute top-4 left-4 z-20 hidden md:block">
             <Image
-              src="/logo/quizrushfix.png"
+              src="/logo/quizrush.png"
               alt="QuizRush Logo"
               width={140}
               height={35}

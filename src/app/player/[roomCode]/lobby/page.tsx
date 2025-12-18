@@ -431,7 +431,7 @@ export default function LobbyPage() {
         {/* Logos */}
         <div className="absolute top-4 left-4 z-20 hidden md:block">
           <Image
-            src="/logo/quizrushfix.png"
+            src="/logo/quizrush.png"
             alt="QuizRush Logo"
             width={140}
             height={35}

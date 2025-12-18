@@ -235,7 +235,7 @@ export default function CharacterSelectPage() {
       <div className="relative z-10 mx-auto p-4 max-w-8xl">
         <div className="hidden md:flex items-center justify-between">
           <Image
-            src="/logo/quizrushfix.png"
+            src="/logo/quizrush.png"
             alt="QuizRush Logo"
             width={140}   // turunin sedikit biar proporsional
             height={35}   // sesuaikan tinggi

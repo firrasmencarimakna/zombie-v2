@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   description: "Speed thinking or face the chase!",
 };
 
-const celgFont = localFont({
-  src: "../fonts/celg.ttf",
-  variable: "--font-celg",
+const zombiefont2Font = localFont({
+  src: "../fonts/zombiefont2.ttf",
+  variable: "--font-zombiefont2",
   display: "swap",
 });
 
@@ -22,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${celgFont.variable} antialiased`}>
+      <body className={`${zombiefont2Font.variable} antialiased`}>
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>

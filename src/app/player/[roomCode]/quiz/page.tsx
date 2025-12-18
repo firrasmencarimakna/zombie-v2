@@ -548,7 +548,7 @@ useEffect(() => {
         {/* QuizRush Logo - Top Left */}
 <div className="absolute top-4 left-0 z-50 hidden md:block">
   <Image
-    src="/logo/quizrushfix.png"
+    src="/logo/quizrush.png"
     alt="QuizRush Logo"
     width={200}           // ukuran asli dalam piksel (untuk optimasi Next.js)
     height={50}

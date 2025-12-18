@@ -396,7 +396,7 @@ export default function QuizSelectPage() {
           >
             <div className="hidden md:flex items-center justify-between">
               <Image
-                src="/logo/quizrushfix.png"
+                src="/logo/quizrush.png"
                 alt="QuizRush Logo"
                 width={140}
                 height={35}
