@@ -20,7 +20,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@supabase/supabase-js": "^2.52.0",
+    "@supabase/supabase-js": "^2.84.0",
     "@yudiel/react-qr-scanner": "^2.4.1",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
